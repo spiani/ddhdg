@@ -1,0 +1,4 @@
+build/
+cmake-build-*/
+load_environment.sh
+.idea

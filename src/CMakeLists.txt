@@ -1,0 +1,3 @@
+add_library(DDHDG SHARED ddhdg.cpp)
+
+DEAL_II_SETUP_TARGET(DDHDG)
