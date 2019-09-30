@@ -19,6 +19,8 @@ namespace Ddhdg
 {
     using namespace dealii;
 
+    DeclExceptionMsg(NoTraceIn1D, "The trace can not be saved in 1D");
+
     template <int dim>
     struct Problem
     {
@@ -47,6 +49,7 @@ namespace Ddhdg
                 unsigned int degree
                 );
         void run();
+        void output_results(const std::string& solution_filename);
         void output_results(const std::string& solution_filename, const std::string& trace_filename);
     private:
         void setup_system();

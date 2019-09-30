@@ -337,7 +337,7 @@ namespace Ddhdg {
 
 
     template <int dim>
-    void Solver<dim>::output_results(const std::string& solution_filename, const std::string& trace_filename)
+    void Solver<dim>::output_results(const std::string& solution_filename)
     {
         std::ofstream output(solution_filename);
         DataOut<dim> data_out;
@@ -355,6 +355,20 @@ namespace Ddhdg {
 
         data_out.build_patches(fe.degree);
         data_out.write_vtk(output);
+    }
+
+    template <>
+    void Solver<1>::output_results(const std::string& solution_filename, const std::string& trace_filename)
+    {
+        (void) solution_filename;
+        (void) trace_filename;
+        AssertThrow(false, NoTraceIn1D());
+    }
+
+    template <int dim>
+    void Solver<dim>::output_results(const std::string& solution_filename, const std::string& trace_filename)
+    {
+        output_results(solution_filename);
 
         std::ofstream face_output(trace_filename);
         DataOutFaces<dim>        data_out_face(false);
