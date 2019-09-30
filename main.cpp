@@ -63,18 +63,18 @@ int main ()
   const unsigned int dim = 2;
 
 
-  // Create a triangolation
+  // Create a triangulation
   std::shared_ptr<dealii::Triangulation<2>> triangulation =
       std::make_shared<dealii::Triangulation<2>> ();
   dealii::GridGenerator::hyper_cube (*triangulation, -1., 1., true);
-  triangulation->refine_global (3);
+  triangulation->refine_global (2);
 
 
   // Set the boundary conditions
   std::shared_ptr<const dealii::Function<2>> boundary_function =
       std::make_shared<const BoundaryFunction> ();
   // std::shared_ptr<const dealii::Function<2>> boundary_function =
-  //     std::make_shared<const dealii::ZeroFunction<2>> ();
+  //     std::make_shared<const dealii::ConstantFunction<2>> (1.);
 
   Ddhdg::DirichletBoundaryCondition<2> dirichlet_boundary_condition (boundary_function);
 

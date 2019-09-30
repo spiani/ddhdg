@@ -26,6 +26,7 @@ namespace Ddhdg {
     )
             : triangulation(problem.triangulation)
             , boundary_handler(problem.boundary_handler)
+            , f(problem.f)
             , fe_local(FE_DGQ<dim>(degree), dim, FE_DGQ<dim>(degree), 1)
             , dof_handler_local(*triangulation)
             , fe(degree)
@@ -135,8 +136,8 @@ namespace Ddhdg {
         // Integrals on the overall cell of elements of the (u, q) space
         for (unsigned int q = 0; q < n_q_points; ++q)
         {
-            //const Point<dim> q_point = scratch.fe_values_local.quadrature_point(q);
-            const double rhs_value = 1.;
+            const Point<dim> q_point = scratch.fe_values_local.quadrature_point(q);
+            const double rhs_value = -f->value(q_point);
 
             const double JxW = scratch.fe_values_local.JxW(q);
             for (unsigned int k = 0; k < loc_dofs_per_cell; ++k)
@@ -268,7 +269,7 @@ namespace Ddhdg {
                     {
                         const unsigned int ii =
                                 scratch.fe_local_support_on_face[face][i];
-                        scratch.l_rhs(ii) -=
+                        scratch.l_rhs(ii)-=
                                 (scratch.q_phi[i] * normal +
                                  scratch.u_phi[i] * tau_stab) *
                                 scratch.trace_values[q] * JxW;
