@@ -16,6 +16,8 @@
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/data_out_faces.h>
 
+#include <fstream>
+
 
 namespace Ddhdg {
 
