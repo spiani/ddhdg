@@ -15,7 +15,7 @@ class F : public dealii::Function<dim> {
   {
     (void) p;
     (void) component;
-    return 1.;
+    return 2.;
   }
 
   dealii::Tensor<1, dim>
