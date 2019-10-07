@@ -155,9 +155,9 @@ namespace Ddhdg {
             {
                 for (unsigned int j = 0; j < loc_dofs_per_cell; ++j)
                     scratch.ll_matrix(i, j) +=
-                            (- scratch.q_phi[i] * scratch.q_phi[j] +
-                             - scratch.q_phi[i] * scratch.u_phi_grad[j] +
-                             + scratch.u_phi[i] * scratch.q_phi_div[j]
+                            (- scratch.q_phi[j] * scratch.q_phi[i] +
+                             - scratch.q_phi[j] * scratch.u_phi_grad[i] +
+                             + scratch.u_phi[j] * scratch.q_phi_div[i]
                             ) * JxW;
                 scratch.l_rhs(i) += scratch.u_phi[i] * rhs_value * JxW;
             }
@@ -210,25 +210,26 @@ namespace Ddhdg {
                             const unsigned int jj =
                                     scratch.fe_support_on_face[face][j];
 
-                            // Integrals of local functions with a test function
-                            // on the border. j is the index of the test function
+                            // Integrals of trace functions using as test function
+                            // the restriction of local test function on the border
+                            // i is the index of the test function
                             scratch.lf_matrix(ii, jj) +=
-                                    ((scratch.q_phi[i] * normal) +
-                                    tau_stab * scratch.u_phi[i]) *
+                                    (-(scratch.q_phi[i] * normal) +
+                                     + tau_stab * scratch.u_phi[i]) *
                                     scratch.tr_phi[j] * JxW;
 
-                            // Integrals of the trace functions using as test function
-                            // the restriction of local test function on the border.
-                            // i is the index of the test function
+                            // Integrals of the local functions restricted on the border.
+                            // Here i is the index of the test function (because we are
+                            // saving the elements in the matrix swapped)
                             // The sign is reversed to be used in the Schur complement
                             // (and therefore this is the opposite of the right matrix
                             // that describes the problem on this cell)
                             scratch.fl_matrix(jj, ii) -=
-                                    (- (tau_stab * scratch.tr_phi[j]) *
-                                    scratch.u_phi[i] - (scratch.tr_phi[j]
-                                    * (normal * scratch.q_phi[i]))
-                                    ) * JxW;
+                                    (+ (scratch.q_phi[i] * normal) +
+                                     + tau_stab * scratch.u_phi[i]
+                                    ) * scratch.tr_phi[j] * JxW;
                         }
+                    // Integrals of trace functions (both test and trial)
                     for (unsigned int i = 0;
                          i < scratch.fe_support_on_face[face].size();
                          ++i)
@@ -258,9 +259,9 @@ namespace Ddhdg {
                         const unsigned int jj =
                                 scratch.fe_local_support_on_face[face][j];
                         scratch.ll_matrix(ii, jj) +=
-                                (scratch.q_phi[i] * normal +
-                                tau_stab * scratch.u_phi[i]) *
-                                scratch.u_phi[j] * JxW;
+                                (scratch.q_phi[j] * normal +
+                                tau_stab * scratch.u_phi[j]) *
+                                scratch.u_phi[i] * JxW;
                     }
 
                 if (task_data.trace_reconstruct)
@@ -270,7 +271,7 @@ namespace Ddhdg {
                     {
                         const unsigned int ii =
                                 scratch.fe_local_support_on_face[face][i];
-                        scratch.l_rhs(ii)-=
+                        scratch.l_rhs(ii)+=
                                 (scratch.q_phi[i] * normal +
                                  scratch.u_phi[i] * tau_stab) *
                                 scratch.trace_values[q] * JxW;
