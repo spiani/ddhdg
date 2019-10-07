@@ -215,7 +215,7 @@ namespace Ddhdg {
                             // i is the index of the test function
                             scratch.lf_matrix(ii, jj) +=
                                     (-(scratch.q_phi[i] * normal) +
-                                     + tau_stab * scratch.u_phi[i]) *
+                                     - tau_stab * scratch.u_phi[i]) *
                                     scratch.tr_phi[j] * JxW;
 
                             // Integrals of the local functions restricted on the border.
