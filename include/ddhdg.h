@@ -47,6 +47,7 @@ namespace Ddhdg
       void output_results (const std::string &solution_filename);
       void output_results (const std::string &solution_filename, const std::string &trace_filename);
      private:
+      std::vector<unsigned int> get_component_mapping (Component component);
       void setup_system ();
       void assemble_system (bool reconstruct_trace = false);
       void solve ();

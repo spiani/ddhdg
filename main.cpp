@@ -76,7 +76,7 @@ int main ()
   // std::shared_ptr<const dealii::Function<2>> boundary_function =
   //     std::make_shared<const dealii::ConstantFunction<2>> (1.);
 
-  Ddhdg::DirichletBoundaryCondition<2> dirichlet_boundary_condition (boundary_function);
+  Ddhdg::DirichletBoundaryCondition<2> dirichlet_boundary_condition (boundary_function, Ddhdg::u);
 
   std::shared_ptr<Ddhdg::BoundaryConditionHandler<2>> boundary_handler =
       std::make_shared<Ddhdg::BoundaryConditionHandler<2>> ();

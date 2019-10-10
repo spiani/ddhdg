@@ -2,8 +2,15 @@
 
 #include <deal.II/base/function.h>
 
+#include "components.h"
+
 namespace Ddhdg
 {
+    template<int dim>
+    using boundary_function_map = std::map<dealii::types::boundary_id, const dealii::Function<dim> *>;
+
+    template<int dim>
+    using boundary_maps = std::map<Ddhdg::Component, boundary_function_map<dim>>;
 
     enum BoundaryConditionType {
         dirichlet, neumann, robin
@@ -12,26 +19,30 @@ namespace Ddhdg
     template<int dim>
     class BoundaryCondition {
      public:
-      explicit BoundaryCondition (BoundaryConditionType bc_type_)
-          : bc_type (bc_type_)
+      explicit BoundaryCondition (BoundaryConditionType bc_type_, Component c)
+          : bc_type (bc_type_), component (c)
       {}
 
       BoundaryConditionType get_type () const
       { return bc_type; }
 
+      Component get_component () const
+      { return component; }
+
      protected:
       const BoundaryConditionType bc_type;
+      const Component component;
     };
 
     template<int dim>
     class DirichletBoundaryCondition : public BoundaryCondition<dim> {
      public:
-      explicit DirichletBoundaryCondition (std::shared_ptr<const dealii::Function<dim>> f)
-          : BoundaryCondition<dim> (dirichlet), function (f)
+      explicit DirichletBoundaryCondition (std::shared_ptr<const dealii::Function<dim>> f, Component c)
+          : BoundaryCondition<dim> (dirichlet, c), function (f)
       {}
 
       DirichletBoundaryCondition (const DirichletBoundaryCondition &dbc)
-          : BoundaryCondition<dim> (dirichlet), function (dbc.get_function ())
+          : BoundaryCondition<dim> (dirichlet, dbc.get_component ()), function (dbc.get_function ())
       {}
 
       std::shared_ptr<const dealii::Function<dim>> get_function () const
@@ -44,12 +55,12 @@ namespace Ddhdg
     template<int dim>
     class NeumannBoundaryCondition : public BoundaryCondition<dim> {
      public:
-      explicit NeumannBoundaryCondition (std::shared_ptr<const dealii::Function<dim>> f)
-          : BoundaryCondition<dim> (neumann), function (f)
+      explicit NeumannBoundaryCondition (std::shared_ptr<const dealii::Function<dim>> f, Component c)
+          : BoundaryCondition<dim> (neumann, c), function (f)
       {}
 
       NeumannBoundaryCondition (const NeumannBoundaryCondition &dbc)
-          : BoundaryCondition<dim> (neumann), function (dbc.get_function ())
+          : BoundaryCondition<dim> (neumann, dbc.get_component ()), function (dbc.get_function ())
       {}
 
       std::shared_ptr<const dealii::Function<dim>> get_function () const
@@ -74,18 +85,7 @@ namespace Ddhdg
       [[nodiscard]] bool has_neumann_boundary_conditions () const
       { return !nbc_map.empty (); }
 
-      std::map<dealii::types::boundary_id, const dealii::Function<dim> *> get_dirichlet_boundary_map () const
-      {
-        std::map<dealii::types::boundary_id, const dealii::Function<dim> *> boundary_map;
-        for (auto const &x : dbc_map)
-          {
-            dealii::types::boundary_id current_id = x.first;
-            const dealii::Function<dim> *current_f = &(*(x.second.get_function ()));
-            boundary_map.insert ({current_id, current_f});
-          }
-
-        return boundary_map;
-      }
+      boundary_maps<dim> get_dirichlet_boundary_maps () const;
 
      protected:
       std::map<dealii::types::boundary_id, const DirichletBoundaryCondition<dim>> dbc_map;
