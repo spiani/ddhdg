@@ -50,7 +50,7 @@ namespace Ddhdg {
                 unsigned int n_degree
         );
 
-        void run();
+        void run(bool parallel=true);
 
         void output_results(const std::string& solution_filename);
 
@@ -60,6 +60,8 @@ namespace Ddhdg {
         std::vector<unsigned int> get_component_mapping(Component component);
 
         void setup_system();
+
+        void assemble_system_multithreaded(bool reconstruct_trace = false);
 
         void assemble_system(bool reconstruct_trace = false);
 

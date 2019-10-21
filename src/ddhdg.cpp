@@ -91,7 +91,7 @@ namespace Ddhdg {
     }
 
     template<int dim>
-    void Solver<dim>::assemble_system(bool trace_reconstruct)
+    void Solver<dim>::assemble_system_multithreaded(bool trace_reconstruct)
     {
         const QGauss<dim> quadrature_formula(fe.degree+1);
         const QGauss<dim-1> face_quadrature_formula(fe.degree+1);
@@ -116,6 +116,32 @@ namespace Ddhdg {
                 &Solver<dim>::copy_local_to_global,
                 scratch,
                 task_data);
+    }
+
+    template<int dim>
+    void Solver<dim>::assemble_system(bool trace_reconstruct)
+    {
+        const QGauss<dim> quadrature_formula(fe.degree+1);
+        const QGauss<dim-1> face_quadrature_formula(fe.degree+1);
+
+        const UpdateFlags local_flags(update_values | update_gradients |
+                                      update_JxW_values | update_quadrature_points);
+        const UpdateFlags local_face_flags(update_values);
+        const UpdateFlags flags(update_values | update_normal_vectors |
+                                update_quadrature_points | update_JxW_values);
+        PerTaskData task_data(fe.dofs_per_cell, trace_reconstruct);
+        ScratchData scratch(fe,
+                            fe_local,
+                            quadrature_formula,
+                            face_quadrature_formula,
+                            local_flags,
+                            local_face_flags,
+                            flags);
+
+        for(const auto &cell : dof_handler.active_cell_iterators()){
+            assemble_system_one_cell(cell, scratch, task_data);
+            copy_local_to_global(task_data);
+        }
     }
 
     template<int dim>
@@ -427,15 +453,24 @@ namespace Ddhdg {
         system_matrix.clear();
         sparsity_pattern.reinit(0, 0, 0, 1);
         constraints.distribute(solution);
-        assemble_system(true);
     }
 
     template<int dim>
-    void Solver<dim>::run()
+    void Solver<dim>::run(const bool parallel)
     {
         setup_system();
-        assemble_system(false);
+
+        if (parallel)
+            assemble_system_multithreaded(false);
+        else
+            assemble_system(false);
+
         solve();
+
+        if (parallel)
+            assemble_system_multithreaded(true);
+        else
+            assemble_system(true);
     }
 
     template<int dim>
