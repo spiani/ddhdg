@@ -1,8 +1,7 @@
 #pragma once
 
-namespace Ddhdg
-{
-    enum Component{
-        u
+namespace Ddhdg {
+    enum Component {
+        V, n
     };
 }
