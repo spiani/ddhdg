@@ -2,6 +2,7 @@
 #include <deal.II/grid/grid_refinement.h>
 #include <deal.II/base/exceptions.h>
 #include <deal.II/base/parameter_handler.h>
+#include <deal.II/base/function_parser.h>
 
 #include <iostream>
 #include <sys/stat.h>
@@ -36,36 +37,6 @@ public:
     }
 };
 
-class BoundaryFunction
-        : public dealii::Function<2> {
-public:
-
-    BoundaryFunction()
-            :dealii::Function<2>(2) { }
-
-    double value(const dealii::Point<2>& p,
-            const unsigned int component = 0) const override
-    {
-        if (component==0) {
-            double x = p[0];
-            double y = p[1];
-            return x*x-x+y;
-        }
-        return 0.;
-    }
-
-    dealii::Tensor<1, 2>
-    gradient(const dealii::Point<2>& p,
-            const unsigned int component = 0) const override
-    {
-        (void) component;
-        double x = p[0];
-        dealii::Tensor<1, 2> grdt;
-        grdt[0] = 2*x-1;
-        grdt[1] = 1.;
-        return grdt;
-    }
-};
 
 bool file_exists(const std::string& file_path)
 {
@@ -87,6 +58,14 @@ void read_parameters(dealii::ParameterHandler& prm, int argc, char const* const 
             "2",
             dealii::Patterns::Integer(),
             "The degree of the polynomials used to approximate the electron density");
+    prm.declare_entry("V boundary function",
+            "0",
+            dealii::Patterns::Anything(),
+            "The function that will be used to specify the Dirichlet boundary conditions for V");
+    prm.declare_entry("n boundary function",
+            "0",
+            dealii::Patterns::Anything(),
+            "The function that will be used to specify the Dirichlet boundary conditions for n");
     prm.declare_entry("multithreading",
             "true",
             dealii::Patterns::Bool(),
@@ -138,15 +117,18 @@ int main(int argc, char const* const argv[])
         triangulation->refine_global(refine_times);
 
     // Set the boundary conditions
-    std::shared_ptr<const dealii::Function<2>> boundary_function =
-            std::make_shared<const BoundaryFunction>();
+    std::shared_ptr<dealii::FunctionParser<2>> V_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
+    V_boundary_function->initialize("x, y", prm.get("V boundary function"), std::map<std::string, double>());
+
+    std::shared_ptr<dealii::FunctionParser<2>> n_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
+    n_boundary_function->initialize("x, y", prm.get("n boundary function"), std::map<std::string, double>());
 
     std::shared_ptr<Ddhdg::BoundaryConditionHandler<2>> boundary_handler =
             std::make_shared<Ddhdg::BoundaryConditionHandler<2>>();
 
     for (unsigned int i = 0; i<4; i++) {
-        boundary_handler->add_boundary_condition(i, Ddhdg::dirichlet, Ddhdg::V, boundary_function);
-        boundary_handler->add_boundary_condition(i, Ddhdg::dirichlet, Ddhdg::n, boundary_function);
+        boundary_handler->add_boundary_condition(i, Ddhdg::dirichlet, Ddhdg::V, V_boundary_function);
+        boundary_handler->add_boundary_condition(i, Ddhdg::dirichlet, Ddhdg::n, n_boundary_function);
     }
 
     // Set the function f for the equation laplacian(u) = f
