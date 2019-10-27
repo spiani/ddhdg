@@ -58,18 +58,34 @@ void read_parameters(dealii::ParameterHandler& prm, int argc, char const* const 
             "2",
             dealii::Patterns::Integer(),
             "The degree of the polynomials used to approximate the electron density");
-    prm.declare_entry("V boundary function",
-            "0",
-            dealii::Patterns::Anything(),
-            "The function that will be used to specify the Dirichlet boundary conditions for V");
-    prm.declare_entry("n boundary function",
-            "0",
-            dealii::Patterns::Anything(),
-            "The function that will be used to specify the Dirichlet boundary conditions for n");
     prm.declare_entry("multithreading",
             "true",
             dealii::Patterns::Bool(),
             "Shall the code run in multithreading mode?");
+    prm.enter_subsection ("boundary conditions");
+    {
+        prm.declare_entry("V boundary function",
+                "0",
+                dealii::Patterns::Anything(),
+                "The function that will be used to specify the Dirichlet boundary conditions for V");
+        prm.declare_entry("n boundary function",
+                "0",
+                dealii::Patterns::Anything(),
+                "The function that will be used to specify the Dirichlet boundary conditions for n");
+    }
+    prm.leave_subsection();
+    prm.enter_subsection ("domain geometry");
+    {
+        prm.declare_entry("left border",
+                "-1",
+                dealii::Patterns::Integer(),
+                "The x coordinate of the leftmost point of the domain (which is a 2d square)");
+        prm.declare_entry("right border",
+                "1",
+                dealii::Patterns::Integer(),
+                "The x coordinate of the rightmost point of the domain (which is a 2d square)");
+    }
+    prm.leave_subsection();
 
     // Check where is the parameter file
     if (argc==1) {
@@ -109,7 +125,10 @@ int main(int argc, char const* const argv[])
     // Create a triangulation
     std::shared_ptr<dealii::Triangulation<2>> triangulation =
             std::make_shared<dealii::Triangulation<2>>();
-    dealii::GridGenerator::hyper_cube(*triangulation, -1., 1., true);
+    std::vector<std::string> domain_geometry = {"domain geometry"};
+    auto left = prm.get_integer(domain_geometry, "left border");
+    auto right = prm.get_integer(domain_geometry, "right border");
+    dealii::GridGenerator::hyper_cube(*triangulation, left, right, true);
 
     // Refine it
     const unsigned int refine_times = prm.get_integer("number of refinements");
@@ -117,11 +136,14 @@ int main(int argc, char const* const argv[])
         triangulation->refine_global(refine_times);
 
     // Set the boundary conditions
+    std::vector<std::string> boundary_conditions = {"boundary conditions"};
     std::shared_ptr<dealii::FunctionParser<2>> V_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
-    V_boundary_function->initialize("x, y", prm.get("V boundary function"), std::map<std::string, double>());
+    std::string V_boundary_description = prm.get(boundary_conditions,"V boundary function");
+    V_boundary_function->initialize("x, y", V_boundary_description, std::map<std::string, double>());
 
     std::shared_ptr<dealii::FunctionParser<2>> n_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
-    n_boundary_function->initialize("x, y", prm.get("n boundary function"), std::map<std::string, double>());
+    std::string n_boundary_description = prm.get(boundary_conditions,"n boundary function");
+    n_boundary_function->initialize("x, y", n_boundary_description, std::map<std::string, double>());
 
     std::shared_ptr<Ddhdg::BoundaryConditionHandler<2>> boundary_handler =
             std::make_shared<Ddhdg::BoundaryConditionHandler<2>>();

@@ -1,0 +1,16 @@
+set number of refinements = 2
+set V degree              = 3
+set n degree              = 3
+set multithreading        = false
+
+subsection boundary conditions
+    set V boundary function   = 0
+    set n boundary function   = 0
+end
+
+subsection domain geometry
+    set left border  = -1
+    set right border  = 1
+end
+
+
