@@ -176,6 +176,16 @@ int main(int argc, char const* const argv[])
                   << std::endl;
         Ddhdg::Solver<2> solver(current_problem, V_degree, n_degree);
         solver.run(prm.get_bool("multithreading"));
+
+        std::shared_ptr<dealii::FunctionParser<2>> expected_solution = std::make_shared<dealii::FunctionParser<2>>();
+        expected_solution->initialize("x, y", "x^2 -x + y", std::map<std::string, double>());
+        std::cout << "The L2 error on V is: "
+                  << solver.estimate_l2_error(expected_solution, Ddhdg::V)
+                  << std::endl;
+        std::cout << "The L2 error on n is: "
+                  << solver.estimate_l2_error(expected_solution, Ddhdg::n)
+                  << std::endl;
+
         solver.output_results(
                 "solution.vtk",
                 "trace.vtk"

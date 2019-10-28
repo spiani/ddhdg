@@ -15,6 +15,8 @@
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/data_out_faces.h>
 
+#include "function_tools.h"
+
 #include <fstream>
 
 namespace Ddhdg {
@@ -43,15 +45,6 @@ namespace Ddhdg {
               , dof_handler(*triangulation) { }
 
     template<int dim>
-    std::vector<unsigned int> Solver<dim>::get_component_mapping(Component component)
-    {
-        if (component==Component::V)
-            return std::vector<unsigned int>{0};
-        else
-            return std::vector<unsigned int>{1};
-    }
-
-    template<int dim>
     void Solver<dim>::setup_system()
     {
         dof_handler_local.distribute_dofs(fe_local);
@@ -68,7 +61,7 @@ namespace Ddhdg {
         constraints.clear();
         DoFTools::make_hanging_node_constraints(dof_handler, constraints);
 
-        // TODO: Old bc remove and implement in a weak form
+        // TODO: Old bc; remove and implement in a weak form
         /*if (boundary_handler->has_dirichlet_boundary_conditions()) {
             std::cout << dof_handler.get_fe(0).n_components() << std::endl;
             boundary_maps<dim> dirichlet_boundary_maps = boundary_handler->get_dirichlet_boundary_maps();
@@ -88,6 +81,20 @@ namespace Ddhdg {
             sparsity_pattern.copy_from(dsp, fe.dofs_per_face);
         }
         system_matrix.reinit(sparsity_pattern);
+    }
+
+    template<int dim>
+    dealii::FEValuesExtractors::Scalar Solver<dim>::get_component_extractor(const Component component)
+    {
+        dealii::FEValuesExtractors::Scalar extractor;
+        switch (component) {
+        case Component::V:
+            extractor = dealii::FEValuesExtractors::Scalar(0);
+            break;
+        case Component::n:
+            extractor = dealii::FEValuesExtractors::Scalar(dim+1);
+        }
+        return extractor;
     }
 
     template<int dim>
@@ -486,6 +493,42 @@ namespace Ddhdg {
             assemble_system_multithreaded(true);
         else
             assemble_system(true);
+    }
+
+    template<int dim>
+    double Solver<dim>::estimate_l2_error(const std::shared_ptr<const dealii::Function<dim, double>> expected_solution,
+            const Ddhdg::Component c)
+    {
+        Vector<double> difference_per_cell(triangulation->n_active_cells());
+
+        unsigned int component_index = 0;
+        switch (c) {
+        case Component::V:
+            component_index = 0;
+            break;
+        case Component::n:
+            component_index = dim+1;
+            break;
+        }
+
+        const unsigned int n_of_components = (dim+1)*2;
+        const auto component_selection = dealii::ComponentSelectFunction<dim>(component_index, n_of_components);
+
+        std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>> c_map;
+        c_map.insert({component_index, expected_solution});
+        FunctionByComponents<dim> expected_solution_multidim = FunctionByComponents<dim>(n_of_components, c_map);
+
+        VectorTools::integrate_difference(dof_handler_local,
+                solution_local,
+                expected_solution_multidim,
+                difference_per_cell,
+                QGauss<dim>(fe.degree+1),
+                VectorTools::L2_norm,
+                &component_selection);
+
+        const double L2_error = VectorTools::compute_global_error(*triangulation, difference_per_cell,
+                VectorTools::L2_norm);
+        return L2_error;
     }
 
     template<int dim>

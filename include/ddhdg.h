@@ -50,14 +50,16 @@ namespace Ddhdg {
                 unsigned int n_degree
         );
 
-        void run(bool parallel=true);
+        void run(bool parallel = true);
+
+        double estimate_l2_error(std::shared_ptr<const dealii::Function<dim>> expected_solution, Component c);
 
         void output_results(const std::string& solution_filename);
 
         void output_results(const std::string& solution_filename, const std::string& trace_filename);
 
     private:
-        std::vector<unsigned int> get_component_mapping(Component component);
+        dealii::FEValuesExtractors::Scalar get_component_extractor(Component component);
 
         void setup_system();
 
