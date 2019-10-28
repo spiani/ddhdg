@@ -3,3 +3,4 @@ cmake-build-*/
 load_environment.sh
 .idea
 *.vtk
+*.txt

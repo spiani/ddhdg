@@ -125,20 +125,20 @@ namespace Ddhdg {
         const QGauss<dim-1> face_quadrature_formula(fe.degree+1);
 
         const UpdateFlags local_flags(update_values | update_gradients |
-                                      update_JxW_values | update_quadrature_points);
+                update_JxW_values | update_quadrature_points);
         const UpdateFlags local_face_flags(update_values);
         const UpdateFlags flags(update_values | update_normal_vectors |
-                                update_quadrature_points | update_JxW_values);
+                update_quadrature_points | update_JxW_values);
         PerTaskData task_data(fe.dofs_per_cell, trace_reconstruct);
         ScratchData scratch(fe,
-                            fe_local,
-                            quadrature_formula,
-                            face_quadrature_formula,
-                            local_flags,
-                            local_face_flags,
-                            flags);
+                fe_local,
+                quadrature_formula,
+                face_quadrature_formula,
+                local_flags,
+                local_face_flags,
+                flags);
 
-        for(const auto &cell : dof_handler.active_cell_iterators()){
+        for (const auto& cell : dof_handler.active_cell_iterators()) {
             assemble_system_one_cell(cell, scratch, task_data);
             copy_local_to_global(task_data);
         }
@@ -332,37 +332,52 @@ namespace Ddhdg {
                             }
                         }
                     }
-                    // Integrals of trace functions (both test and trial)
-                    for (unsigned int i = 0; i<scratch.fe_support_on_face[face].size(); ++i) {
-                        const unsigned int ii = scratch.fe_support_on_face[face][i];
-                        for (unsigned int j = 0; j<scratch.fe_support_on_face[face].size(); ++j) {
-                            const unsigned int jj = scratch.fe_support_on_face[face][j];
-                            if (V_has_dirichlet_conditions) {
+                    // Integrals of trace functions (both test and trial) for component V
+                    if (V_has_dirichlet_conditions) {
+                        for (unsigned int i = 0; i<scratch.fe_support_on_face[face].size(); ++i) {
+                            const unsigned int ii = scratch.fe_support_on_face[face][i];
+                            for (unsigned int j = 0; j<scratch.fe_support_on_face[face].size(); ++j) {
+                                const unsigned int jj = scratch.fe_support_on_face[face][j];
                                 task_data.cell_matrix(ii, jj) += scratch.tr_V[i]*scratch.tr_V[j]*JxW;
                             }
-                            else {
+                            task_data.cell_vector[ii] += scratch.tr_V[i]*V_dbc_value*JxW;
+                        }
+                    }
+                    else {
+                        for (unsigned int i = 0; i<scratch.fe_support_on_face[face].size(); ++i) {
+                            const unsigned int ii = scratch.fe_support_on_face[face][i];
+                            for (unsigned int j = 0; j<scratch.fe_support_on_face[face].size(); ++j) {
+                                const unsigned int jj = scratch.fe_support_on_face[face][j];
                                 task_data.cell_matrix(ii, jj) += -tau_stab*scratch.tr_V[i]*scratch.tr_V[j]*JxW;
                             }
-
-                            if (n_has_dirichlet_conditions) {
+                        }
+                    }
+                    // Integrals of trace functions (both test and trial) for component n
+                    if (n_has_dirichlet_conditions) {
+                        for (unsigned int i = 0; i<scratch.fe_support_on_face[face].size(); ++i) {
+                            const unsigned int ii = scratch.fe_support_on_face[face][i];
+                            for (unsigned int j = 0; j<scratch.fe_support_on_face[face].size(); ++j) {
+                                const unsigned int jj = scratch.fe_support_on_face[face][j];
                                 task_data.cell_matrix(ii, jj) += scratch.tr_n[i]*scratch.tr_n[j]*JxW;
                             }
-                            else {
+                            task_data.cell_vector[ii] += scratch.tr_n[i]*n_dbc_value*JxW;
+                        }
+                    }
+                    else {
+                        for (unsigned int i = 0; i<scratch.fe_support_on_face[face].size(); ++i) {
+                            const unsigned int ii = scratch.fe_support_on_face[face][i];
+                            for (unsigned int j = 0; j<scratch.fe_support_on_face[face].size(); ++j) {
+                                const unsigned int jj = scratch.fe_support_on_face[face][j];
                                 task_data.cell_matrix(ii, jj) += -tau_stab*scratch.tr_n[i]*scratch.tr_n[j]*JxW;
                             }
                         }
-                        if (V_has_dirichlet_conditions)
-                            task_data.cell_vector[ii] += scratch.tr_V[i]*V_dbc_value*JxW;
-                        if (n_has_dirichlet_conditions)
-                            task_data.cell_vector[ii] += scratch.tr_n[i]*n_dbc_value*JxW;
                     }
-
                     if (V_has_neumann_conditions) {
                         const auto boundary_map = boundary_handler->get_neumann_conditions_for_id(face_boundary_id);
                         const double nbc_value = boundary_map.find(V)->second.evaluate(quadrature_point);
                         for (unsigned int i = 0; i<scratch.fe_support_on_face[face].size(); ++i) {
                             const unsigned int ii = scratch.fe_support_on_face[face][i];
-                            task_data.cell_vector(ii) += scratch.tr_V[i] * nbc_value * JxW;
+                            task_data.cell_vector(ii) += scratch.tr_V[i]*nbc_value*JxW;
                         }
                     }
                     if (n_has_neumann_conditions) {
@@ -370,7 +385,7 @@ namespace Ddhdg {
                         const double nbc_value = boundary_map.find(n)->second.evaluate(quadrature_point);
                         for (unsigned int i = 0; i<scratch.fe_support_on_face[face].size(); ++i) {
                             const unsigned int ii = scratch.fe_support_on_face[face][i];
-                            task_data.cell_vector(ii) += scratch.tr_n[i] * nbc_value * JxW;
+                            task_data.cell_vector(ii) += scratch.tr_n[i]*nbc_value*JxW;
                         }
                     }
 
