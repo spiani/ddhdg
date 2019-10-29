@@ -2,11 +2,15 @@ set number of refinements = 2
 set V degree              = 3
 set n degree              = 3
 set multithreading        = false
+set f                     = -2*pi^2*cos(pi*x)*cos(pi*y)
 
 subsection boundary conditions
     set V boundary function   = 0
-    set n boundary function   = 0
+    set n boundary function   = x - y
 end
+
+set expected V solution = cos(pi * x) * cos(pi * y)
+set expected n solution = cos(pi * x) * cos(pi * y) + x - y
 
 subsection domain geometry
     set left border  = -1

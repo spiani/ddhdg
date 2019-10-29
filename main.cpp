@@ -1,4 +1,3 @@
-#define _USE_MATH_DEFINES
 #define DEFAULT_PARAMETER_FILE "parameters.prm"
 
 #include <deal.II/grid/grid_generator.h>
@@ -9,36 +8,9 @@
 
 #include <iostream>
 #include <sys/stat.h>
-#include <math.h>
+#include <cmath>
 
 #include "ddhdg.h"
-
-
-template<int dim>
-class F
-        : public dealii::Function<dim> {
-public:
-
-    double value(const dealii::Point<dim>& p,
-            const unsigned int component = 0) const override
-    {
-        (void) p;
-        (void) component;
-        return 2.;
-    }
-
-    dealii::Tensor<1, dim>
-    gradient(const dealii::Point<dim>& p,
-            const unsigned int component = 0) const override
-    {
-        (void) p;
-        (void) component;
-        dealii::Tensor<1, dim> zeros;
-        for (int i = 0; i<dim; i++)
-            zeros[i] = 0.;
-        return zeros;
-    }
-};
 
 bool file_exists(const std::string& file_path)
 {
@@ -88,6 +60,19 @@ void read_parameters(dealii::ParameterHandler& prm, int argc, char const* const 
                 "The x coordinate of the rightmost point of the domain (which is a 2d square)");
     }
     prm.leave_subsection();
+    prm.declare_entry("f",
+            "0",
+            dealii::Patterns::Anything(),
+            "The right term of the equation: laplacian(u) = f");
+    prm.declare_entry("expected V solution",
+            "0",
+            dealii::Patterns::Anything(),
+            "The expected solution for the potential");
+    prm.declare_entry("expected n solution",
+            "0",
+            dealii::Patterns::Anything(),
+            "The expected solution for the electron density");
+
 
     // Check where is the parameter file
     if (argc==1) {
@@ -163,7 +148,9 @@ int main(int argc, char const* const argv[])
     }
 
     // Set the function f for the equation laplacian(u) = f
-    std::shared_ptr<dealii::Function<2>> f = std::make_shared<F<2>>();
+    std::shared_ptr<dealii::FunctionParser<2>> f = std::make_shared<dealii::FunctionParser<2>>(1);
+    std::string f_description = prm.get("f");
+    f->initialize("x, y", f_description, constants);
 
     // Read the degree of the polynomial spaces
     const int V_degree = prm.get_integer("V degree");
@@ -186,13 +173,19 @@ int main(int argc, char const* const argv[])
         Ddhdg::Solver<2> solver(current_problem, V_degree, n_degree);
         solver.run(prm.get_bool("multithreading"));
 
-        std::shared_ptr<dealii::FunctionParser<2>> expected_solution = std::make_shared<dealii::FunctionParser<2>>();
-        expected_solution->initialize("x, y", "x^2 -x + y", constants);
+        std::shared_ptr<dealii::FunctionParser<2>> expected_V_solution =
+                std::make_shared<dealii::FunctionParser<2>>();
+        std::shared_ptr<dealii::FunctionParser<2>> expected_n_solution =
+                std::make_shared<dealii::FunctionParser<2>>();
+        std::string expected_V_solution_description = prm.get("expected V solution");
+        std::string expected_n_solution_description = prm.get("expected n solution");
+        expected_V_solution->initialize("x, y", expected_V_solution_description, constants);
+        expected_n_solution->initialize("x, y", expected_n_solution_description, constants);
         std::cout << "The L2 error on V is: "
-                  << solver.estimate_l2_error(expected_solution, Ddhdg::V)
+                  << solver.estimate_l2_error(expected_V_solution, Ddhdg::V)
                   << std::endl;
         std::cout << "The L2 error on n is: "
-                  << solver.estimate_l2_error(expected_solution, Ddhdg::n)
+                  << solver.estimate_l2_error(expected_n_solution, Ddhdg::n)
                   << std::endl;
 
         solver.output_results(
