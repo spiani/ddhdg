@@ -84,6 +84,20 @@ namespace Ddhdg {
     }
 
     template<int dim>
+    dealii::ComponentMask Solver<dim>::get_component_mask(const Component component)
+    {
+        dealii::ComponentMask mask(2 * dim + 2, false);
+        switch (component) {
+        case Component::V:
+            mask.set(0, true);
+            break;
+        case Component::n:
+            mask.set(dim + 1, true);
+        }
+        return mask;
+    }
+
+    template<int dim>
     dealii::FEValuesExtractors::Scalar Solver<dim>::get_component_extractor(const Component component)
     {
         dealii::FEValuesExtractors::Scalar extractor;

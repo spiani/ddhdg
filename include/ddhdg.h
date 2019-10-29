@@ -59,6 +59,8 @@ namespace Ddhdg {
         void output_results(const std::string& solution_filename, const std::string& trace_filename);
 
     private:
+        dealii::ComponentMask get_component_mask(Component component);
+
         dealii::FEValuesExtractors::Scalar get_component_extractor(Component component);
 
         void setup_system();
