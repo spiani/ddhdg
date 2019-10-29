@@ -1,3 +1,6 @@
+#define _USE_MATH_DEFINES
+#define DEFAULT_PARAMETER_FILE "parameters.prm"
+
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_refinement.h>
 #include <deal.II/base/exceptions.h>
@@ -6,10 +9,10 @@
 
 #include <iostream>
 #include <sys/stat.h>
+#include <math.h>
 
 #include "ddhdg.h"
 
-#define DEFAULT_PARAMETER_FILE "parameters.prm"
 
 template<int dim>
 class F
@@ -37,7 +40,6 @@ public:
     }
 };
 
-
 bool file_exists(const std::string& file_path)
 {
     struct stat buffer;
@@ -62,7 +64,7 @@ void read_parameters(dealii::ParameterHandler& prm, int argc, char const* const 
             "true",
             dealii::Patterns::Bool(),
             "Shall the code run in multithreading mode?");
-    prm.enter_subsection ("boundary conditions");
+    prm.enter_subsection("boundary conditions");
     {
         prm.declare_entry("V boundary function",
                 "0",
@@ -74,7 +76,7 @@ void read_parameters(dealii::ParameterHandler& prm, int argc, char const* const 
                 "The function that will be used to specify the Dirichlet boundary conditions for n");
     }
     prm.leave_subsection();
-    prm.enter_subsection ("domain geometry");
+    prm.enter_subsection("domain geometry");
     {
         prm.declare_entry("left border",
                 "-1",
@@ -95,10 +97,11 @@ void read_parameters(dealii::ParameterHandler& prm, int argc, char const* const 
                   << DEFAULT_PARAMETER_FILE
                   << " in the current working dir..."
                   << std::endl;
-        if(file_exists(DEFAULT_PARAMETER_FILE)) {
+        if (file_exists(DEFAULT_PARAMETER_FILE)) {
             std::cout << "File found! Reading it..." << std::endl;
             prm.parse_input(DEFAULT_PARAMETER_FILE);
-        } else {
+        }
+        else {
             std::cout << "File *NOT* found! Using default values!" << std::endl;
         }
     }
@@ -107,7 +110,8 @@ void read_parameters(dealii::ParameterHandler& prm, int argc, char const* const 
         if (parameter_file_path!="-") {
             std::cout << "Reading parameter file " << parameter_file_path << std::endl;
             prm.parse_input(parameter_file_path);
-        } else {
+        }
+        else {
             std::cout << "Reading parameter file from standard input.." << std::endl;
             prm.parse_input(std::cin, std::string("File name"));
         }
@@ -117,6 +121,11 @@ void read_parameters(dealii::ParameterHandler& prm, int argc, char const* const 
 int main(int argc, char const* const argv[])
 {
     dealii::deallog.depth_console(2);
+
+    // Prepare the constants that will be used when reading the functions
+    std::map<std::string, double> constants;
+    constants.insert({"pi", M_PI});
+    constants.insert({"e", std::exp(1.0)});
 
     // Read the content of the parameter file
     dealii::ParameterHandler prm;
@@ -138,12 +147,12 @@ int main(int argc, char const* const argv[])
     // Set the boundary conditions
     std::vector<std::string> boundary_conditions = {"boundary conditions"};
     std::shared_ptr<dealii::FunctionParser<2>> V_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
-    std::string V_boundary_description = prm.get(boundary_conditions,"V boundary function");
-    V_boundary_function->initialize("x, y", V_boundary_description, std::map<std::string, double>());
+    std::string V_boundary_description = prm.get(boundary_conditions, "V boundary function");
+    V_boundary_function->initialize("x, y", V_boundary_description, constants);
 
     std::shared_ptr<dealii::FunctionParser<2>> n_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
-    std::string n_boundary_description = prm.get(boundary_conditions,"n boundary function");
-    n_boundary_function->initialize("x, y", n_boundary_description, std::map<std::string, double>());
+    std::string n_boundary_description = prm.get(boundary_conditions, "n boundary function");
+    n_boundary_function->initialize("x, y", n_boundary_description, constants);
 
     std::shared_ptr<Ddhdg::BoundaryConditionHandler<2>> boundary_handler =
             std::make_shared<Ddhdg::BoundaryConditionHandler<2>>();
@@ -178,7 +187,7 @@ int main(int argc, char const* const argv[])
         solver.run(prm.get_bool("multithreading"));
 
         std::shared_ptr<dealii::FunctionParser<2>> expected_solution = std::make_shared<dealii::FunctionParser<2>>();
-        expected_solution->initialize("x, y", "x^2 -x + y", std::map<std::string, double>());
+        expected_solution->initialize("x, y", "x^2 -x + y", constants);
         std::cout << "The L2 error on V is: "
                   << solver.estimate_l2_error(expected_solution, Ddhdg::V)
                   << std::endl;
