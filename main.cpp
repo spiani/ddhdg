@@ -4,7 +4,6 @@
 #include <deal.II/base/function_parser.h>
 #include <deal.II/base/parameter_handler.h>
 #include <deal.II/base/parsed_convergence_table.h>
-#include <deal.II/base/parsed_function.h>
 
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_refinement.h>
@@ -23,8 +22,6 @@ file_exists(const std::string &file_path)
   return (stat(file_path.c_str(), &buffer) == 0);
 }
 
-
-
 class ProblemParameters : public dealii::ParameterHandler
 {
 public:
@@ -37,14 +34,12 @@ public:
                     dealii::VectorTools::L2_norm}}){};
 
   unsigned int initial_refinements = 2;
-
-  unsigned int n_cycles = 4;
+  unsigned int n_cycles            = 4;
 
   double left  = -1;
   double right = 1;
 
   dealii::ParsedConvergenceTable error_table;
-
 
   void
   read_parameters(int argc, char const *const argv[])
@@ -64,27 +59,27 @@ public:
       "2",
       dealii::Patterns::Integer(),
       "The degree of the polynomials used to approximate the potential");
-    declare_entry(
-      "n degree",
-      "2",
-      dealii::Patterns::Integer(),
-      "The degree of the polynomials used to approximate the electron density");
+    declare_entry("n degree",
+                  "2",
+                  dealii::Patterns::Integer(),
+                  "The degree of the polynomials used to approximate the "
+                  "electron density");
     declare_entry("multithreading",
                   "true",
                   dealii::Patterns::Bool(),
                   "Shall the code run in multithreading mode?");
     enter_subsection("boundary conditions");
     {
-      declare_entry(
-        "V boundary function",
-        "0",
-        dealii::Patterns::Anything(),
-        "The function that will be used to specify the Dirichlet boundary conditions for V");
-      declare_entry(
-        "n boundary function",
-        "0",
-        dealii::Patterns::Anything(),
-        "The function that will be used to specify the Dirichlet boundary conditions for n");
+      declare_entry("V boundary function",
+                    "0",
+                    dealii::Patterns::Anything(),
+                    "The function that will be used to specify the Dirichlet "
+                    "boundary conditions for V");
+      declare_entry("n boundary function",
+                    "0",
+                    dealii::Patterns::Anything(),
+                    "The function that will be used to specify the Dirichlet "
+                    "boundary conditions for n");
     }
     leave_subsection();
     enter_subsection("domain geometry");
@@ -105,7 +100,6 @@ public:
                   "0",
                   dealii::Patterns::Anything(),
                   "The expected solution for the electron density");
-
 
     // Check where is the parameter file
     if (argc == 1)
@@ -199,7 +193,6 @@ main(int argc, char **argv)
   const int V_degree = prm.get_integer("V degree");
   const int n_degree = prm.get_integer("n degree");
 
-
   // Create a triangulation
   std::shared_ptr<dealii::Triangulation<2>> triangulation =
     std::make_shared<dealii::Triangulation<2>>();
@@ -207,7 +200,6 @@ main(int argc, char **argv)
   dealii::GridGenerator::hyper_cube(*triangulation, prm.left, prm.right, true);
 
   triangulation->refine_global(prm.initial_refinements);
-
 
   std::shared_ptr<dealii::FunctionParser<2>> expected_V_solution =
     std::make_shared<dealii::FunctionParser<2>>();
@@ -230,7 +222,6 @@ main(int argc, char **argv)
 
   prm.print_parameters(std::cout, dealii::ParameterHandler::Text);
 
-
   for (unsigned int cycle = 0; cycle < prm.n_cycles; ++cycle)
     {
       // Create the main problem that must be solved
@@ -247,7 +238,6 @@ main(int argc, char **argv)
       triangulation->refine_global(1);
     }
   prm.error_table.output_table(std::cout);
-
 
   return 0;
 }

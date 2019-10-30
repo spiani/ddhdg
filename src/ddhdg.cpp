@@ -70,25 +70,12 @@ namespace Ddhdg
 
     constraints.clear();
     DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-
-    // TODO: Old bc; remove and implement in a weak form
-    /*if (boundary_handler->has_dirichlet_boundary_conditions()) {
-        std::cout << dof_handler.get_fe(0).n_components() << std::endl;
-        boundary_maps<dim> dirichlet_boundary_maps =
-    boundary_handler->get_dirichlet_boundary_maps(); for (auto const&
-    boundary_map : dirichlet_boundary_maps) { auto component =
-    boundary_map.first; auto boundary_function_map = boundary_map.second;
-            VectorTools::project_boundary_values(dof_handler,
-                    boundary_function_map,
-                    QGauss<dim-1>(fe.degree+1),
-                    constraints);
-        }
-    }*/
     constraints.close();
+
     {
       DynamicSparsityPattern dsp(dof_handler.n_dofs());
       DoFTools::make_sparsity_pattern(dof_handler, dsp, constraints, false);
-      sparsity_pattern.copy_from(dsp); //, fe.dofs_per_face);
+      sparsity_pattern.copy_from(dsp);
     }
     system_matrix.reinit(sparsity_pattern);
   }
