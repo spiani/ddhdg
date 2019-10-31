@@ -60,14 +60,15 @@ namespace Ddhdg
     double
     estimate_l2_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
-      Component                                    c);
+      Component                                    c) const;
 
     void
-    output_results(const std::string &solution_filename);
+    output_results(const std::string &solution_filename) const;
 
     void
     output_results(const std::string &solution_filename,
-                   const std::string &trace_filename);
+                   const std::string &trace_filename) const;
+
 
     // private:
     dealii::ComponentMask
@@ -75,6 +76,10 @@ namespace Ddhdg
 
     dealii::FEValuesExtractors::Scalar
     get_component_extractor(Component component);
+
+    static std::unique_ptr<dealii::Triangulation<dim>>
+    copy_triangulation(
+      std::shared_ptr<const dealii::Triangulation<dim>> triangulation);
 
     void
     setup_system();
@@ -100,7 +105,7 @@ namespace Ddhdg
     void
     copy_local_to_global(const PerTaskData &data);
 
-    const std::shared_ptr<const Triangulation<dim>>            triangulation;
+    const std::unique_ptr<Triangulation<dim>>                  triangulation;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
     const std::shared_ptr<const Function<dim>>                 f;
 

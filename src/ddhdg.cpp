@@ -29,6 +29,17 @@
 namespace Ddhdg
 {
   template <int dim>
+  std::unique_ptr<dealii::Triangulation<dim>>
+  Solver<dim>::copy_triangulation(
+    const std::shared_ptr<const dealii::Triangulation<dim>> triangulation)
+  {
+    std::unique_ptr<dealii::Triangulation<dim>> new_triangulation =
+      std::make_unique<dealii::Triangulation<dim>>();
+    new_triangulation->copy_triangulation(*triangulation);
+    return new_triangulation;
+  }
+
+  template <int dim>
   Solver<dim>::Solver(const Problem<dim> &problem, const unsigned int degree)
     : Solver(problem, degree, degree)
   {}
@@ -37,7 +48,7 @@ namespace Ddhdg
   Solver<dim>::Solver(const Problem<dim> &problem,
                       const unsigned int  v_degree,
                       const unsigned int  n_degree)
-    : triangulation(problem.triangulation)
+    : triangulation(copy_triangulation(problem.triangulation))
     , boundary_handler(problem.boundary_handler)
     , f(problem.f)
     , fe_local(FE_DGQ<dim>(v_degree),
@@ -656,7 +667,7 @@ namespace Ddhdg
   Solver<dim>::estimate_l2_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
                            expected_solution,
-    const Ddhdg::Component c)
+    const Ddhdg::Component c) const
   {
     Vector<double> difference_per_cell(triangulation->n_active_cells());
 
@@ -698,7 +709,7 @@ namespace Ddhdg
 
   template <int dim>
   void
-  Solver<dim>::output_results(const std::string &solution_filename)
+  Solver<dim>::output_results(const std::string &solution_filename) const
   {
     std::ofstream         output(solution_filename);
     DataOut<dim>          data_out;
@@ -735,7 +746,7 @@ namespace Ddhdg
   template <>
   void
   Solver<1>::output_results(const std::string &solution_filename,
-                            const std::string &trace_filename)
+                            const std::string &trace_filename) const
   {
     (void)solution_filename;
     (void)trace_filename;
@@ -745,7 +756,7 @@ namespace Ddhdg
   template <int dim>
   void
   Solver<dim>::output_results(const std::string &solution_filename,
-                              const std::string &trace_filename)
+                              const std::string &trace_filename) const
   {
     output_results(solution_filename);
 
