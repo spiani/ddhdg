@@ -31,19 +31,11 @@ public:
                    {dealii::VectorTools::H1_norm, dealii::VectorTools::L2_norm},
                    {},
                    {dealii::VectorTools::H1_norm,
-                    dealii::VectorTools::L2_norm}}){};
-
-  unsigned int initial_refinements = 2;
-  unsigned int n_cycles            = 4;
-
-  double left  = -1;
-  double right = 1;
-
-  dealii::ParsedConvergenceTable error_table;
-
-  void
-  read_parameters(int argc, char const *const argv[])
+                    dealii::VectorTools::L2_norm}})
   {
+    constants.insert({"pi", M_PI});
+    constants.insert({"e", std::exp(1.0)});
+
     enter_subsection("Error table");
     error_table.add_parameters(*this);
     leave_subsection();
@@ -54,32 +46,28 @@ public:
 
     add_parameter("number of refinement cycles", n_cycles);
 
-    declare_entry(
+    add_parameter(
       "V degree",
-      "2",
-      dealii::Patterns::Integer(),
+      V_degree,
       "The degree of the polynomials used to approximate the potential");
-    declare_entry("n degree",
-                  "2",
-                  dealii::Patterns::Integer(),
-                  "The degree of the polynomials used to approximate the "
-                  "electron density");
-    declare_entry("multithreading",
-                  "true",
-                  dealii::Patterns::Bool(),
+    add_parameter(
+      "n degree",
+      n_degree,
+      "The degree of the polynomials used to approximate the electron density");
+    add_parameter("multithreading",
+                  multithreading,
                   "Shall the code run in multithreading mode?");
+
     enter_subsection("boundary conditions");
     {
-      declare_entry("V boundary function",
-                    "0",
-                    dealii::Patterns::Anything(),
-                    "The function that will be used to specify the Dirichlet "
-                    "boundary conditions for V");
-      declare_entry("n boundary function",
-                    "0",
-                    dealii::Patterns::Anything(),
-                    "The function that will be used to specify the Dirichlet "
-                    "boundary conditions for n");
+      add_parameter(
+        "V boundary function",
+        V_boundary_function_str,
+        "The function that will be used to specify the Dirichlet boundary conditions for V");
+      add_parameter(
+        "n boundary function",
+        V_boundary_function_str,
+        "The function that will be used to specify the Dirichlet boundary conditions for n");
     }
     leave_subsection();
     enter_subsection("domain geometry");
@@ -88,54 +76,106 @@ public:
       add_parameter("right border", right);
     }
     leave_subsection();
-    declare_entry("f",
-                  "0",
-                  dealii::Patterns::Anything(),
+    add_parameter("f",
+                  f_str,
                   "The right term of the equation: laplacian(u) = f");
-    declare_entry("expected V solution",
-                  "0",
-                  dealii::Patterns::Anything(),
+    add_parameter("expected V solution",
+                  expected_V_solution_str,
                   "The expected solution for the potential");
-    declare_entry("expected n solution",
-                  "0",
-                  dealii::Patterns::Anything(),
+    add_parameter("expected n solution",
+                  expected_n_solution_str,
                   "The expected solution for the electron density");
+  };
 
-    // Check where is the parameter file
-    if (argc == 1)
+  unsigned int initial_refinements = 2;
+  unsigned int n_cycles            = 4;
+
+  double left  = -1;
+  double right = 1;
+
+  unsigned int V_degree = 1;
+  unsigned int n_degree = 1;
+
+  bool multithreading = true;
+
+  std::string f_str = "0.";
+
+  std::shared_ptr<dealii::FunctionParser<2>> f;
+
+  std::string expected_V_solution_str = "0.";
+  std::string expected_n_solution_str = "0.";
+
+  std::shared_ptr<dealii::FunctionParser<2>> expected_V_solution;
+  std::shared_ptr<dealii::FunctionParser<2>> expected_n_solution;
+
+  std::string V_boundary_function_str = "0.";
+  std::string n_boundary_function_str = "0.";
+
+  std::shared_ptr<dealii::FunctionParser<2>> V_boundary_function;
+  std::shared_ptr<dealii::FunctionParser<2>> n_boundary_function;
+
+  std::map<std::string, double> constants;
+
+  dealii::ParsedConvergenceTable error_table;
+
+  void
+  read_parameters_file()
+  {
+    std::cout << "No parameter file submitted from command line. " << std::endl
+              << "Looking for a file named " << DEFAULT_PARAMETER_FILE
+              << " in the current working dir..." << std::endl;
+    if (file_exists(DEFAULT_PARAMETER_FILE))
       {
-        std::cout << "No parameter file submitted from command line. "
-                  << std::endl
-                  << "Looking for a file named " << DEFAULT_PARAMETER_FILE
-                  << " in the current working dir..." << std::endl;
-        if (file_exists(DEFAULT_PARAMETER_FILE))
-          {
-            std::cout << "File found! Reading it..." << std::endl;
-            parse_input(DEFAULT_PARAMETER_FILE);
-          }
-        else
-          {
-            std::cout << "File *NOT* found! Using default values!" << std::endl;
-          }
+        std::cout << "File found! Reading it..." << std::endl;
+        read_parameters_file(DEFAULT_PARAMETER_FILE);
       }
     else
       {
-        std::string parameter_file_path(argv[1]);
-        if (parameter_file_path != "-")
-          {
-            std::cout << "Reading parameter file " << parameter_file_path
-                      << std::endl;
-            parse_input(parameter_file_path);
-          }
-        else
-          {
-            std::cout << "Reading parameter file from standard input.."
-                      << std::endl;
-            parse_input(std::cin, std::string("File name"));
-          }
+        std::cout << "File *NOT* found! Using default values!" << std::endl;
       }
-    std::ofstream ofile("used_parameters.prm");
-    print_parameters(ofile, dealii::ParameterHandler::ShortText);
+    after_reading_operations();
+  }
+
+  void
+  read_parameters_file(const std::string &parameters_file_path)
+  {
+    std::cout << "Reading parameter file " << parameters_file_path << std::endl;
+    parse_input(parameters_file_path);
+    after_reading_operations();
+  }
+
+  void
+  read_parameters_from_stdin()
+  {
+    std::cout << "Reading parameter file from standard input.." << std::endl;
+    parse_input(std::cin, std::string("File name"));
+    after_reading_operations();
+  }
+
+private:
+  void
+  parse_arguments()
+  {
+    f                   = std::make_shared<dealii::FunctionParser<2>>(1);
+    expected_V_solution = std::make_shared<dealii::FunctionParser<2>>(1);
+    expected_n_solution = std::make_shared<dealii::FunctionParser<2>>(1);
+    V_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
+    n_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
+
+    f->initialize("x, y", f_str, constants);
+    expected_V_solution->initialize("x, y", expected_V_solution_str, constants);
+    expected_n_solution->initialize("x, y", expected_n_solution_str, constants);
+    V_boundary_function->initialize("x, y", V_boundary_function_str, constants);
+    n_boundary_function->initialize("x, y", n_boundary_function_str, constants);
+  }
+
+  void
+  after_reading_operations()
+  {
+    parse_arguments();
+
+    // std::ofstream ofile("used_parameters.prm");
+    print_parameters(std::cout, dealii::ParameterHandler::ShortText);
   }
 };
 
@@ -145,29 +185,11 @@ main(int argc, char **argv)
   dealii::Utilities::MPI::MPI_InitFinalize initialization(argc, argv);
   dealii::deallog.depth_console(2);
 
-  // Prepare the constants that will be used when reading the functions
-  std::map<std::string, double> constants;
-  constants.insert({"pi", M_PI});
-  constants.insert({"e", std::exp(1.0)});
-
   // Read the content of the parameter file
   ProblemParameters prm;
-  prm.read_parameters(argc, argv);
+  prm.read_parameters_file();
 
   // Set the boundary conditions
-  std::vector<std::string> boundary_conditions = {"boundary conditions"};
-  std::shared_ptr<dealii::FunctionParser<2>> V_boundary_function =
-    std::make_shared<dealii::FunctionParser<2>>(1);
-  std::string V_boundary_description =
-    prm.get(boundary_conditions, "V boundary function");
-  V_boundary_function->initialize("x, y", V_boundary_description, constants);
-
-  std::shared_ptr<dealii::FunctionParser<2>> n_boundary_function =
-    std::make_shared<dealii::FunctionParser<2>>(1);
-  std::string n_boundary_description =
-    prm.get(boundary_conditions, "n boundary function");
-  n_boundary_function->initialize("x, y", n_boundary_description, constants);
-
   std::shared_ptr<Ddhdg::BoundaryConditionHandler<2>> boundary_handler =
     std::make_shared<Ddhdg::BoundaryConditionHandler<2>>();
 
@@ -176,22 +198,12 @@ main(int argc, char **argv)
       boundary_handler->add_boundary_condition(i,
                                                Ddhdg::dirichlet,
                                                Ddhdg::V,
-                                               V_boundary_function);
+                                               prm.V_boundary_function);
       boundary_handler->add_boundary_condition(i,
                                                Ddhdg::dirichlet,
                                                Ddhdg::n,
-                                               n_boundary_function);
+                                               prm.n_boundary_function);
     }
-
-  // Set the function f for the equation laplacian(u) = f
-  std::shared_ptr<dealii::FunctionParser<2>> f =
-    std::make_shared<dealii::FunctionParser<2>>(1);
-  std::string f_description = prm.get("f");
-  f->initialize("x, y", f_description, constants);
-
-  // Read the degree of the polynomial spaces
-  const int V_degree = prm.get_integer("V degree");
-  const int n_degree = prm.get_integer("n degree");
 
   // Create a triangulation
   std::shared_ptr<dealii::Triangulation<2>> triangulation =
@@ -201,33 +213,20 @@ main(int argc, char **argv)
 
   triangulation->refine_global(prm.initial_refinements);
 
-  std::shared_ptr<dealii::FunctionParser<2>> expected_V_solution =
-    std::make_shared<dealii::FunctionParser<2>>();
-  std::shared_ptr<dealii::FunctionParser<2>> expected_n_solution =
-    std::make_shared<dealii::FunctionParser<2>>();
-  std::string expected_V_solution_description = prm.get("expected V solution");
-  std::string expected_n_solution_description = prm.get("expected n solution");
-  expected_V_solution->initialize("x, y",
-                                  expected_V_solution_description,
-                                  constants);
-  expected_n_solution->initialize("x, y",
-                                  expected_n_solution_description,
-                                  constants);
-
   dealii::FunctionParser<2> exact_solution(6);
   exact_solution.initialize("x,y",
-                            "0;0;" + expected_V_solution_description + ";0;0;" +
-                              expected_n_solution_description,
-                            constants);
+                            "0;0;" + prm.expected_V_solution_str + ";0;0;" +
+                              prm.expected_n_solution_str,
+                            prm.constants);
 
   prm.print_parameters(std::cout, dealii::ParameterHandler::Text);
 
   for (unsigned int cycle = 0; cycle < prm.n_cycles; ++cycle)
     {
       // Create the main problem that must be solved
-      Ddhdg::Problem<2> current_problem(triangulation, boundary_handler, f);
-      Ddhdg::Solver<2>  solver(current_problem, V_degree, n_degree);
-      solver.run(prm.get_bool("multithreading"));
+      Ddhdg::Problem<2> current_problem(triangulation, boundary_handler, prm.f);
+      Ddhdg::Solver<2>  solver(current_problem, prm.V_degree, prm.n_degree);
+      solver.run(prm.multithreading);
 
       prm.error_table.error_from_exact(solver.dof_handler_local,
                                        solver.solution_local,

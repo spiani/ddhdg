@@ -88,10 +88,10 @@ namespace Ddhdg
     switch (component)
       {
         case Component::V:
-          mask.set(0, true);
+          mask.set(dim, true);
           break;
         case Component::n:
-          mask.set(dim + 1, true);
+          mask.set(2 * dim + 1, true);
       }
     return mask;
   }
@@ -104,10 +104,10 @@ namespace Ddhdg
     switch (component)
       {
         case Component::V:
-          extractor = dealii::FEValuesExtractors::Scalar(0);
+          extractor = dealii::FEValuesExtractors::Scalar(dim);
           break;
         case Component::n:
-          extractor = dealii::FEValuesExtractors::Scalar(dim + 1);
+          extractor = dealii::FEValuesExtractors::Scalar(2 * dim + 1);
       }
     return extractor;
   }
