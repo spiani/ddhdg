@@ -51,12 +51,14 @@ namespace Ddhdg
   public:
     Solver(const Problem<dim> &problem,
            unsigned int        degree,
-           bool                multithrading = true);
+           bool                iterative_linear_solver = false,
+           bool                multithrading           = true);
 
     Solver(const Problem<dim> &problem,
            unsigned int        v_degree,
            unsigned int        n_degree,
-           bool                multithreading = true);
+           bool                iterative_linear_solver = false,
+           bool                multithreading          = true);
 
     void
     refine_grid(unsigned int i = 1)
@@ -127,7 +129,8 @@ namespace Ddhdg
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
     const std::shared_ptr<const Function<dim>>                 f;
 
-    const bool multithreading = true;
+    const bool iterative_linear_solver = true;
+    const bool multithreading          = true;
 
     FESystem<dim>   fe_local;
     DoFHandler<dim> dof_handler_local;

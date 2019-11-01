@@ -2,6 +2,7 @@ set initial refinements             = 2
 set number of refinement cycles     = 6
 set V degree                        = 3
 set n degree                        = 3
+set use iterative linear solver     = false
 set multithreading                  = true
 set f                               = -pi^2/2*cos(pi/2*x)*cos(pi/2*y)
 

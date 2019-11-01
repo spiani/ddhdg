@@ -41,18 +41,21 @@ namespace Ddhdg
   template <int dim>
   Solver<dim>::Solver(const Problem<dim> &problem,
                       const unsigned int  degree,
+                      const bool          iterative_linear_solver,
                       const bool          multithreading)
-    : Solver(problem, degree, degree, multithreading)
+    : Solver(problem, degree, degree, iterative_linear_solver, multithreading)
   {}
 
   template <int dim>
   Solver<dim>::Solver(const Problem<dim> &problem,
                       const unsigned int  v_degree,
                       const unsigned int  n_degree,
+                      const bool          iterative_linear_solver,
                       const bool          multithreading)
     : triangulation(copy_triangulation(problem.triangulation))
     , boundary_handler(problem.boundary_handler)
     , f(problem.f)
+    , iterative_linear_solver(iterative_linear_solver)
     , multithreading(multithreading)
     , fe_local(FE_DGQ<dim>(v_degree),
                dim,
@@ -624,15 +627,14 @@ namespace Ddhdg
     SolverControl solver_control(system_matrix.m() * 10,
                                  1e-11 * system_rhs.l2_norm());
 
-    bool use_iterative_solver = false;
-    if (use_iterative_solver == true)
+    if (iterative_linear_solver)
       {
         SolverGMRES<> linear_solver(solver_control);
         linear_solver.solve(system_matrix,
                             solution,
                             system_rhs,
                             PreconditionIdentity());
-        std::cout << "   Number of BICGSTAB iterations: "
+        std::cout << "   Number of GMRES iterations: "
                   << solver_control.last_step() << std::endl;
       }
     else

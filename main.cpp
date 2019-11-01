@@ -48,6 +48,9 @@ public:
       "n degree",
       n_degree,
       "The degree of the polynomials used to approximate the electron density");
+    add_parameter("use iterative linear solver",
+                  iterative_linear_solver,
+                  "Shall the code use an iterative linear solver (GMRES)?");
     add_parameter("multithreading",
                   multithreading,
                   "Shall the code run in multithreading mode?");
@@ -90,7 +93,8 @@ public:
   unsigned int V_degree = 1;
   unsigned int n_degree = 1;
 
-  bool multithreading = true;
+  bool iterative_linear_solver = true;
+  bool multithreading          = true;
 
   std::string f_str = "0.";
 
@@ -212,6 +216,7 @@ main(int argc, char **argv)
   Ddhdg::Solver<2> solver(current_problem,
                           prm.V_degree,
                           prm.n_degree,
+                          prm.iterative_linear_solver,
                           prm.multithreading);
 
   std::cout << std::endl
