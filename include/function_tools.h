@@ -55,4 +55,4 @@ namespace Ddhdg
                    const std::shared_ptr<const dealii::Function<dim>>>
       component_map;
   };
-}
+} // namespace Ddhdg

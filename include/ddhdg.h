@@ -17,6 +17,7 @@
 #include <iostream>
 
 #include "boundary_conditions.h"
+#include "convergence_table.h"
 
 namespace Ddhdg
 {
@@ -48,14 +49,24 @@ namespace Ddhdg
   class Solver
   {
   public:
-    Solver(const Problem<dim> &problem, unsigned int degree);
+    Solver(const Problem<dim> &problem,
+           unsigned int        degree,
+           bool                multithrading = true);
 
     Solver(const Problem<dim> &problem,
            unsigned int        v_degree,
-           unsigned int        n_degree);
+           unsigned int        n_degree,
+           bool                multithreading = true);
 
     void
-    run(bool parallel = true);
+    refine_grid(unsigned int i = 1)
+    {
+      triangulation->refine_global(i);
+      this->setup_system();
+    }
+
+    void
+    run();
 
     double
     estimate_l2_error(
@@ -69,8 +80,15 @@ namespace Ddhdg
     output_results(const std::string &solution_filename,
                    const std::string &trace_filename) const;
 
+    void
+    print_convergence_table(
+      std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
+      std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
+      std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
+      unsigned int                                 n_cycles,
+      unsigned int                                 initial_refinements = 0);
 
-    // private:
+  private:
     dealii::ComponentMask
     get_component_mask(Component component);
 
@@ -108,6 +126,8 @@ namespace Ddhdg
     const std::unique_ptr<Triangulation<dim>>                  triangulation;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
     const std::shared_ptr<const Function<dim>>                 f;
+
+    const bool multithreading = true;
 
     FESystem<dim>   fe_local;
     DoFHandler<dim> dof_handler_local;

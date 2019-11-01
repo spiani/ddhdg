@@ -3,7 +3,6 @@
 #include <deal.II/base/exceptions.h>
 #include <deal.II/base/function_parser.h>
 #include <deal.II/base/parameter_handler.h>
-#include <deal.II/base/parsed_convergence_table.h>
 
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_refinement.h>
@@ -26,21 +25,16 @@ class ProblemParameters : public dealii::ParameterHandler
 {
 public:
   ProblemParameters()
-    : error_table({"E", "E", "V", "W", "W", "n"},
-                  {{},
-                   {dealii::VectorTools::H1_norm, dealii::VectorTools::L2_norm},
-                   {},
-                   {dealii::VectorTools::H1_norm,
-                    dealii::VectorTools::L2_norm}})
+    : error_table(std::make_shared<Ddhdg::ConvergenceTable>())
   {
     constants.insert({"pi", M_PI});
     constants.insert({"e", std::exp(1.0)});
 
     enter_subsection("Error table");
-    error_table.add_parameters(*this);
+    error_table->add_parameters(*this);
     leave_subsection();
 
-    add_parameter("number of refinements",
+    add_parameter("initial refinements",
                   initial_refinements,
                   "How many time the square grid will be refined");
 
@@ -66,7 +60,7 @@ public:
         "The function that will be used to specify the Dirichlet boundary conditions for V");
       add_parameter(
         "n boundary function",
-        V_boundary_function_str,
+        n_boundary_function_str,
         "The function that will be used to specify the Dirichlet boundary conditions for n");
     }
     leave_subsection();
@@ -116,7 +110,7 @@ public:
 
   std::map<std::string, double> constants;
 
-  dealii::ParsedConvergenceTable error_table;
+  std::shared_ptr<Ddhdg::ConvergenceTable> error_table;
 
   void
   read_parameters_file()
@@ -132,8 +126,8 @@ public:
     else
       {
         std::cout << "File *NOT* found! Using default values!" << std::endl;
+        after_reading_operations();
       }
-    after_reading_operations();
   }
 
   void
@@ -189,6 +183,12 @@ main(int argc, char **argv)
   ProblemParameters prm;
   prm.read_parameters_file();
 
+  // Create a triangulation
+  std::shared_ptr<dealii::Triangulation<2>> triangulation =
+    std::make_shared<dealii::Triangulation<2>>();
+
+  dealii::GridGenerator::hyper_cube(*triangulation, prm.left, prm.right, true);
+
   // Set the boundary conditions
   std::shared_ptr<Ddhdg::BoundaryConditionHandler<2>> boundary_handler =
     std::make_shared<Ddhdg::BoundaryConditionHandler<2>>();
@@ -205,38 +205,28 @@ main(int argc, char **argv)
                                                prm.n_boundary_function);
     }
 
-  // Create a triangulation
-  std::shared_ptr<dealii::Triangulation<2>> triangulation =
-    std::make_shared<dealii::Triangulation<2>>();
+  // Create an object that represent the problem we are going to solve
+  Ddhdg::Problem<2> current_problem(triangulation, boundary_handler, prm.f);
 
-  dealii::GridGenerator::hyper_cube(*triangulation, prm.left, prm.right, true);
+  // Create a solver for the problem
+  Ddhdg::Solver<2> solver(current_problem,
+                          prm.V_degree,
+                          prm.n_degree,
+                          prm.multithreading);
 
-  triangulation->refine_global(prm.initial_refinements);
-
-  dealii::FunctionParser<2> exact_solution(6);
-  exact_solution.initialize("x,y",
-                            "0;0;" + prm.expected_V_solution_str + ";0;0;" +
-                              prm.expected_n_solution_str,
-                            prm.constants);
-
-  prm.print_parameters(std::cout, dealii::ParameterHandler::Text);
-
-  for (unsigned int cycle = 0; cycle < prm.n_cycles; ++cycle)
-    {
-      // Create the main problem that must be solved
-      Ddhdg::Problem<2> current_problem(triangulation, boundary_handler, prm.f);
-      Ddhdg::Solver<2>  solver(current_problem, prm.V_degree, prm.n_degree);
-      solver.run(prm.multithreading);
-
-      prm.error_table.error_from_exact(solver.dof_handler_local,
-                                       solver.solution_local,
-                                       exact_solution);
-
-      solver.output_results("solution_" + std::to_string(cycle) + ".vtk",
-                            "trace_" + std::to_string(cycle) + ".vtk");
-      triangulation->refine_global(1);
-    }
-  prm.error_table.output_table(std::cout);
+  std::cout << std::endl
+            << std::endl
+            << "--------------------------------------------------------------"
+            << std::endl
+            << "STARTING COMPUTATION" << std::endl
+            << "--------------------------------------------------------------"
+            << std::endl
+            << std::endl;
+  solver.print_convergence_table(prm.error_table,
+                                 prm.expected_V_solution,
+                                 prm.expected_n_solution,
+                                 prm.n_cycles,
+                                 prm.initial_refinements);
 
   return 0;
 }

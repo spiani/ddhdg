@@ -11,7 +11,6 @@
 #include <deal.II/lac/dynamic_sparsity_pattern.h>
 #include <deal.II/lac/full_matrix.h>
 #include <deal.II/lac/precondition.h>
-#include <deal.II/lac/solver_bicgstab.h>
 #include <deal.II/lac/solver_gmres.h>
 #include <deal.II/lac/sparse_direct.h>
 #include <deal.II/lac/trilinos_precondition.h>
@@ -40,17 +39,21 @@ namespace Ddhdg
   }
 
   template <int dim>
-  Solver<dim>::Solver(const Problem<dim> &problem, const unsigned int degree)
-    : Solver(problem, degree, degree)
+  Solver<dim>::Solver(const Problem<dim> &problem,
+                      const unsigned int  degree,
+                      const bool          multithreading)
+    : Solver(problem, degree, degree, multithreading)
   {}
 
   template <int dim>
   Solver<dim>::Solver(const Problem<dim> &problem,
                       const unsigned int  v_degree,
-                      const unsigned int  n_degree)
+                      const unsigned int  n_degree,
+                      const bool          multithreading)
     : triangulation(copy_triangulation(problem.triangulation))
     , boundary_handler(problem.boundary_handler)
     , f(problem.f)
+    , multithreading(multithreading)
     , fe_local(FE_DGQ<dim>(v_degree),
                dim,
                FE_DGQ<dim>(v_degree),
@@ -638,25 +641,23 @@ namespace Ddhdg
         Ainv.initialize(system_matrix);
         Ainv.vmult(solution, system_rhs);
       }
-    // system_matrix.clear();
-    // sparsity_pattern.reinit(0, 0, 0, 1);
     constraints.distribute(solution);
   }
 
   template <int dim>
   void
-  Solver<dim>::run(const bool parallel)
+  Solver<dim>::run()
   {
     setup_system();
 
-    if (parallel)
+    if (multithreading)
       assemble_system_multithreaded(false);
     else
       assemble_system(false);
 
     solve();
 
-    if (parallel)
+    if (multithreading)
       assemble_system_multithreaded(true);
     else
       assemble_system(true);
@@ -711,11 +712,11 @@ namespace Ddhdg
   void
   Solver<dim>::output_results(const std::string &solution_filename) const
   {
-    std::ofstream         output(solution_filename);
-    DataOut<dim>          data_out;
-    DataOutBase::VtkFlags flags;
-    flags.write_higher_order_cells = true;
-    data_out.set_flags(flags);
+    std::ofstream output(solution_filename);
+    DataOut<dim>  data_out;
+    // DataOutBase::VtkFlags flags;
+    // flags.write_higher_order_cells = true;
+    // data_out.set_flags(flags);
 
     std::vector<std::string> names(dim, "electric_field");
     names.emplace_back("electric_potential");
@@ -773,6 +774,39 @@ namespace Ddhdg
     data_out_face.build_patches(fe.degree);
     data_out_face.write_vtk(face_output);
   }
+
+  template <int dim>
+  void
+  Solver<dim>::print_convergence_table(
+    std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
+    std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
+    std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
+    unsigned int                                 n_cycles,
+    unsigned int                                 initial_refinements)
+  {
+    this->refine_grid(initial_refinements);
+
+
+    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
+      components;
+    components.insert({dim, expected_V_solution});
+    components.insert({2 * dim + 1, expected_n_solution});
+    FunctionByComponents expected_solution(6, components);
+
+    for (unsigned int cycle = 0; cycle < n_cycles; ++cycle)
+      {
+        this->run();
+        error_table->error_from_exact(dof_handler_local,
+                                      solution_local,
+                                      expected_solution);
+
+        // this->output_results("solution_" + std::to_string(cycle) + ".vtk",
+        //"trace_" + std::to_string(cycle) + ".vtk");
+        this->refine_grid(1);
+      }
+    error_table->output_table(std::cout);
+  }
+
 
   template class Solver<1>;
 
