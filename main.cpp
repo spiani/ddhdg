@@ -48,6 +48,7 @@ public:
       "n degree",
       n_degree,
       "The degree of the polynomials used to approximate the electron density");
+    add_parameter("tau", tau, "The value of the stabilization constant");
     add_parameter("use iterative linear solver",
                   iterative_linear_solver,
                   "Shall the code use an iterative linear solver (GMRES)?");
@@ -92,6 +93,8 @@ public:
 
   unsigned int V_degree = 1;
   unsigned int n_degree = 1;
+
+  double tau = 1.;
 
   bool iterative_linear_solver = true;
   bool multithreading          = true;
@@ -210,14 +213,21 @@ main(int argc, char **argv)
     }
 
   // Create an object that represent the problem we are going to solve
-  Ddhdg::Problem<2> current_problem(triangulation, boundary_handler, prm.f);
+  std::shared_ptr<const Ddhdg::Problem<2>> problem =
+    std::make_shared<const Ddhdg::Problem<2>>(triangulation,
+                                              boundary_handler,
+                                              prm.f);
+
+  // Coose the parameters for the solver
+  std::shared_ptr<const Ddhdg::SolverParameters> parameters =
+    std::make_shared<const Ddhdg::SolverParameters>(prm.V_degree,
+                                                    prm.n_degree,
+                                                    prm.tau,
+                                                    prm.iterative_linear_solver,
+                                                    prm.multithreading);
 
   // Create a solver for the problem
-  Ddhdg::Solver<2> solver(current_problem,
-                          prm.V_degree,
-                          prm.n_degree,
-                          prm.iterative_linear_solver,
-                          prm.multithreading);
+  Ddhdg::Solver<2> solver(problem, parameters);
 
   std::cout << std::endl
             << std::endl

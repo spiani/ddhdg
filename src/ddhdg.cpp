@@ -39,34 +39,25 @@ namespace Ddhdg
   }
 
   template <int dim>
-  Solver<dim>::Solver(const Problem<dim> &problem,
-                      const unsigned int  degree,
-                      const bool          iterative_linear_solver,
-                      const bool          multithreading)
-    : Solver(problem, degree, degree, iterative_linear_solver, multithreading)
-  {}
-
-  template <int dim>
-  Solver<dim>::Solver(const Problem<dim> &problem,
-                      const unsigned int  v_degree,
-                      const unsigned int  n_degree,
-                      const bool          iterative_linear_solver,
-                      const bool          multithreading)
-    : triangulation(copy_triangulation(problem.triangulation))
-    , boundary_handler(problem.boundary_handler)
-    , f(problem.f)
-    , iterative_linear_solver(iterative_linear_solver)
-    , multithreading(multithreading)
-    , fe_local(FE_DGQ<dim>(v_degree),
+  Solver<dim>::Solver(const std::shared_ptr<const Problem<dim>>     problem,
+                      const std::shared_ptr<const SolverParameters> parameters)
+    : triangulation(copy_triangulation(problem->triangulation))
+    , boundary_handler(problem->boundary_handler)
+    , f(problem->f)
+    , parameters(parameters)
+    , fe_local(FE_DGQ<dim>(parameters->V_degree),
                dim,
-               FE_DGQ<dim>(v_degree),
+               FE_DGQ<dim>(parameters->V_degree),
                1,
-               FE_DGQ<dim>(n_degree),
+               FE_DGQ<dim>(parameters->n_degree),
                dim,
-               FE_DGQ<dim>(n_degree),
+               FE_DGQ<dim>(parameters->n_degree),
                1)
     , dof_handler_local(*triangulation)
-    , fe(FE_FaceQ<dim>(v_degree), 1, FE_FaceQ<dim>(n_degree), 1)
+    , fe(FE_FaceQ<dim>(parameters->V_degree),
+         1,
+         FE_FaceQ<dim>(parameters->n_degree),
+         1)
     , dof_handler(*triangulation)
   {}
 
@@ -197,7 +188,8 @@ namespace Ddhdg
                                                             cell->level(),
                                                             cell->index(),
                                                             &dof_handler_local);
-    const double                                   tau_stab = 1.;
+
+    const double tau_stab = parameters->tau;
 
     const unsigned int n_q_points =
       scratch.fe_values_local.get_quadrature().size();
@@ -213,13 +205,13 @@ namespace Ddhdg
     const FEValuesExtractors::Scalar electric_field_trace(0);
     const FEValuesExtractors::Scalar electron_density_trace(1);
 
-    bool   V_has_dirichlet_conditions = false;
-    bool   n_has_dirichlet_conditions = false;
-    double V_dbc_value                = 0.;
-    double n_dbc_value                = 0.;
+    bool   V_has_dirichlet_conditions;
+    bool   n_has_dirichlet_conditions;
+    double V_dbc_value = 0.;
+    double n_dbc_value = 0.;
 
-    bool V_has_neumann_conditions = false;
-    bool n_has_neumann_conditions = false;
+    bool V_has_neumann_conditions;
+    bool n_has_neumann_conditions;
 
     scratch.ll_matrix = 0;
     scratch.l_rhs     = 0;
@@ -627,7 +619,7 @@ namespace Ddhdg
     SolverControl solver_control(system_matrix.m() * 10,
                                  1e-11 * system_rhs.l2_norm());
 
-    if (iterative_linear_solver)
+    if (parameters->iterative_linear_solver)
       {
         SolverGMRES<> linear_solver(solver_control);
         linear_solver.solve(system_matrix,
@@ -652,14 +644,14 @@ namespace Ddhdg
   {
     setup_system();
 
-    if (multithreading)
+    if (parameters->multithreading)
       assemble_system_multithreaded(false);
     else
       assemble_system(false);
 
     solve();
 
-    if (multithreading)
+    if (parameters->multithreading)
       assemble_system_multithreaded(true);
     else
       assemble_system(true);

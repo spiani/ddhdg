@@ -45,20 +45,45 @@ namespace Ddhdg
     {}
   };
 
+  struct SolverParameters
+  {
+    SolverParameters(unsigned int V_degree,
+                     unsigned int n_degree,
+                     double       tau                     = 1.,
+                     bool         iterative_linear_solver = false,
+                     bool         multithreading          = true)
+      : V_degree(V_degree)
+      , n_degree(n_degree)
+      , tau(tau)
+      , iterative_linear_solver(iterative_linear_solver)
+      , multithreading(multithreading)
+    {}
+
+    SolverParameters(unsigned int degree,
+                     double       tau                     = 1.,
+                     bool         iterative_linear_solver = false,
+                     bool         multithreading          = true)
+      : V_degree(degree)
+      , n_degree(degree)
+      , tau(tau)
+      , iterative_linear_solver(iterative_linear_solver)
+      , multithreading(multithreading)
+    {}
+
+    const unsigned int V_degree;
+    const unsigned int n_degree;
+
+    const double tau                     = 1.;
+    const bool   iterative_linear_solver = false;
+    const bool   multithreading          = true;
+  };
+
   template <int dim>
   class Solver
   {
   public:
-    Solver(const Problem<dim> &problem,
-           unsigned int        degree,
-           bool                iterative_linear_solver = false,
-           bool                multithrading           = true);
-
-    Solver(const Problem<dim> &problem,
-           unsigned int        v_degree,
-           unsigned int        n_degree,
-           bool                iterative_linear_solver = false,
-           bool                multithreading          = true);
+    Solver(std::shared_ptr<const Problem<dim>> problem,
+           std::shared_ptr<const SolverParameters> parameters);
 
     void
     refine_grid(unsigned int i = 1)
@@ -129,8 +154,7 @@ namespace Ddhdg
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
     const std::shared_ptr<const Function<dim>>                 f;
 
-    const bool iterative_linear_solver = true;
-    const bool multithreading          = true;
+    const std::shared_ptr<const SolverParameters> parameters;
 
     FESystem<dim>   fe_local;
     DoFHandler<dim> dof_handler_local;
