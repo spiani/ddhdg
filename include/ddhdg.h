@@ -82,7 +82,7 @@ namespace Ddhdg
   class Solver
   {
   public:
-    Solver(std::shared_ptr<const Problem<dim>> problem,
+    Solver(std::shared_ptr<const Problem<dim>>     problem,
            std::shared_ptr<const SolverParameters> parameters);
 
     void
@@ -146,6 +146,58 @@ namespace Ddhdg
       const typename DoFHandler<dim>::active_cell_iterator &cell,
       ScratchData &                                         scratch,
       PerTaskData &                                         task_data);
+
+    void
+    add_cell_products_to_ll_matrix(ScratchData &scratch);
+
+    inline void
+    copy_fe_values_on_scratch(ScratchData &scratch,
+                              unsigned int face,
+                              unsigned int q);
+
+    inline void
+    copy_fe_values_for_trace(ScratchData &scratch,
+                             unsigned int face,
+                             unsigned int q);
+
+    inline void
+    assemble_lf_matrix(ScratchData &scratch, unsigned int face, unsigned int q);
+
+    template <Component c>
+    inline void
+    assemble_fl_matrix(ScratchData &scratch, unsigned int face, unsigned int q);
+
+    template <Component c>
+    inline void
+    assemble_cell_matrix(ScratchData &scratch,
+                         PerTaskData &task_data,
+                         unsigned int face,
+                         unsigned int q);
+
+    template <Component c>
+    inline void
+    apply_dbc_from_current_q_point(ScratchData &scratch,
+                                   PerTaskData &task_data,
+                                   double       dbc_value,
+                                   unsigned int face,
+                                   unsigned int q);
+
+    template <Component c>
+    inline void
+    apply_nbc_on_face(ScratchData &              scratch,
+                      PerTaskData &              task_data,
+                      unsigned int               face,
+                      dealii::types::boundary_id face_id);
+
+    inline void
+    add_border_products_to_ll_matrix(ScratchData &scratch,
+                                     unsigned int face,
+                                     unsigned int q);
+
+    inline void
+    add_trace_terms_to_l_rhs(ScratchData &scratch,
+                             unsigned int face,
+                             unsigned int q);
 
     void
     copy_local_to_global(const PerTaskData &data);

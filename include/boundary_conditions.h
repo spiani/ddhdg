@@ -139,28 +139,38 @@ namespace Ddhdg
                            std::shared_ptr<const dealii::Function<dim>> f);
 
     [[nodiscard]] bool
-    has_dirichlet_boundary_conditions() const
-    {
-      return !dbc_map.empty();
-    }
+    has_dirichlet_boundary_conditions() const;
 
     [[nodiscard]] bool
     has_dirichlet_boundary_conditions(dealii::types::boundary_id id) const;
 
     [[nodiscard]] bool
-    has_neumann_boundary_conditions() const
-    {
-      return !nbc_map.empty();
-    }
+    has_dirichlet_boundary_conditions(dealii::types::boundary_id id,
+                                      Component                  c) const;
+
+    [[nodiscard]] bool
+    has_neumann_boundary_conditions() const;
 
     [[nodiscard]] bool
     has_neumann_boundary_conditions(dealii::types::boundary_id id) const;
 
+    [[nodiscard]] bool
+    has_neumann_boundary_conditions(dealii::types::boundary_id id,
+                                    Component                  c) const;
+
     dirichlet_boundary_map<dim>
     get_dirichlet_conditions_for_id(dealii::types::boundary_id id) const;
 
+    DirichletBoundaryCondition<dim>
+    get_dirichlet_conditions_for_id(dealii::types::boundary_id id,
+                                    Component                  c) const;
+
     neumann_boundary_map<dim>
     get_neumann_conditions_for_id(dealii::types::boundary_id id) const;
+
+    NeumannBoundaryCondition<dim>
+    get_neumann_conditions_for_id(dealii::types::boundary_id id,
+                                  Component                  c) const;
 
   protected:
     dirichlet_boundary_id_map<dim> dbc_map;

@@ -58,10 +58,39 @@ Ddhdg::BoundaryConditionHandler<dim>::add_boundary_condition(
 
 template <int dim>
 bool
+Ddhdg::BoundaryConditionHandler<dim>::has_dirichlet_boundary_conditions() const
+{
+  return !dbc_map.empty();
+}
+
+
+template <int dim>
+bool
 Ddhdg::BoundaryConditionHandler<dim>::has_dirichlet_boundary_conditions(
   dealii::types::boundary_id id) const
 {
   return dbc_map.find(id) != dbc_map.end();
+}
+
+template <int dim>
+bool
+Ddhdg::BoundaryConditionHandler<dim>::has_dirichlet_boundary_conditions(
+  dealii::types::boundary_id id,
+  Component                  c) const
+{
+  if (dbc_map.find(id) == dbc_map.end())
+    {
+      return false;
+    }
+  dirichlet_boundary_map<dim> boundary_map = this->dbc_map.at(id);
+  return boundary_map.find(c) != boundary_map.end();
+}
+
+template <int dim>
+bool
+Ddhdg::BoundaryConditionHandler<dim>::has_neumann_boundary_conditions() const
+{
+  return !nbc_map.empty();
 }
 
 template <int dim>
@@ -73,6 +102,20 @@ Ddhdg::BoundaryConditionHandler<dim>::has_neumann_boundary_conditions(
 }
 
 template <int dim>
+bool
+Ddhdg::BoundaryConditionHandler<dim>::has_neumann_boundary_conditions(
+  dealii::types::boundary_id id,
+  Component                  c) const
+{
+  if (nbc_map.find(id) == nbc_map.end())
+    {
+      return false;
+    }
+  neumann_boundary_map<dim> boundary_map = this->nbc_map.at(id);
+  return boundary_map.find(c) != boundary_map.end();
+}
+
+template <int dim>
 Ddhdg::dirichlet_boundary_map<dim>
 Ddhdg::BoundaryConditionHandler<dim>::get_dirichlet_conditions_for_id(
   dealii::types::boundary_id id) const
@@ -81,11 +124,31 @@ Ddhdg::BoundaryConditionHandler<dim>::get_dirichlet_conditions_for_id(
 }
 
 template <int dim>
+Ddhdg::DirichletBoundaryCondition<dim>
+Ddhdg::BoundaryConditionHandler<dim>::get_dirichlet_conditions_for_id(
+  dealii::types::boundary_id id, Ddhdg::Component c) const
+{
+  auto boundary_map = dbc_map.at(id);
+  return boundary_map.find(c)->second;
+
+}
+
+template <int dim>
 Ddhdg::neumann_boundary_map<dim>
 Ddhdg::BoundaryConditionHandler<dim>::get_neumann_conditions_for_id(
   dealii::types::boundary_id id) const
 {
   return nbc_map.at(id);
+}
+
+template <int dim>
+Ddhdg::NeumannBoundaryCondition<dim>
+Ddhdg::BoundaryConditionHandler<dim>::get_neumann_conditions_for_id(
+  dealii::types::boundary_id id, Ddhdg::Component c) const
+{
+  auto boundary_map = nbc_map.at(id);
+  return boundary_map.find(c)->second;
+
 }
 
 template class Ddhdg::BoundaryConditionHandler<1>;
