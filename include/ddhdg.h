@@ -3,6 +3,7 @@
 #include <deal.II/base/function.h>
 #include <deal.II/base/quadrature_lib.h>
 #include <deal.II/base/tensor_function.h>
+#include <deal.II/base/thread_management.h>
 
 #include <deal.II/fe/fe_dgq.h>
 #include <deal.II/fe/fe_face.h>
@@ -13,8 +14,6 @@
 
 #include <deal.II/lac/chunk_sparse_matrix.h>
 #include <deal.II/lac/sparse_matrix.h>
-
-#include <deal.II/base/thread_management.h>
 
 #include <iostream>
 
@@ -164,26 +163,24 @@ namespace Ddhdg
                              unsigned int q);
 
     inline void
-    assemble_lf_matrix(ScratchData &scratch, unsigned int face, unsigned int q);
+    assemble_lf_matrix(ScratchData &scratch, unsigned int face);
 
     template <Component c>
     inline void
-    assemble_fl_matrix(ScratchData &scratch, unsigned int face, unsigned int q);
+    assemble_fl_matrix(ScratchData &scratch, unsigned int face);
 
     template <Component c>
     inline void
     assemble_cell_matrix(ScratchData &scratch,
                          PerTaskData &task_data,
-                         unsigned int face,
-                         unsigned int q);
+                         unsigned int face);
 
     template <Component c>
     inline void
-    apply_dbc_from_current_q_point(ScratchData &scratch,
-                                   PerTaskData &task_data,
-                                   double       dbc_value,
-                                   unsigned int face,
-                                   unsigned int q);
+    apply_dbc_on_face(ScratchData &                         scratch,
+                      PerTaskData &                         task_data,
+                      const DirichletBoundaryCondition<dim> dbc,
+                      unsigned int                          face);
 
     template <Component c>
     inline void
@@ -193,14 +190,10 @@ namespace Ddhdg
                       dealii::types::boundary_id face_id);
 
     inline void
-    add_border_products_to_ll_matrix(ScratchData &scratch,
-                                     unsigned int face,
-                                     unsigned int q);
+    add_border_products_to_ll_matrix(ScratchData &scratch, unsigned int face);
 
     inline void
-    add_trace_terms_to_l_rhs(ScratchData &scratch,
-                             unsigned int face,
-                             unsigned int q);
+    add_trace_terms_to_l_rhs(ScratchData &scratch, unsigned int face);
 
     void
     copy_local_to_global(const PerTaskData &data);
