@@ -671,7 +671,9 @@ namespace Ddhdg
           }
       }
 
+    inversion_mutex.lock();
     scratch.ll_matrix.gauss_jordan();
+    inversion_mutex.unlock();
 
     if (!task_data.trace_reconstruct)
       {

@@ -14,6 +14,8 @@
 #include <deal.II/lac/chunk_sparse_matrix.h>
 #include <deal.II/lac/sparse_matrix.h>
 
+#include <deal.II/base/thread_management.h>
+
 #include <iostream>
 
 #include "boundary_conditions.h"
@@ -140,6 +142,7 @@ namespace Ddhdg
 
     struct PerTaskData;
     struct ScratchData;
+    dealii::Threads::Mutex inversion_mutex;
 
     void
     assemble_system_one_cell(
