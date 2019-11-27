@@ -23,6 +23,7 @@
 
 #include <fstream>
 
+#include "constants.h"
 #include "function_tools.h"
 
 namespace Ddhdg
@@ -42,8 +43,10 @@ namespace Ddhdg
   Solver<dim>::Solver(const std::shared_ptr<const Problem<dim>>     problem,
                       const std::shared_ptr<const SolverParameters> parameters)
     : triangulation(copy_triangulation(problem->triangulation))
+    , permittivity(problem->permittivity)
+    , electron_mobility(problem->electron_mobility)
+    , temperature(problem->temperature)
     , boundary_handler(problem->boundary_handler)
-    , f(problem->f)
     , parameters(parameters)
     , fe_local(FE_DGQ<dim>(parameters->V_degree),
                dim,
@@ -71,9 +74,11 @@ namespace Ddhdg
     std::cout << "   Number of degrees of freedom: " << dof_handler.n_dofs()
               << std::endl;
 
+    previous_solution.reinit(dof_handler.n_dofs());
     solution.reinit(dof_handler.n_dofs());
     system_rhs.reinit(dof_handler.n_dofs());
 
+    previous_solution_local.reinit(dof_handler_local.n_dofs());
     solution_local.reinit(dof_handler_local.n_dofs());
 
     constraints.clear();
@@ -198,11 +203,29 @@ namespace Ddhdg
     const FEValuesExtractors::Vector electron_displacement(dim + 1);
     const FEValuesExtractors::Scalar electron_density(2 * dim + 1);
 
+    // Get the values of E on the quadrature points of the cell computed during
+    // the previous iteration
+    scratch.fe_values_local[electric_field].get_function_values(
+      previous_solution_local, scratch.previous_E);
+
+    // Get the position of the quadrature points
+    for (unsigned int q = 0; q < n_q_points; ++q)
+      scratch.cell_quadrature_points[q] =
+        scratch.fe_values_local.quadrature_point(q);
+
+    // Compute the value of epsilon
+    permittivity->compute_absolute_permittivity(scratch.cell_quadrature_points,
+                                                scratch.epsilon_cell);
+
+    // Compute the value of mu
+    electron_mobility->compute_electron_mobility(scratch.cell_quadrature_points,
+                                                 scratch.mu_cell);
+
+    // Compute the value of T
+    temperature->value_list(scratch.cell_quadrature_points, scratch.T_cell);
+
     for (unsigned int q = 0; q < n_q_points; ++q)
       {
-        const Point<dim> q_point = scratch.fe_values_local.quadrature_point(q);
-        const double     rhs_value = -f->value(q_point);
-
         const double JxW = scratch.fe_values_local.JxW(q);
         for (unsigned int k = 0; k < loc_dofs_per_cell; ++k)
           {
@@ -224,18 +247,29 @@ namespace Ddhdg
               scratch.fe_values_local[electron_density].gradient(k, q);
           }
 
+        const dealii::Tensor<1, dim> mu_times_previous_E =
+          scratch.mu_cell[q] * scratch.previous_E[q];
+
+        const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
+          Constants::KB / Constants::Q * scratch.T_cell[q] * scratch.mu_cell[q];
+
         for (unsigned int i = 0; i < loc_dofs_per_cell; ++i)
           {
             for (unsigned int j = 0; j < loc_dofs_per_cell; ++j)
-              scratch.ll_matrix(i, j) += (-scratch.E[j] * scratch.E[i] +
-                                          -scratch.E[j] * scratch.V_grad[i] +
-                                          +scratch.V[j] * scratch.E_div[i] +
-                                          -scratch.W[j] * scratch.W[i] +
-                                          -scratch.W[j] * scratch.n_grad[i] +
-                                          +scratch.n[j] * scratch.W_div[i]) *
-                                         JxW;
-            scratch.l_rhs(i) +=
-              scratch.V[i] * rhs_value * JxW + scratch.n[i] * rhs_value * JxW;
+              {
+                scratch.ll_matrix(i, j) +=
+                  (-scratch.V[j] * scratch.E_div[i] +
+                   scratch.E[j] * scratch.E[i] -
+                   (scratch.epsilon_cell[q] * scratch.E[j]) *
+                     scratch.V_grad[i] -
+                   scratch.n[j] * scratch.V[i] -
+                   scratch.n[j] * scratch.W_div[i] +
+                   scratch.W[j] * scratch.W[i] -
+                   scratch.n[j] * (mu_times_previous_E * scratch.n_grad[i]) +
+                   (einstein_diffusion_coefficient * scratch.W[j]) *
+                     scratch.n_grad[i]) *
+                  JxW;
+              }
           }
       }
   }
@@ -317,12 +351,11 @@ namespace Ddhdg
                 // the restriction of local test function on the border
                 // i is the index of the test function
                 scratch.lf_matrix(ii, jj) +=
-                  (-(scratch.E[i] * normal) + -parameters->tau * scratch.V[i]) *
-                  scratch.tr_V[j] * JxW;
-
-                scratch.lf_matrix(ii, jj) +=
-                  (-(scratch.W[i] * normal) + -parameters->tau * scratch.n[i]) *
-                  scratch.tr_n[j] * JxW;
+                  (scratch.tr_V[j] * (scratch.E[i] * normal) -
+                   parameters->tau * scratch.tr_V[j] * scratch.V[i] +
+                   scratch.tr_n[j] * (scratch.W[i] * normal) -
+                   parameters->tau * (scratch.tr_n[j] * scratch.n[i])) *
+                  JxW;
               }
           }
       }
@@ -348,6 +381,12 @@ namespace Ddhdg
         const double         JxW    = scratch.fe_face_values.JxW(q);
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
+        const dealii::Tensor<1, dim> mu_times_previous_E =
+          scratch.mu_face[q] * scratch.previous_E[q];
+
+        const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
+          Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
+
         for (unsigned int i = 0;
              i < scratch.fe_local_support_on_face[face].size();
              ++i)
@@ -369,13 +408,17 @@ namespace Ddhdg
                 if (c == V)
                   {
                     scratch.fl_matrix(jj, ii) -=
-                      (scratch.E[i] * normal + parameters->tau * scratch.V[i]) *
+                      ((scratch.epsilon_face[q] * scratch.E[i]) * normal +
+                       parameters->tau * scratch.V[i]) *
                       scratch.tr_V[j] * JxW;
                   }
                 if (c == n)
                   {
                     scratch.fl_matrix(jj, ii) -=
-                      (scratch.W[i] * normal + parameters->tau * scratch.n[i]) *
+                      (scratch.n[i] * (mu_times_previous_E * normal) -
+                       (einstein_diffusion_coefficient * scratch.W[i]) *
+                         normal +
+                       parameters->tau * scratch.n[i]) *
                       scratch.tr_n[j] * JxW;
                   }
               }
@@ -555,6 +598,12 @@ namespace Ddhdg
         const double         JxW    = scratch.fe_face_values.JxW(q);
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
+        const dealii::Tensor<1, dim> mu_times_previous_E =
+          scratch.mu_face[q] * scratch.previous_E[q];
+
+        const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
+          Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
+
         for (unsigned int i = 0;
              i < scratch.fe_local_support_on_face[face].size();
              ++i)
@@ -568,11 +617,14 @@ namespace Ddhdg
                 const unsigned int jj =
                   scratch.fe_local_support_on_face[face][j];
                 scratch.ll_matrix(ii, jj) +=
-                  (scratch.E[j] * normal + parameters->tau * scratch.V[j]) *
-                  scratch.V[i] * JxW;
-                scratch.ll_matrix(ii, jj) +=
-                  (scratch.W[j] * normal + parameters->tau * scratch.n[j]) *
-                  scratch.n[i] * JxW;
+                  (scratch.epsilon_face[q] * scratch.E[j] * normal *
+                     scratch.V[i] +
+                   parameters->tau * scratch.V[j] * scratch.V[i] +
+                   mu_times_previous_E * normal * scratch.n[j] * scratch.n[i] -
+                   einstein_diffusion_coefficient * scratch.W[j] * normal *
+                     scratch.n[i] +
+                   parameters->tau * scratch.n[j] * scratch.n[i]) *
+                  JxW;
               }
           }
       }
@@ -601,10 +653,10 @@ namespace Ddhdg
           {
             const unsigned int ii = scratch.fe_local_support_on_face[face][i];
             scratch.l_rhs(ii) +=
-              (scratch.E[i] * normal + scratch.V[i] * parameters->tau) *
+              (-scratch.E[i] * normal + scratch.V[i] * parameters->tau) *
               scratch.tr_V_solution_values[q] * JxW;
             scratch.l_rhs(ii) +=
-              (scratch.W[i] * normal + scratch.n[i] * parameters->tau) *
+              (-scratch.W[i] * normal + scratch.n[i] * parameters->tau) *
               scratch.tr_n_solution_values[q] * JxW;
           }
       }
@@ -682,6 +734,22 @@ namespace Ddhdg
                  face_boundary_id, c)});
           }
 
+        // Before assembling the other parts of the matrix, we need the values
+        // of epsilon, mu and D_n on the quadrature points of the current face
+        const unsigned int n_face_q_points =
+          scratch.fe_face_values_local.get_quadrature().size();
+        for (unsigned int q = 0; q < n_face_q_points; ++q)
+          scratch.face_quadrature_points[q] =
+            scratch.fe_face_values.quadrature_point(q);
+
+        permittivity->compute_absolute_permittivity(
+          scratch.face_quadrature_points, scratch.epsilon_face);
+
+        electron_mobility->compute_electron_mobility(
+          scratch.face_quadrature_points, scratch.mu_face);
+
+        temperature->value_list(scratch.face_quadrature_points, scratch.T_face);
+
         // Assembly the other matrices (the ll_matrix has been assembled
         // calling the add_cell_products_to_ll_matrix method)
         if (!task_data.trace_reconstruct)
@@ -757,10 +825,11 @@ namespace Ddhdg
 
   template <int dim>
   void
-  Solver<dim>::solve()
+  Solver<dim>::solve_linear_problem()
   {
-    std::cout << "RHS norm   : " << system_rhs.l2_norm() << std::endl
-              << "Matrix norm: " << system_matrix.linfty_norm() << std::endl;
+    std::cout << "    RHS norm   : " << system_rhs.l2_norm() << std::endl
+              << "    Matrix norm: " << system_matrix.linfty_norm()
+              << std::endl;
 
     SolverControl solver_control(system_matrix.m() * 10,
                                  1e-11 * system_rhs.l2_norm());
@@ -772,7 +841,7 @@ namespace Ddhdg
                             solution,
                             system_rhs,
                             PreconditionIdentity());
-        std::cout << "   Number of GMRES iterations: "
+        std::cout << "    Number of GMRES iterations: "
                   << solver_control.last_step() << std::endl;
       }
     else
@@ -786,21 +855,83 @@ namespace Ddhdg
 
   template <int dim>
   void
-  Solver<dim>::run()
+  Solver<dim>::run(const double                         tolerance,
+                   const dealii::VectorTools::NormType &norm,
+                   const int max_number_of_iterations)
   {
     setup_system();
 
-    if (parameters->multithreading)
-      assemble_system_multithreaded(false);
-    else
-      assemble_system(false);
+    dealii::Vector<double> difference_per_cell(triangulation->n_active_cells());
 
-    solve();
+    dealii::Vector<double> difference;
+    difference.reinit(dof_handler_local.n_dofs());
 
-    if (parameters->multithreading)
-      assemble_system_multithreaded(true);
-    else
-      assemble_system(true);
+    for (int step = 1;
+         step <= max_number_of_iterations && max_number_of_iterations > 0;
+         step++)
+      {
+        std::cout << "Computing step number " << step << std::endl;
+        previous_solution       = solution;
+        previous_solution_local = solution_local;
+        solution                = 0;
+        solution_local          = 0;
+
+        if (parameters->multithreading)
+          assemble_system_multithreaded(false);
+        else
+          assemble_system(false);
+
+        solve_linear_problem();
+
+        if (parameters->multithreading)
+          assemble_system_multithreaded(true);
+        else
+          assemble_system(true);
+
+        difference = 0.;
+        difference += solution_local;
+        difference -= previous_solution_local;
+
+        VectorTools::integrate_difference(dof_handler_local,
+                                          difference,
+                                          dealii::Functions::ZeroFunction<dim>(
+                                            2 * dim + 2),
+                                          difference_per_cell,
+                                          QGauss<dim>(fe.degree + 1),
+                                          norm);
+
+        const double global_difference_norm =
+          VectorTools::compute_global_error(*triangulation,
+                                            difference_per_cell,
+                                            norm);
+        std::cout << "Difference in norm compared to the previous step: "
+                  << global_difference_norm << std::endl;
+        if (global_difference_norm < tolerance)
+          {
+            std::cout
+              << "Difference is smaller than tolerance. CONVERGENCE REACHED"
+              << std::endl;
+            break;
+          }
+      }
+  }
+
+  template <int dim>
+  void
+  Solver<dim>::run(const double tolerance, const int max_number_of_iterations)
+  {
+    this->run(tolerance,
+              parameters->nonlinear_solver_tolerance_norm,
+              max_number_of_iterations);
+  }
+
+  template <int dim>
+  void
+  Solver<dim>::run()
+  {
+    this->run(parameters->nonlinear_solver_tolerance,
+              parameters->nonlinear_solver_tolerance_norm,
+              parameters->nonlinear_solver_max_number_of_iterations);
   }
 
   template <int dim>
@@ -822,7 +953,7 @@ namespace Ddhdg
           component_index = 2 * dim + 1;
           break;
         default:
-          AssertThrow(false, UnknownComponent());
+          AssertThrow(false, UnknownComponent())
       }
 
     const unsigned int n_of_components = (dim + 1) * 2;
@@ -943,7 +1074,7 @@ namespace Ddhdg
                                       expected_solution);
 
         // this->output_results("solution_" + std::to_string(cycle) + ".vtk",
-        //                     "trace_" + std::to_string(cycle) + ".vtk");
+        //                      "trace_" + std::to_string(cycle) + ".vtk");
         this->refine_grid(1);
       }
     error_table->output_table(std::cout);

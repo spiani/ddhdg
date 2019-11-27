@@ -4,15 +4,15 @@ set V degree                        = 3
 set n degree                        = 3
 set use iterative linear solver     = false
 set multithreading                  = true
-set f                               = -pi^2/2*cos(pi/2*x)*cos(pi/2*y)
+set temperature                     = q / kb
 
 subsection boundary conditions
-    set V boundary function         = 0
-    set n boundary function         = x - y
+    set V boundary function         = x - y
+    set n boundary function         = 0
 end
 
-set expected V solution             = cos(pi/2 * x) * cos(pi/2 * y)
-set expected n solution             = cos(pi/2 * x) * cos(pi/2 * y) + x - y
+set expected V solution             = x - y
+set expected n solution             = 0
 
 subsection domain geometry
     set left border                 = -1

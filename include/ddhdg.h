@@ -19,6 +19,8 @@
 
 #include "boundary_conditions.h"
 #include "convergence_table.h"
+#include "electron_mobility.h"
+#include "permittivity.h"
 
 namespace Ddhdg
 {
@@ -29,19 +31,23 @@ namespace Ddhdg
   template <int dim>
   struct Problem
   {
-    const std::shared_ptr<const Triangulation<dim>>            triangulation;
-    const std::shared_ptr<const Function<dim>>                 f;
+    const std::shared_ptr<const Triangulation<dim>>    triangulation;
+    const std::shared_ptr<const Permittivity<dim>>     permittivity;
+    const std::shared_ptr<const ElectronMobility<dim>> electron_mobility;
+    const std::shared_ptr<const dealii::Function<dim>> temperature;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
 
     explicit Problem(
-      const std::shared_ptr<const Triangulation<dim>> triangulation,
+      const std::shared_ptr<const Triangulation<dim>>    triangulation,
+      const std::shared_ptr<const Permittivity<dim>>     permittivity,
+      const std::shared_ptr<const ElectronMobility<dim>> electron_mobility,
+      const std::shared_ptr<const dealii::Function<dim>> temperature,
       const std::shared_ptr<const BoundaryConditionHandler<dim>>
-                                                 boundary_handler,
-      const std::shared_ptr<const Function<dim>> f
-      // other parameter functions (like epsilon)
-      )
+        boundary_handler)
       : triangulation(triangulation)
-      , f(f)
+      , permittivity(permittivity)
+      , electron_mobility(electron_mobility)
+      , temperature(temperature)
       , boundary_handler(boundary_handler)
     {}
   };
@@ -50,22 +56,36 @@ namespace Ddhdg
   {
     SolverParameters(unsigned int V_degree,
                      unsigned int n_degree,
-                     double       tau                     = 1.,
-                     bool         iterative_linear_solver = false,
-                     bool         multithreading          = true)
+                     double       nonlinear_solver_tolerance,
+                     int          nonlinear_solver_max_number_of_iterations,
+                     VectorTools::NormType norm_type = VectorTools::H1_norm,
+                     double                tau       = 1.,
+                     bool                  iterative_linear_solver = false,
+                     bool                  multithreading          = true)
       : V_degree(V_degree)
       , n_degree(n_degree)
+      , nonlinear_solver_tolerance(nonlinear_solver_tolerance)
+      , nonlinear_solver_max_number_of_iterations(
+          nonlinear_solver_max_number_of_iterations)
+      , nonlinear_solver_tolerance_norm(norm_type)
       , tau(tau)
       , iterative_linear_solver(iterative_linear_solver)
       , multithreading(multithreading)
     {}
 
     SolverParameters(unsigned int degree,
-                     double       tau                     = 1.,
-                     bool         iterative_linear_solver = false,
-                     bool         multithreading          = true)
+                     double       nonlinear_solver_tolerance,
+                     int          nonlinear_solver_max_number_of_iterations,
+                     VectorTools::NormType norm_type = VectorTools::H1_norm,
+                     double                tau       = 1.,
+                     bool                  iterative_linear_solver = false,
+                     bool                  multithreading          = true)
       : V_degree(degree)
       , n_degree(degree)
+      , nonlinear_solver_tolerance(nonlinear_solver_tolerance)
+      , nonlinear_solver_max_number_of_iterations(
+          nonlinear_solver_max_number_of_iterations)
+      , nonlinear_solver_tolerance_norm(norm_type)
       , tau(tau)
       , iterative_linear_solver(iterative_linear_solver)
       , multithreading(multithreading)
@@ -73,6 +93,10 @@ namespace Ddhdg
 
     const unsigned int V_degree;
     const unsigned int n_degree;
+
+    const double                nonlinear_solver_tolerance;
+    const int                   nonlinear_solver_max_number_of_iterations;
+    const VectorTools::NormType nonlinear_solver_tolerance_norm;
 
     const double tau                     = 1.;
     const bool   iterative_linear_solver = false;
@@ -92,6 +116,14 @@ namespace Ddhdg
       triangulation->refine_global(i);
       this->setup_system();
     }
+
+    void
+    run(double                               tolerance,
+        const dealii::VectorTools::NormType &norm,
+        int                                  max_number_of_iterations = -1);
+
+    void
+    run(double tolerance, int max_number_of_iterations = -1);
 
     void
     run();
@@ -137,7 +169,7 @@ namespace Ddhdg
     assemble_system(bool reconstruct_trace = false);
 
     void
-    solve();
+    solve_linear_problem();
 
     struct PerTaskData;
     struct ScratchData;
@@ -198,18 +230,22 @@ namespace Ddhdg
     void
     copy_local_to_global(const PerTaskData &data);
 
-    const std::unique_ptr<Triangulation<dim>>                  triangulation;
+    const std::unique_ptr<Triangulation<dim>>          triangulation;
+    const std::shared_ptr<const Permittivity<dim>>     permittivity;
+    const std::shared_ptr<const ElectronMobility<dim>> electron_mobility;
+    const std::shared_ptr<const dealii::Function<dim>> temperature;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
-    const std::shared_ptr<const Function<dim>>                 f;
 
     const std::shared_ptr<const SolverParameters> parameters;
 
     FESystem<dim>   fe_local;
     DoFHandler<dim> dof_handler_local;
     Vector<double>  solution_local;
+    Vector<double>  previous_solution_local;
     FESystem<dim>   fe;
     DoFHandler<dim> dof_handler;
     Vector<double>  solution;
+    Vector<double>  previous_solution;
     Vector<double>  system_rhs;
 
     AffineConstraints<double> constraints;
@@ -245,6 +281,16 @@ namespace Ddhdg
     FullMatrix<double>                     tmp_matrix;
     Vector<double>                         l_rhs;
     Vector<double>                         tmp_rhs;
+    std::vector<Point<dim>>                cell_quadrature_points;
+    std::vector<Point<dim>>                face_quadrature_points;
+    std::vector<Tensor<2, dim>>            epsilon_cell;
+    std::vector<Tensor<2, dim>>            epsilon_face;
+    std::vector<Tensor<2, dim>>            mu_cell;
+    std::vector<Tensor<2, dim>>            mu_face;
+    std::vector<double>                    T_cell;
+    std::vector<double>                    T_face;
+    std::vector<Tensor<1, dim>>            previous_E;
+    std::vector<Tensor<1, dim>>            previous_tr_E;
     std::vector<Tensor<1, dim>>            E;
     std::vector<double>                    E_div;
     std::vector<double>                    V;
@@ -278,6 +324,16 @@ namespace Ddhdg
       , tmp_matrix(fe.dofs_per_cell, fe_local.dofs_per_cell)
       , l_rhs(fe_local.dofs_per_cell)
       , tmp_rhs(fe_local.dofs_per_cell)
+      , cell_quadrature_points(quadrature_formula.size())
+      , face_quadrature_points(face_quadrature_formula.size())
+      , epsilon_cell(quadrature_formula.size())
+      , epsilon_face(face_quadrature_formula.size())
+      , mu_cell(quadrature_formula.size())
+      , mu_face(face_quadrature_formula.size())
+      , T_cell(quadrature_formula.size())
+      , T_face(face_quadrature_formula.size())
+      , previous_E(quadrature_formula.size())
+      , previous_tr_E(face_quadrature_formula.size())
       , E(fe_local.dofs_per_cell)
       , E_div(fe_local.dofs_per_cell)
       , V(fe_local.dofs_per_cell)
@@ -325,6 +381,16 @@ namespace Ddhdg
       , tmp_matrix(sd.tmp_matrix)
       , l_rhs(sd.l_rhs)
       , tmp_rhs(sd.tmp_rhs)
+      , cell_quadrature_points(sd.cell_quadrature_points)
+      , face_quadrature_points(sd.face_quadrature_points)
+      , epsilon_cell(sd.epsilon_cell)
+      , epsilon_face(sd.epsilon_face)
+      , mu_cell(sd.mu_cell)
+      , mu_face(sd.mu_face)
+      , T_cell(sd.T_cell)
+      , T_face(sd.T_face)
+      , previous_E(sd.previous_E)
+      , previous_tr_E(sd.previous_tr_E)
       , E(sd.E)
       , E_div(sd.E_div)
       , V(sd.V)

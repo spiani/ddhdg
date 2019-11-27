@@ -9,9 +9,9 @@
 
 #include <sys/stat.h>
 
-#include <cmath>
 #include <iostream>
 
+#include "constants.h"
 #include "ddhdg.h"
 
 bool
@@ -27,9 +27,6 @@ public:
   ProblemParameters()
     : error_table(std::make_shared<Ddhdg::ConvergenceTable>())
   {
-    constants.insert({"pi", M_PI});
-    constants.insert({"e", std::exp(1.0)});
-
     enter_subsection("Error table");
     error_table->add_parameters(*this);
     leave_subsection();
@@ -55,6 +52,9 @@ public:
     add_parameter("multithreading",
                   multithreading,
                   "Shall the code run in multithreading mode?");
+    add_parameter("temperature",
+                  temperature_str,
+                  "A function that defines the temperature on the domain");
 
     enter_subsection("boundary conditions");
     {
@@ -74,15 +74,24 @@ public:
       add_parameter("right border", right);
     }
     leave_subsection();
-    add_parameter("f",
-                  f_str,
-                  "The right term of the equation: laplacian(u) = f");
     add_parameter("expected V solution",
                   expected_V_solution_str,
                   "The expected solution for the potential");
     add_parameter("expected n solution",
                   expected_n_solution_str,
                   "The expected solution for the electron density");
+    enter_subsection("nonlinear solver");
+    add_parameter(
+      "tolerance",
+      nonlinear_solver_tolerance,
+      "If the distance between the current solution and the "
+      "previous one (in H1 norm) is smaller than this tolerance, the algorithm "
+      "will stop");
+    add_parameter("max number of iterations",
+                  nonlinear_solver_max_number_of_iterations,
+                  "If this number of iterations is reached, the code will stop "
+                  "its execution");
+    leave_subsection();
   };
 
   unsigned int initial_refinements = 2;
@@ -99,9 +108,10 @@ public:
   bool iterative_linear_solver = true;
   bool multithreading          = true;
 
-  std::string f_str = "0.";
+  double nonlinear_solver_tolerance                = 1e-7;
+  int    nonlinear_solver_max_number_of_iterations = 100;
 
-  std::shared_ptr<dealii::FunctionParser<2>> f;
+  std::string f_str = "0.";
 
   std::string expected_V_solution_str = "0.";
   std::string expected_n_solution_str = "0.";
@@ -115,7 +125,8 @@ public:
   std::shared_ptr<dealii::FunctionParser<2>> V_boundary_function;
   std::shared_ptr<dealii::FunctionParser<2>> n_boundary_function;
 
-  std::map<std::string, double> constants;
+  std::string                                temperature_str = "25.";
+  std::shared_ptr<dealii::FunctionParser<2>> temperature;
 
   std::shared_ptr<Ddhdg::ConvergenceTable> error_table;
 
@@ -157,17 +168,27 @@ private:
   void
   parse_arguments()
   {
-    f                   = std::make_shared<dealii::FunctionParser<2>>(1);
     expected_V_solution = std::make_shared<dealii::FunctionParser<2>>(1);
     expected_n_solution = std::make_shared<dealii::FunctionParser<2>>(1);
     V_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
     n_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
+    temperature         = std::make_shared<dealii::FunctionParser<2>>(1);
 
-    f->initialize("x, y", f_str, constants);
-    expected_V_solution->initialize("x, y", expected_V_solution_str, constants);
-    expected_n_solution->initialize("x, y", expected_n_solution_str, constants);
-    V_boundary_function->initialize("x, y", V_boundary_function_str, constants);
-    n_boundary_function->initialize("x, y", n_boundary_function_str, constants);
+    expected_V_solution->initialize("x, y",
+                                    expected_V_solution_str,
+                                    Ddhdg::Constants::constants);
+    expected_n_solution->initialize("x, y",
+                                    expected_n_solution_str,
+                                    Ddhdg::Constants::constants);
+    V_boundary_function->initialize("x, y",
+                                    V_boundary_function_str,
+                                    Ddhdg::Constants::constants);
+    n_boundary_function->initialize("x, y",
+                                    n_boundary_function_str,
+                                    Ddhdg::Constants::constants);
+    temperature->initialize("x, y",
+                            temperature_str,
+                            Ddhdg::Constants::constants);
   }
 
   void
@@ -211,20 +232,33 @@ main(int argc, char **argv)
                                                Ddhdg::n,
                                                prm.n_boundary_function);
     }
+  // For the time being, we will fix the permittivity (epsilon0) to one
+  const std::shared_ptr<const Ddhdg::Permittivity<2>> permittivity =
+    std::make_shared<const Ddhdg::HomogeneousPermittivity<2>>(1.);
+
+  // The same for the electron mobility
+  const std::shared_ptr<const Ddhdg::ElectronMobility<2>> electron_mobility =
+    std::make_shared<const Ddhdg::HomogeneousElectronMobility<2>>(1.);
 
   // Create an object that represent the problem we are going to solve
   std::shared_ptr<const Ddhdg::Problem<2>> problem =
     std::make_shared<const Ddhdg::Problem<2>>(triangulation,
-                                              boundary_handler,
-                                              prm.f);
+                                              permittivity,
+                                              electron_mobility,
+                                              prm.temperature,
+                                              boundary_handler);
 
-  // Coose the parameters for the solver
+  // Choose the parameters for the solver
   std::shared_ptr<const Ddhdg::SolverParameters> parameters =
-    std::make_shared<const Ddhdg::SolverParameters>(prm.V_degree,
-                                                    prm.n_degree,
-                                                    prm.tau,
-                                                    prm.iterative_linear_solver,
-                                                    prm.multithreading);
+    std::make_shared<const Ddhdg::SolverParameters>(
+      prm.V_degree,
+      prm.n_degree,
+      prm.nonlinear_solver_tolerance,
+      prm.nonlinear_solver_max_number_of_iterations,
+      Ddhdg::VectorTools::H1_norm,
+      prm.tau,
+      prm.iterative_linear_solver,
+      prm.multithreading);
 
   // Create a solver for the problem
   Ddhdg::Solver<2> solver(problem, parameters);
