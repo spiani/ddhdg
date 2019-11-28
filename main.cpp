@@ -25,7 +25,7 @@ class ProblemParameters : public dealii::ParameterHandler
 {
 public:
   ProblemParameters()
-    : error_table(std::make_shared<Ddhdg::ConvergenceTable>())
+    : error_table(std::make_shared<Ddhdg::ConvergenceTable>(2))
   {
     enter_subsection("Error table");
     error_table->add_parameters(*this);
