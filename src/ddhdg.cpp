@@ -45,6 +45,7 @@ namespace Ddhdg
     : triangulation(copy_triangulation(problem->triangulation))
     , permittivity(problem->permittivity)
     , electron_mobility(problem->electron_mobility)
+    , recombination_term(problem->recombination_term)
     , temperature(problem->temperature)
     , boundary_handler(problem->boundary_handler)
     , parameters(parameters)
@@ -208,6 +209,10 @@ namespace Ddhdg
     scratch.fe_values_local[electric_field].get_function_values(
       previous_solution_local, scratch.previous_E);
 
+    // The same for n
+    scratch.fe_values_local[electron_density].get_function_values(
+      previous_solution_local, scratch.previous_n);
+
     // Get the position of the quadrature points
     for (unsigned int q = 0; q < n_q_points; ++q)
       scratch.cell_quadrature_points[q] =
@@ -223,6 +228,13 @@ namespace Ddhdg
 
     // Compute the value of T
     temperature->value_list(scratch.cell_quadrature_points, scratch.T_cell);
+
+    // Compute the value of the recombination term and its derivative respect to
+    // n
+    recombination_term->compute_multiple_recombination_terms(
+      scratch.previous_n, scratch.cell_quadrature_points, scratch.r_cell);
+    recombination_term->compute_multiple_derivatives_of_recombination_terms(
+      scratch.previous_n, scratch.cell_quadrature_points, scratch.dr_cell);
 
     for (unsigned int q = 0; q < n_q_points; ++q)
       {
@@ -267,9 +279,14 @@ namespace Ddhdg
                    scratch.W[j] * scratch.W[i] -
                    scratch.n[j] * (mu_times_previous_E * scratch.n_grad[i]) +
                    (einstein_diffusion_coefficient * scratch.W[j]) *
-                     scratch.n_grad[i]) *
+                     scratch.n_grad[i] -
+                   scratch.dr_cell[q] * scratch.n[j] * scratch.n[i] /
+                     Constants::Q) *
                   JxW;
               }
+            scratch.l_rhs[i] += (scratch.previous_n[q] * scratch.r_cell[q] -
+                                 scratch.previous_n[q] * scratch.dr_cell[q]) /
+                                Constants::Q * scratch.n[i] * JxW;
           }
       }
   }
@@ -690,7 +707,9 @@ namespace Ddhdg
 
     // Integrals on the overall cell
     // This function computes every L2 product that we need to compute in order
-    // to solve the problem related to the current cell
+    // to solve the problem related to the current cell. Moreover, this function
+    // also compute the l2 products that are needed to compute the right hand
+    // term
     this->add_cell_products_to_ll_matrix(scratch);
 
     // Now we must perform the L2 product on the boundary, i.e. for each face of

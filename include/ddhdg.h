@@ -21,6 +21,7 @@
 #include "convergence_table.h"
 #include "electron_mobility.h"
 #include "permittivity.h"
+#include "recombination_term.h"
 
 namespace Ddhdg
 {
@@ -31,22 +32,25 @@ namespace Ddhdg
   template <int dim>
   struct Problem
   {
-    const std::shared_ptr<const Triangulation<dim>>    triangulation;
-    const std::shared_ptr<const Permittivity<dim>>     permittivity;
-    const std::shared_ptr<const ElectronMobility<dim>> electron_mobility;
-    const std::shared_ptr<const dealii::Function<dim>> temperature;
+    const std::shared_ptr<const Triangulation<dim>>     triangulation;
+    const std::shared_ptr<const Permittivity<dim>>      permittivity;
+    const std::shared_ptr<const ElectronMobility<dim>>  electron_mobility;
+    const std::shared_ptr<const RecombinationTerm<dim>> recombination_term;
+    const std::shared_ptr<const dealii::Function<dim>>  temperature;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
 
     explicit Problem(
-      const std::shared_ptr<const Triangulation<dim>>    triangulation,
-      const std::shared_ptr<const Permittivity<dim>>     permittivity,
-      const std::shared_ptr<const ElectronMobility<dim>> electron_mobility,
-      const std::shared_ptr<const dealii::Function<dim>> temperature,
+      const std::shared_ptr<const Triangulation<dim>>     triangulation,
+      const std::shared_ptr<const Permittivity<dim>>      permittivity,
+      const std::shared_ptr<const ElectronMobility<dim>>  electron_mobility,
+      const std::shared_ptr<const RecombinationTerm<dim>> recombination_term,
+      const std::shared_ptr<const dealii::Function<dim>>  temperature,
       const std::shared_ptr<const BoundaryConditionHandler<dim>>
         boundary_handler)
       : triangulation(triangulation)
       , permittivity(permittivity)
       , electron_mobility(electron_mobility)
+      , recombination_term(recombination_term)
       , temperature(temperature)
       , boundary_handler(boundary_handler)
     {}
@@ -230,10 +234,11 @@ namespace Ddhdg
     void
     copy_local_to_global(const PerTaskData &data);
 
-    const std::unique_ptr<Triangulation<dim>>          triangulation;
-    const std::shared_ptr<const Permittivity<dim>>     permittivity;
-    const std::shared_ptr<const ElectronMobility<dim>> electron_mobility;
-    const std::shared_ptr<const dealii::Function<dim>> temperature;
+    const std::unique_ptr<Triangulation<dim>>           triangulation;
+    const std::shared_ptr<const Permittivity<dim>>      permittivity;
+    const std::shared_ptr<const ElectronMobility<dim>>  electron_mobility;
+    const std::shared_ptr<const RecombinationTerm<dim>> recombination_term;
+    const std::shared_ptr<const dealii::Function<dim>>  temperature;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
 
     const std::shared_ptr<const SolverParameters> parameters;
@@ -289,6 +294,9 @@ namespace Ddhdg
     std::vector<Tensor<2, dim>>            mu_face;
     std::vector<double>                    T_cell;
     std::vector<double>                    T_face;
+    std::vector<double>                    r_cell;
+    std::vector<double>                    dr_cell;
+    std::vector<double>                    previous_n;
     std::vector<Tensor<1, dim>>            previous_E;
     std::vector<Tensor<1, dim>>            previous_tr_E;
     std::vector<Tensor<1, dim>>            E;
@@ -332,6 +340,9 @@ namespace Ddhdg
       , mu_face(face_quadrature_formula.size())
       , T_cell(quadrature_formula.size())
       , T_face(face_quadrature_formula.size())
+      , r_cell(quadrature_formula.size())
+      , dr_cell(quadrature_formula.size())
+      , previous_n(quadrature_formula.size())
       , previous_E(quadrature_formula.size())
       , previous_tr_E(face_quadrature_formula.size())
       , E(fe_local.dofs_per_cell)
@@ -389,6 +400,9 @@ namespace Ddhdg
       , mu_face(sd.mu_face)
       , T_cell(sd.T_cell)
       , T_face(sd.T_face)
+      , r_cell(sd.r_cell)
+      , dr_cell(sd.dr_cell)
+      , previous_n(sd.previous_n)
       , previous_E(sd.previous_E)
       , previous_tr_E(sd.previous_tr_E)
       , E(sd.E)

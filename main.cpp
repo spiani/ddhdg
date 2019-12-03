@@ -7,6 +7,7 @@
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_refinement.h>
 
+#include <recombination_term.h>
 #include <sys/stat.h>
 
 #include <iostream>
@@ -52,9 +53,21 @@ public:
     add_parameter("multithreading",
                   multithreading,
                   "Shall the code run in multithreading mode?");
+
+    enter_subsection("physical quantities");
     add_parameter("temperature",
                   temperature_str,
                   "A function that defines the temperature on the domain");
+    add_parameter(
+      "recombination term zero order term",
+      recombination_term_constant_term,
+      "A function of the space that represent the value of the recombination term when n = 0");
+    add_parameter(
+      "recombination term first order term",
+      recombination_term_constant_term,
+      "A function of the space that represent the linear coefficient that "
+      "approximates the dependency of the recombination term from n");
+    leave_subsection();
 
     enter_subsection("boundary conditions");
     {
@@ -111,8 +124,6 @@ public:
   double nonlinear_solver_tolerance                = 1e-7;
   int    nonlinear_solver_max_number_of_iterations = 100;
 
-  std::string f_str = "0.";
-
   std::string expected_V_solution_str = "0.";
   std::string expected_n_solution_str = "0.";
 
@@ -127,6 +138,9 @@ public:
 
   std::string                                temperature_str = "25.";
   std::shared_ptr<dealii::FunctionParser<2>> temperature;
+
+  std::string recombination_term_constant_term = "0.";
+  std::string recombination_term_linear_factor = "0.";
 
   std::shared_ptr<Ddhdg::ConvergenceTable> error_table;
 
@@ -240,11 +254,18 @@ main(int argc, char **argv)
   const std::shared_ptr<const Ddhdg::ElectronMobility<2>> electron_mobility =
     std::make_shared<const Ddhdg::HomogeneousElectronMobility<2>>(1.);
 
+  // Set the recombination term
+  const std::shared_ptr<const Ddhdg::RecombinationTerm<2>> recombination_term =
+    std::make_shared<const Ddhdg::LinearRecombinationTerm<2>>(
+      prm.recombination_term_constant_term,
+      prm.recombination_term_linear_factor);
+
   // Create an object that represent the problem we are going to solve
   std::shared_ptr<const Ddhdg::Problem<2>> problem =
     std::make_shared<const Ddhdg::Problem<2>>(triangulation,
                                               permittivity,
                                               electron_mobility,
+                                              recombination_term,
                                               prm.temperature,
                                               boundary_handler);
 

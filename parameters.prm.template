@@ -4,7 +4,12 @@ set V degree                        = 3
 set n degree                        = 3
 set use iterative linear solver     = false
 set multithreading                  = true
-set temperature                     = q / kb
+
+subsection physical quantities
+  set recombination term first order term = 0
+  set recombination term zero order term  = -1./5000*x^2 - 1./2500*y^2 - 3./2500*y - 1./2500
+  set temperature                         = q / kb
+end
 
 subsection boundary conditions
     set V boundary function         = x - y
