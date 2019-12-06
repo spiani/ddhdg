@@ -118,8 +118,16 @@ namespace Ddhdg
     refine_grid(unsigned int i = 1)
     {
       triangulation->refine_global(i);
-      this->setup_system();
+      this->initialized = false;
     }
+
+    void
+    set_V_component(
+      const std::shared_ptr<const dealii::Function<dim>> V_function);
+
+    void
+    set_n_component(
+      const std::shared_ptr<const dealii::Function<dim>> n_function);
 
     void
     run(double                               tolerance,
@@ -149,6 +157,16 @@ namespace Ddhdg
       std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
       std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
       std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
+      unsigned int                                 n_cycles,
+      unsigned int                                 initial_refinements = 0);
+
+    void
+    print_convergence_table(
+      std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
+      std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
+      std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
+      std::shared_ptr<const dealii::Function<dim>> initial_V_function,
+      std::shared_ptr<const dealii::Function<dim>> initial_n_function,
       unsigned int                                 n_cycles,
       unsigned int                                 initial_refinements = 0);
 
@@ -256,6 +274,8 @@ namespace Ddhdg
     AffineConstraints<double> constraints;
     SparsityPattern           sparsity_pattern;
     SparseMatrix<double>      system_matrix;
+
+    bool initialized = false;
   };
 
   template <int dim>

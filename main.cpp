@@ -2,6 +2,7 @@
 
 #include <deal.II/base/exceptions.h>
 #include <deal.II/base/function_parser.h>
+#include <deal.II/base/geometry_info.h>
 #include <deal.II/base/parameter_handler.h>
 
 #include <deal.II/grid/grid_generator.h>
@@ -15,6 +16,8 @@
 #include "constants.h"
 #include "ddhdg.h"
 
+const unsigned int dim = 2;
+
 bool
 file_exists(const std::string &file_path)
 {
@@ -26,7 +29,7 @@ class ProblemParameters : public dealii::ParameterHandler
 {
 public:
   ProblemParameters()
-    : error_table(std::make_shared<Ddhdg::ConvergenceTable>(2))
+    : error_table(std::make_shared<Ddhdg::ConvergenceTable>(dim))
   {
     enter_subsection("Error table");
     error_table->add_parameters(*this);
@@ -87,6 +90,12 @@ public:
       add_parameter("right border", right);
     }
     leave_subsection();
+    enter_subsection("Starting points");
+    {
+      add_parameter("V starting point", V_starting_point_str);
+      add_parameter("n starting point", n_starting_point_str);
+    }
+    leave_subsection();
     add_parameter("expected V solution",
                   expected_V_solution_str,
                   "The expected solution for the potential");
@@ -127,17 +136,23 @@ public:
   std::string expected_V_solution_str = "0.";
   std::string expected_n_solution_str = "0.";
 
-  std::shared_ptr<dealii::FunctionParser<2>> expected_V_solution;
-  std::shared_ptr<dealii::FunctionParser<2>> expected_n_solution;
+  std::shared_ptr<dealii::FunctionParser<dim>> expected_V_solution;
+  std::shared_ptr<dealii::FunctionParser<dim>> expected_n_solution;
 
   std::string V_boundary_function_str = "0.";
   std::string n_boundary_function_str = "0.";
 
-  std::shared_ptr<dealii::FunctionParser<2>> V_boundary_function;
-  std::shared_ptr<dealii::FunctionParser<2>> n_boundary_function;
+  std::shared_ptr<dealii::FunctionParser<dim>> V_boundary_function;
+  std::shared_ptr<dealii::FunctionParser<dim>> n_boundary_function;
 
-  std::string                                temperature_str = "25.";
-  std::shared_ptr<dealii::FunctionParser<2>> temperature;
+  std::string V_starting_point_str = "0.";
+  std::string n_starting_point_str = "0.";
+
+  std::shared_ptr<dealii::FunctionParser<dim>> V_starting_point;
+  std::shared_ptr<dealii::FunctionParser<dim>> n_starting_point;
+
+  std::string                                  temperature_str = "25.";
+  std::shared_ptr<dealii::FunctionParser<dim>> temperature;
 
   std::string recombination_term_constant_term = "0.";
   std::string recombination_term_linear_factor = "0.";
@@ -182,27 +197,42 @@ private:
   void
   parse_arguments()
   {
-    expected_V_solution = std::make_shared<dealii::FunctionParser<2>>(1);
-    expected_n_solution = std::make_shared<dealii::FunctionParser<2>>(1);
-    V_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
-    n_boundary_function = std::make_shared<dealii::FunctionParser<2>>(1);
-    temperature         = std::make_shared<dealii::FunctionParser<2>>(1);
+    expected_V_solution = std::make_shared<dealii::FunctionParser<dim>>(1);
+    expected_n_solution = std::make_shared<dealii::FunctionParser<dim>>(1);
+    V_boundary_function = std::make_shared<dealii::FunctionParser<dim>>(1);
+    n_boundary_function = std::make_shared<dealii::FunctionParser<dim>>(1);
+    temperature         = std::make_shared<dealii::FunctionParser<dim>>(1);
+    V_starting_point    = std::make_shared<dealii::FunctionParser<dim>>(1);
+    n_starting_point    = std::make_shared<dealii::FunctionParser<dim>>(1);
 
-    expected_V_solution->initialize("x, y",
-                                    expected_V_solution_str,
-                                    Ddhdg::Constants::constants);
-    expected_n_solution->initialize("x, y",
-                                    expected_n_solution_str,
-                                    Ddhdg::Constants::constants);
-    V_boundary_function->initialize("x, y",
-                                    V_boundary_function_str,
-                                    Ddhdg::Constants::constants);
-    n_boundary_function->initialize("x, y",
-                                    n_boundary_function_str,
-                                    Ddhdg::Constants::constants);
-    temperature->initialize("x, y",
-                            temperature_str,
-                            Ddhdg::Constants::constants);
+    expected_V_solution->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_V_solution_str,
+      Ddhdg::Constants::constants);
+    expected_n_solution->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_n_solution_str,
+      Ddhdg::Constants::constants);
+    V_boundary_function->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      V_boundary_function_str,
+      Ddhdg::Constants::constants);
+    n_boundary_function->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      n_boundary_function_str,
+      Ddhdg::Constants::constants);
+    temperature->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      temperature_str,
+      Ddhdg::Constants::constants);
+    V_starting_point->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      V_starting_point_str,
+      Ddhdg::Constants::constants);
+    n_starting_point->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      n_starting_point_str,
+      Ddhdg::Constants::constants);
   }
 
   void
@@ -226,16 +256,16 @@ main(int argc, char **argv)
   prm.read_parameters_file();
 
   // Create a triangulation
-  std::shared_ptr<dealii::Triangulation<2>> triangulation =
-    std::make_shared<dealii::Triangulation<2>>();
+  std::shared_ptr<dealii::Triangulation<dim>> triangulation =
+    std::make_shared<dealii::Triangulation<dim>>();
 
   dealii::GridGenerator::hyper_cube(*triangulation, prm.left, prm.right, true);
 
   // Set the boundary conditions
-  std::shared_ptr<Ddhdg::BoundaryConditionHandler<2>> boundary_handler =
-    std::make_shared<Ddhdg::BoundaryConditionHandler<2>>();
+  std::shared_ptr<Ddhdg::BoundaryConditionHandler<dim>> boundary_handler =
+    std::make_shared<Ddhdg::BoundaryConditionHandler<dim>>();
 
-  for (unsigned int i = 0; i < 4; i++)
+  for (unsigned int i = 0; i < dealii::GeometryInfo<dim>::faces_per_cell; i++)
     {
       boundary_handler->add_boundary_condition(i,
                                                Ddhdg::dirichlet,
@@ -247,27 +277,28 @@ main(int argc, char **argv)
                                                prm.n_boundary_function);
     }
   // For the time being, we will fix the permittivity (epsilon0) to one
-  const std::shared_ptr<const Ddhdg::Permittivity<2>> permittivity =
-    std::make_shared<const Ddhdg::HomogeneousPermittivity<2>>(1.);
+  const std::shared_ptr<const Ddhdg::Permittivity<dim>> permittivity =
+    std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.);
 
   // The same for the electron mobility
-  const std::shared_ptr<const Ddhdg::ElectronMobility<2>> electron_mobility =
-    std::make_shared<const Ddhdg::HomogeneousElectronMobility<2>>(1.);
+  const std::shared_ptr<const Ddhdg::ElectronMobility<dim>> electron_mobility =
+    std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.);
 
   // Set the recombination term
-  const std::shared_ptr<const Ddhdg::RecombinationTerm<2>> recombination_term =
-    std::make_shared<const Ddhdg::LinearRecombinationTerm<2>>(
-      prm.recombination_term_constant_term,
-      prm.recombination_term_linear_factor);
+  const std::shared_ptr<const Ddhdg::RecombinationTerm<dim>>
+    recombination_term =
+      std::make_shared<const Ddhdg::LinearRecombinationTerm<dim>>(
+        prm.recombination_term_constant_term,
+        prm.recombination_term_linear_factor);
 
   // Create an object that represent the problem we are going to solve
-  std::shared_ptr<const Ddhdg::Problem<2>> problem =
-    std::make_shared<const Ddhdg::Problem<2>>(triangulation,
-                                              permittivity,
-                                              electron_mobility,
-                                              recombination_term,
-                                              prm.temperature,
-                                              boundary_handler);
+  std::shared_ptr<const Ddhdg::Problem<dim>> problem =
+    std::make_shared<const Ddhdg::Problem<dim>>(triangulation,
+                                                permittivity,
+                                                electron_mobility,
+                                                recombination_term,
+                                                prm.temperature,
+                                                boundary_handler);
 
   // Choose the parameters for the solver
   std::shared_ptr<const Ddhdg::SolverParameters> parameters =
@@ -282,7 +313,7 @@ main(int argc, char **argv)
       prm.multithreading);
 
   // Create a solver for the problem
-  Ddhdg::Solver<2> solver(problem, parameters);
+  Ddhdg::Solver<dim> solver(problem, parameters);
 
   std::cout << std::endl
             << std::endl
@@ -295,6 +326,8 @@ main(int argc, char **argv)
   solver.print_convergence_table(prm.error_table,
                                  prm.expected_V_solution,
                                  prm.expected_n_solution,
+                                 prm.V_starting_point,
+                                 prm.n_starting_point,
                                  prm.n_cycles,
                                  prm.initial_refinements);
 

@@ -65,6 +65,8 @@ namespace Ddhdg
     , dof_handler(*triangulation)
   {}
 
+
+
   template <int dim>
   void
   Solver<dim>::setup_system()
@@ -92,6 +94,8 @@ namespace Ddhdg
       sparsity_pattern.copy_from(dsp);
     }
     system_matrix.reinit(sparsity_pattern);
+
+    this->initialized = true;
   }
 
   template <int dim>
@@ -112,6 +116,114 @@ namespace Ddhdg
       }
     return mask;
   }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::set_V_component(
+    const std::shared_ptr<const dealii::Function<dim>> V_function)
+  {
+    if (!this->initialized)
+      this->setup_system();
+
+    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
+      V_f_components;
+    V_f_components.insert({dim, V_function});
+    auto V_function_extended =
+      FunctionByComponents<dim>(2 * dim + 2, V_f_components);
+    dealii::VectorTools::interpolate(this->dof_handler_local,
+                                     V_function_extended,
+                                     this->solution_local,
+                                     this->get_component_mask(V));
+
+    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
+      V_trace_f_components;
+    V_trace_f_components.insert({0, V_function});
+    auto V_trace_function_extended =
+      FunctionByComponents<dim>(2, V_trace_f_components);
+    dealii::ComponentMask trace_V_mask(2, false);
+    trace_V_mask.set(0, true);
+    dealii::VectorTools::interpolate(this->dof_handler,
+                                     V_trace_function_extended,
+                                     this->solution,
+                                     trace_V_mask);
+
+    dealii::ComponentMask E_mask(2 * dim + 2, false);
+    const Gradient<dim>   E_function(*V_function);
+    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
+      E_f_components;
+    for (unsigned int i = 0; i < dim; i++)
+      {
+        E_mask.set(i, true);
+        E_f_components.insert(
+          {i, std::make_shared<const ComponentFunction<dim>>(E_function, i)});
+      }
+    auto E_function_expanded =
+      FunctionByComponents<dim>(2 * dim + 2, E_f_components);
+
+    dealii::VectorTools::interpolate(this->dof_handler_local,
+                                     E_function_expanded,
+                                     this->solution_local,
+                                     E_mask);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::set_n_component(
+    const std::shared_ptr<const dealii::Function<dim>> n_function)
+  {
+    if (!this->initialized)
+      this->setup_system();
+
+    // Set n on the cells
+    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
+      n_f_components;
+    n_f_components.insert({2 * dim + 1, n_function});
+    auto n_function_extended =
+      FunctionByComponents<dim>(2 * dim + 2, n_f_components);
+    dealii::VectorTools::interpolate(this->dof_handler_local,
+                                     n_function_extended,
+                                     this->solution_local,
+                                     this->get_component_mask(n));
+
+    // Set n on the trace
+    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
+      n_trace_f_components;
+    n_trace_f_components.insert({1, n_function});
+    auto n_trace_function_extended =
+      FunctionByComponents<dim>(2, n_trace_f_components);
+    dealii::ComponentMask trace_n_mask(2, false);
+    trace_n_mask.set(1, true);
+    dealii::VectorTools::interpolate(this->dof_handler,
+                                     n_trace_function_extended,
+                                     this->solution,
+                                     trace_n_mask);
+
+    // Set W
+    dealii::ComponentMask W_mask(2 * dim + 2, false);
+    const Gradient<dim>   W_function(*n_function);
+    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
+      W_f_components;
+    for (unsigned int i = 0; i < dim; i++)
+      {
+        W_mask.set(dim + 1 + i, true);
+        W_f_components.insert(
+          {dim + 1 + i,
+           std::make_shared<const ComponentFunction<dim>>(W_function, i)});
+      }
+    auto W_function_expanded =
+      FunctionByComponents<dim>(2 * dim + 2, W_f_components);
+
+    dealii::VectorTools::interpolate(this->dof_handler_local,
+                                     W_function_expanded,
+                                     this->solution_local,
+                                     W_mask);
+  }
+
+
 
   template <int dim>
   dealii::FEValuesExtractors::Scalar
@@ -136,6 +248,8 @@ namespace Ddhdg
   void
   Solver<dim>::assemble_system_multithreaded(bool trace_reconstruct)
   {
+    Assert(this->initialized, dealii::ExcNotInitialized());
+
     const QGauss<dim>     quadrature_formula(fe.degree + 1);
     const QGauss<dim - 1> face_quadrature_formula(fe.degree + 1);
 
@@ -165,6 +279,8 @@ namespace Ddhdg
   void
   Solver<dim>::assemble_system(bool trace_reconstruct)
   {
+    Assert(this->initialized, dealii::ExcNotInitialized());
+
     const QGauss<dim>     quadrature_formula(fe.degree + 1);
     const QGauss<dim - 1> face_quadrature_formula(fe.degree + 1);
 
@@ -878,7 +994,8 @@ namespace Ddhdg
                    const dealii::VectorTools::NormType &norm,
                    const int max_number_of_iterations)
   {
-    setup_system();
+    if (!this->initialized)
+      setup_system();
 
     dealii::Vector<double> difference_per_cell(triangulation->n_active_cells());
 
@@ -1067,12 +1184,41 @@ namespace Ddhdg
     data_out_face.write_vtk(face_output);
   }
 
+
+
   template <int dim>
   void
   Solver<dim>::print_convergence_table(
     std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
     std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
     std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
+    unsigned int                                 n_cycles,
+    unsigned int                                 initial_refinements)
+  {
+    const std::shared_ptr<const dealii::Function<dim>> initial_V_function =
+      std::make_shared<const dealii::Functions::ZeroFunction<dim>>();
+    const std::shared_ptr<const dealii::Function<dim>> initial_n_function =
+      std::make_shared<const dealii::Functions::ZeroFunction<dim>>();
+
+    this->print_convergence_table(error_table,
+                                  expected_V_solution,
+                                  expected_n_solution,
+                                  initial_V_function,
+                                  initial_n_function,
+                                  n_cycles,
+                                  initial_refinements);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::print_convergence_table(
+    std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
+    std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
+    std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
+    std::shared_ptr<const dealii::Function<dim>> initial_V_function,
+    std::shared_ptr<const dealii::Function<dim>> initial_n_function,
     unsigned int                                 n_cycles,
     unsigned int                                 initial_refinements)
   {
@@ -1087,6 +1233,8 @@ namespace Ddhdg
 
     for (unsigned int cycle = 0; cycle < n_cycles; ++cycle)
       {
+        this->set_V_component(initial_V_function);
+        this->set_n_component(initial_n_function);
         this->run();
         error_table->error_from_exact(dof_handler_local,
                                       solution_local,

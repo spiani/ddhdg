@@ -1,9 +1,14 @@
 #pragma once
 
 #include <deal.II/base/function.h>
+#include <deal.II/base/function_derivative.h>
 
 namespace Ddhdg
 {
+  DeclExceptionMsg(FunctionMustBeScalar,
+                   "The submitted function must be scalar");
+
+
   template <int dim>
   class FunctionByComponents : public dealii::Function<dim>
   {
@@ -19,40 +24,68 @@ namespace Ddhdg
 
     double
     value(const dealii::Point<dim> &p,
-          const unsigned int        component = 0) const override
-    {
-      auto component_function = component_map.find(component);
-      if (component_function != component_map.end())
-        {
-          return component_function->second->value(p, 0.);
-        }
-      else
-        {
-          return 0.;
-        }
-    }
+          unsigned int              component = 0) const override;
 
     dealii::Tensor<1, dim>
     gradient(const dealii::Point<dim> &p,
-             const unsigned int        component = 0) const override
-    {
-      auto component_function = component_map.find(component);
-      if (component_function != component_map.end())
-        {
-          return component_function->second->gradient(p, 0.);
-        }
-      else
-        {
-          dealii::Tensor<1, dim> zeros;
-          for (int i = 0; i < dim; i++)
-            zeros[i] = 0.;
-          return zeros;
-        }
-    }
+             unsigned int              component = 0) const override;
+
 
   private:
     const std::map<unsigned int,
                    const std::shared_ptr<const dealii::Function<dim>>>
       component_map;
+  };
+
+
+  template <int dim>
+  class ComponentFunction : public dealii::Function<dim>
+  {
+  public:
+    ComponentFunction(const dealii::Function<dim> &f, unsigned int component)
+      : dealii::Function<dim>(1)
+      , component(component)
+      , f(f)
+    {}
+
+    double
+    value(const dealii::Point<dim> &p,
+          unsigned int              component = 0) const override
+    {
+      Assert(component == 0, dealii::ExcIndexRange(component, 0, 1));
+      return f.value(p, this->component);
+    }
+
+    dealii::Tensor<1, dim>
+    gradient(const dealii::Point<dim> &p,
+             unsigned int              component = 0) const override
+    {
+      Assert(component == 0, dealii::ExcIndexRange(component, 0, 1));
+      return f.gradient(p, this->component);
+    }
+
+
+  private:
+    const unsigned int           component;
+    const dealii::Function<dim> &f;
+  };
+
+  template <int dim>
+  class Gradient : public dealii::Function<dim>
+  {
+  public:
+    explicit Gradient(const dealii::Function<dim> &function);
+
+    double
+    value(const dealii::Point<dim> &p,
+          unsigned int              component = 0) const override;
+
+    dealii::Tensor<1, dim>
+    gradient(const dealii::Point<dim> &p,
+             unsigned int              component = 0) const override;
+
+  private:
+    const dealii::Function<dim> &                  f;
+    std::map<int, dealii::FunctionDerivative<dim>> partial_derivatives;
   };
 } // namespace Ddhdg
