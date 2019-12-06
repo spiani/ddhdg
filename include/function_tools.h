@@ -50,17 +50,19 @@ namespace Ddhdg
 
     double
     value(const dealii::Point<dim> &p,
-          unsigned int              component = 0) const override
+          unsigned int              cmp = 0) const override
     {
-      Assert(component == 0, dealii::ExcIndexRange(component, 0, 1));
+      (void) cmp;
+      Assert(cmp == 0, dealii::ExcIndexRange(cmp, 0, 1));
       return f.value(p, this->component);
     }
 
     dealii::Tensor<1, dim>
     gradient(const dealii::Point<dim> &p,
-             unsigned int              component = 0) const override
+             unsigned int              cmp = 0) const override
     {
-      Assert(component == 0, dealii::ExcIndexRange(component, 0, 1));
+      (void) cmp;
+      Assert(cmp == 0, dealii::ExcIndexRange(cmp, 0, 1));
       return f.gradient(p, this->component);
     }
 

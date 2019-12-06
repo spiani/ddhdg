@@ -174,6 +174,12 @@ namespace Ddhdg
     dealii::ComponentMask
     get_component_mask(Component component);
 
+    dealii::ComponentMask
+    get_component_mask(Displacement displacement);
+
+    dealii::ComponentMask
+    get_trace_component_mask(Component component);
+
     dealii::FEValuesExtractors::Scalar
     get_component_extractor(Component component);
 

@@ -98,6 +98,8 @@ namespace Ddhdg
     this->initialized = true;
   }
 
+
+
   template <int dim>
   dealii::ComponentMask
   Solver<dim>::get_component_mask(const Component component)
@@ -110,6 +112,50 @@ namespace Ddhdg
           break;
         case Component::n:
           mask.set(2 * dim + 1, true);
+          break;
+        default:
+          AssertThrow(false, UnknownComponent());
+      }
+    return mask;
+  }
+
+
+
+  template <int dim>
+  dealii::ComponentMask
+  Solver<dim>::get_component_mask(const Displacement displacement)
+  {
+    dealii::ComponentMask mask(2 * dim + 2, false);
+    switch (displacement)
+      {
+        case Displacement::E:
+          for (unsigned int i = 0; i < dim; i++)
+            mask.set(i, true);
+          break;
+        case Displacement::W:
+          for (unsigned int i = dim + 1; i < 2 * dim + 1; i++)
+            mask.set(i, true);
+          break;
+        default:
+          AssertThrow(false, UnknownDisplacement());
+      }
+    return mask;
+  }
+
+
+
+  template <int dim>
+  dealii::ComponentMask
+  Solver<dim>::get_trace_component_mask(const Component component)
+  {
+    dealii::ComponentMask mask(2, false);
+    switch (component)
+      {
+        case Component::V:
+          mask.set(0, true);
+          break;
+        case Component::n:
+          mask.set(1, true);
           break;
         default:
           AssertThrow(false, UnknownComponent());
@@ -142,20 +188,17 @@ namespace Ddhdg
     V_trace_f_components.insert({0, V_function});
     auto V_trace_function_extended =
       FunctionByComponents<dim>(2, V_trace_f_components);
-    dealii::ComponentMask trace_V_mask(2, false);
-    trace_V_mask.set(0, true);
+
     dealii::VectorTools::interpolate(this->dof_handler,
                                      V_trace_function_extended,
                                      this->solution,
-                                     trace_V_mask);
+                                     this->get_trace_component_mask(V));
 
-    dealii::ComponentMask E_mask(2 * dim + 2, false);
     const Gradient<dim>   E_function(*V_function);
     std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
       E_f_components;
     for (unsigned int i = 0; i < dim; i++)
       {
-        E_mask.set(i, true);
         E_f_components.insert(
           {i, std::make_shared<const ComponentFunction<dim>>(E_function, i)});
       }
@@ -165,7 +208,7 @@ namespace Ddhdg
     dealii::VectorTools::interpolate(this->dof_handler_local,
                                      E_function_expanded,
                                      this->solution_local,
-                                     E_mask);
+                                     this->get_component_mask(E));
   }
 
 
@@ -195,21 +238,17 @@ namespace Ddhdg
     n_trace_f_components.insert({1, n_function});
     auto n_trace_function_extended =
       FunctionByComponents<dim>(2, n_trace_f_components);
-    dealii::ComponentMask trace_n_mask(2, false);
-    trace_n_mask.set(1, true);
     dealii::VectorTools::interpolate(this->dof_handler,
                                      n_trace_function_extended,
                                      this->solution,
-                                     trace_n_mask);
+                                     this->get_trace_component_mask(n));
 
     // Set W
-    dealii::ComponentMask W_mask(2 * dim + 2, false);
     const Gradient<dim>   W_function(*n_function);
     std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
       W_f_components;
     for (unsigned int i = 0; i < dim; i++)
       {
-        W_mask.set(dim + 1 + i, true);
         W_f_components.insert(
           {dim + 1 + i,
            std::make_shared<const ComponentFunction<dim>>(W_function, i)});
@@ -220,7 +259,7 @@ namespace Ddhdg
     dealii::VectorTools::interpolate(this->dof_handler_local,
                                      W_function_expanded,
                                      this->solution_local,
-                                     W_mask);
+                                     this->get_component_mask(W));
   }
 
 
