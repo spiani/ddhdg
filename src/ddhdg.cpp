@@ -166,6 +166,100 @@ namespace Ddhdg
 
 
   template <int dim>
+  std::shared_ptr<dealii::Function<dim>>
+  Solver<dim>::extend_function_on_all_components(
+    const std::shared_ptr<const dealii::Function<dim>> f,
+    const Component                                    c)
+  {
+    Assert(f->n_components == 1, FunctionMustBeScalar());
+    component_map<dim> f_components;
+    switch (c)
+      {
+          case V: {
+            f_components.insert({dim, f});
+            break;
+          }
+          case n: {
+            f_components.insert({2 * dim + 1, f});
+            break;
+          }
+        default:
+          AssertThrow(false, UnknownComponent());
+      }
+    std::shared_ptr<dealii::Function<dim>> function_extended =
+      std::make_shared<FunctionByComponents<dim>>(2 * dim + 2, f_components);
+    return function_extended;
+  }
+
+
+
+  template <int dim>
+  std::shared_ptr<dealii::Function<dim>>
+  Solver<dim>::extend_function_on_all_components(
+    const std::shared_ptr<const dealii::Function<dim>> f,
+    const Displacement                                 d)
+  {
+    Assert(f->n_components == dim,
+           dealii::ExcDimensionMismatch(f->n_components, dim));
+    component_map<dim> f_components;
+    switch (d)
+      {
+          case E: {
+            for (unsigned int i = 0; i < dim; i++)
+              {
+                f_components.insert(
+                  {i, std::make_shared<const ComponentFunction<dim>>(f, i)});
+              }
+            break;
+          }
+          case W: {
+            for (unsigned int i = 0; i < dim; i++)
+              {
+                f_components.insert(
+                  {dim + 1 + i,
+                   std::make_shared<const ComponentFunction<dim>>(f, i)});
+              }
+            break;
+          }
+        default:
+          AssertThrow(false, UnknownDisplacement());
+      }
+    std::shared_ptr<dealii::Function<dim>> function_extended =
+      std::make_shared<FunctionByComponents<dim>>(2 * dim + 2, f_components);
+    return function_extended;
+  }
+
+
+
+  template <int dim>
+  std::shared_ptr<dealii::Function<dim>>
+  Solver<dim>::extend_function_on_all_trace_components(
+    const std::shared_ptr<const dealii::Function<dim>> f,
+    const Component                                    c)
+  {
+    Assert(f->n_components == 1, FunctionMustBeScalar());
+    component_map<dim> f_components;
+    switch (c)
+      {
+          case V: {
+            f_components.insert({0, f});
+            break;
+          }
+          case n: {
+            f_components.insert({1, f});
+            break;
+          }
+        default:
+          AssertThrow(false, UnknownComponent());
+      }
+    std::shared_ptr<dealii::Function<dim>> function_extended =
+      std::make_shared<FunctionByComponents<dim>>(2, f_components);
+    return function_extended;
+  }
+
+
+
+  template <int dim>
   void
   Solver<dim>::set_V_component(
     const std::shared_ptr<const dealii::Function<dim>> V_function)
@@ -173,40 +267,27 @@ namespace Ddhdg
     if (!this->initialized)
       this->setup_system();
 
-    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
-      V_f_components;
-    V_f_components.insert({dim, V_function});
     auto V_function_extended =
-      FunctionByComponents<dim>(2 * dim + 2, V_f_components);
+      this->extend_function_on_all_components(V_function, V);
+    auto V_function_trace_extended =
+      this->extend_function_on_all_trace_components(V_function, V);
+    auto V_grad     = std::make_shared<Gradient<dim>>(V_function);
+    auto E_function = std::make_shared<Opposite<dim>>(V_grad);
+    auto E_function_extended =
+      this->extend_function_on_all_components(E_function, E);
+
     dealii::VectorTools::interpolate(this->dof_handler_local,
-                                     V_function_extended,
+                                     *V_function_extended,
                                      this->solution_local,
                                      this->get_component_mask(V));
 
-    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
-      V_trace_f_components;
-    V_trace_f_components.insert({0, V_function});
-    auto V_trace_function_extended =
-      FunctionByComponents<dim>(2, V_trace_f_components);
-
     dealii::VectorTools::interpolate(this->dof_handler,
-                                     V_trace_function_extended,
+                                     *V_function_trace_extended,
                                      this->solution,
                                      this->get_trace_component_mask(V));
 
-    const Gradient<dim>   E_function(*V_function);
-    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
-      E_f_components;
-    for (unsigned int i = 0; i < dim; i++)
-      {
-        E_f_components.insert(
-          {i, std::make_shared<const ComponentFunction<dim>>(E_function, i)});
-      }
-    auto E_function_expanded =
-      FunctionByComponents<dim>(2 * dim + 2, E_f_components);
-
     dealii::VectorTools::interpolate(this->dof_handler_local,
-                                     E_function_expanded,
+                                     *E_function_extended,
                                      this->solution_local,
                                      this->get_component_mask(E));
   }
@@ -221,43 +302,30 @@ namespace Ddhdg
     if (!this->initialized)
       this->setup_system();
 
-    // Set n on the cells
-    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
-      n_f_components;
-    n_f_components.insert({2 * dim + 1, n_function});
     auto n_function_extended =
-      FunctionByComponents<dim>(2 * dim + 2, n_f_components);
+      this->extend_function_on_all_components(n_function, n);
+    auto n_function_trace_extended =
+      this->extend_function_on_all_trace_components(n_function, n);
+    auto n_grad     = std::make_shared<Gradient<dim>>(n_function);
+    auto W_function = std::make_shared<Opposite<dim>>(n_grad);
+    auto W_function_extended =
+      this->extend_function_on_all_components(W_function, W);
+
+    // Set n on the cells
     dealii::VectorTools::interpolate(this->dof_handler_local,
-                                     n_function_extended,
+                                     *n_function_extended,
                                      this->solution_local,
                                      this->get_component_mask(n));
 
     // Set n on the trace
-    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
-      n_trace_f_components;
-    n_trace_f_components.insert({1, n_function});
-    auto n_trace_function_extended =
-      FunctionByComponents<dim>(2, n_trace_f_components);
     dealii::VectorTools::interpolate(this->dof_handler,
-                                     n_trace_function_extended,
+                                     *n_function_trace_extended,
                                      this->solution,
                                      this->get_trace_component_mask(n));
 
-    // Set W
-    const Gradient<dim>   W_function(*n_function);
-    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
-      W_f_components;
-    for (unsigned int i = 0; i < dim; i++)
-      {
-        W_f_components.insert(
-          {dim + 1 + i,
-           std::make_shared<const ComponentFunction<dim>>(W_function, i)});
-      }
-    auto W_function_expanded =
-      FunctionByComponents<dim>(2 * dim + 2, W_f_components);
-
+    // Set W on the cells
     dealii::VectorTools::interpolate(this->dof_handler_local,
-                                     W_function_expanded,
+                                     *W_function_extended,
                                      this->solution_local,
                                      this->get_component_mask(W));
   }
@@ -554,7 +622,7 @@ namespace Ddhdg
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
         const dealii::Tensor<1, dim> mu_times_previous_E =
-          scratch.mu_face[q] * scratch.previous_E[q];
+          scratch.mu_face[q] * scratch.previous_tr_E[q];
 
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
           Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
@@ -771,7 +839,7 @@ namespace Ddhdg
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
         const dealii::Tensor<1, dim> mu_times_previous_E =
-          scratch.mu_face[q] * scratch.previous_E[q];
+          scratch.mu_face[q] * scratch.previous_tr_E[q];
 
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
           Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
@@ -915,6 +983,10 @@ namespace Ddhdg
         for (unsigned int q = 0; q < n_face_q_points; ++q)
           scratch.face_quadrature_points[q] =
             scratch.fe_face_values.quadrature_point(q);
+
+        const FEValuesExtractors::Vector electric_field(0);
+        scratch.fe_face_values_local[electric_field].get_function_values(
+          previous_solution_local, scratch.previous_tr_E);
 
         permittivity->compute_absolute_permittivity(
           scratch.face_quadrature_points, scratch.epsilon_face);

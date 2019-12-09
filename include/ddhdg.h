@@ -171,6 +171,10 @@ namespace Ddhdg
       unsigned int                                 initial_refinements = 0);
 
   private:
+    static std::unique_ptr<dealii::Triangulation<dim>>
+    copy_triangulation(
+      std::shared_ptr<const dealii::Triangulation<dim>> triangulation);
+
     dealii::ComponentMask
     get_component_mask(Component component);
 
@@ -183,9 +187,20 @@ namespace Ddhdg
     dealii::FEValuesExtractors::Scalar
     get_component_extractor(Component component);
 
-    static std::unique_ptr<dealii::Triangulation<dim>>
-    copy_triangulation(
-      std::shared_ptr<const dealii::Triangulation<dim>> triangulation);
+    std::shared_ptr<dealii::Function<dim>>
+    extend_function_on_all_components(
+      std::shared_ptr<const dealii::Function<dim>> f,
+      Component                                    c);
+
+    std::shared_ptr<dealii::Function<dim>>
+    extend_function_on_all_components(
+      std::shared_ptr<const dealii::Function<dim>> f,
+      Displacement                                 d);
+
+    std::shared_ptr<dealii::Function<dim>>
+    extend_function_on_all_trace_components(
+      std::shared_ptr<const dealii::Function<dim>> f,
+      Component                                    c);
 
     void
     setup_system();
