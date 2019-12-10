@@ -1,5 +1,6 @@
 build/
 cmake-build-*/
+clean_results.sh
 load_environment.sh
 .idea
 *.vtk
