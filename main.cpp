@@ -90,7 +90,7 @@ public:
       add_parameter("right border", right);
     }
     leave_subsection();
-    enter_subsection("Starting points");
+    enter_subsection("starting points");
     {
       add_parameter("V starting point", V_starting_point_str);
       add_parameter("n starting point", n_starting_point_str);
