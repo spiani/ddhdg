@@ -22,8 +22,10 @@ subsection boundary conditions
     set n boundary function         = 0
 end
 
-set expected V solution             = x - y
-set expected n solution             = 0
+subsection expected solutions
+    set expected V solution             = x - y
+    set expected n solution             = 0
+end
 
 subsection domain geometry
     set left border                 = -1

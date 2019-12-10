@@ -24,6 +24,8 @@ namespace Ddhdg
           compute_recombination_term(n[q], P[q]);
   }
 
+
+
   template <int dim>
   void
   RecombinationTerm<dim>::compute_multiple_derivatives_of_recombination_terms(
@@ -41,6 +43,8 @@ namespace Ddhdg
     for (std::size_t q = 0; q < n_of_points; q++)
       r[q] = compute_recombination_term(n[q], P[q]);
   }
+
+
 
   template <int dim>
   LinearRecombinationTerm<dim>::LinearRecombinationTerm(
@@ -61,6 +65,8 @@ namespace Ddhdg
       Constants::constants);
   }
 
+
+
   template <int dim>
   LinearRecombinationTerm<dim>::LinearRecombinationTerm(
     const LinearRecombinationTerm<dim> &linear_recombination_term)
@@ -79,6 +85,8 @@ namespace Ddhdg
       Constants::constants);
   }
 
+
+
   template <int dim>
   double
   LinearRecombinationTerm<dim>::compute_recombination_term(
@@ -90,6 +98,8 @@ namespace Ddhdg
     return a + n * b;
   }
 
+
+
   template <int dim>
   double
   LinearRecombinationTerm<dim>::compute_derivative_of_recombination_term(
@@ -99,6 +109,8 @@ namespace Ddhdg
     (void)n;
     return this->parsed_linear_coefficient.value(q);
   }
+
+
 
   template <int dim>
   void
@@ -124,6 +136,8 @@ namespace Ddhdg
       r[q] = a[q] + b[q] * n[q];
   }
 
+
+
   template <int dim>
   void
   LinearRecombinationTerm<dim>::
@@ -132,12 +146,11 @@ namespace Ddhdg
       const std::vector<dealii::Point<dim>> &P,
       std::vector<double> &                  r) const
   {
-    const std::size_t n_of_points = P.size();
-
-    Assert(n_of_points == n.size(),
-           dealii::ExcDimensionMismatch(n_of_points, n.size()));
-    Assert(n_of_points == r.size(),
-           dealii::ExcDimensionMismatch(n_of_points, r.size()));
+    (void) n;
+    Assert(P.size() == n.size(),
+           dealii::ExcDimensionMismatch(P.size(), n.size()));
+    Assert(P.size() == r.size(),
+           dealii::ExcDimensionMismatch(P.size(), r.size()));
 
     this->parsed_linear_coefficient.value_list(P, r);
   }

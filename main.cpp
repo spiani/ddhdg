@@ -96,12 +96,14 @@ public:
       add_parameter("n starting point", n_starting_point_str);
     }
     leave_subsection();
+    enter_subsection("expected solutions");
     add_parameter("expected V solution",
                   expected_V_solution_str,
                   "The expected solution for the potential");
     add_parameter("expected n solution",
                   expected_n_solution_str,
                   "The expected solution for the electron density");
+    leave_subsection();
     enter_subsection("nonlinear solver");
     add_parameter(
       "tolerance",
