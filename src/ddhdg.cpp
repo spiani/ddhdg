@@ -1100,7 +1100,7 @@ namespace Ddhdg
   }
 
   template <int dim>
-  void
+  NonlinearIteratorStatus
   Solver<dim>::run(const double                         tolerance,
                    const dealii::VectorTools::NormType &norm,
                    const int max_number_of_iterations)
@@ -1113,7 +1113,11 @@ namespace Ddhdg
     dealii::Vector<double> difference;
     difference.reinit(dof_handler_local.n_dofs());
 
-    for (int step = 1;
+    bool   convergence_reached    = false;
+    int    step                   = 0;
+    double global_difference_norm = 0.;
+
+    for (step = 1;
          step <= max_number_of_iterations && max_number_of_iterations > 0;
          step++)
       {
@@ -1147,7 +1151,7 @@ namespace Ddhdg
                                           QGauss<dim>(fe.degree + 1),
                                           norm);
 
-        const double global_difference_norm =
+        global_difference_norm =
           VectorTools::compute_global_error(*triangulation,
                                             difference_per_cell,
                                             norm);
@@ -1158,27 +1162,32 @@ namespace Ddhdg
             std::cout
               << "Difference is smaller than tolerance. CONVERGENCE REACHED"
               << std::endl;
+            convergence_reached = true;
             break;
           }
       }
+
+    return NonlinearIteratorStatus(convergence_reached,
+                                   step,
+                                   global_difference_norm);
   }
 
   template <int dim>
-  void
+  NonlinearIteratorStatus
   Solver<dim>::run(const double tolerance, const int max_number_of_iterations)
   {
-    this->run(tolerance,
-              parameters->nonlinear_solver_tolerance_norm,
-              max_number_of_iterations);
+    return this->run(tolerance,
+                     parameters->nonlinear_solver_tolerance_norm,
+                     max_number_of_iterations);
   }
 
   template <int dim>
-  void
+  NonlinearIteratorStatus
   Solver<dim>::run()
   {
-    this->run(parameters->nonlinear_solver_tolerance,
-              parameters->nonlinear_solver_tolerance_norm,
-              parameters->nonlinear_solver_max_number_of_iterations);
+    return this->run(parameters->nonlinear_solver_tolerance,
+                     parameters->nonlinear_solver_tolerance_norm,
+                     parameters->nonlinear_solver_max_number_of_iterations);
   }
 
   template <int dim>
@@ -1335,18 +1344,37 @@ namespace Ddhdg
   {
     this->refine_grid(initial_refinements);
 
-
     std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
       components;
     components.insert({dim, expected_V_solution});
     components.insert({2 * dim + 1, expected_n_solution});
     FunctionByComponents expected_solution(6, components);
 
+    bool         converged;
+    unsigned int iterations;
+    double       last_step_difference;
+
+    auto converged_function            = [&]() { return converged; };
+    auto iterations_function           = [&]() { return iterations; };
+    auto last_step_difference_function = [&]() { return last_step_difference; };
+
+    error_table->add_extra_column("converged", converged_function, false);
+    error_table->add_extra_column("iterations", iterations_function, false);
+    error_table->add_extra_column("last step",
+                                  last_step_difference_function,
+                                  false);
+
+
     for (unsigned int cycle = 0; cycle < n_cycles; ++cycle)
       {
         this->set_V_component(initial_V_function);
         this->set_n_component(initial_n_function);
-        this->run();
+        const NonlinearIteratorStatus iter_status = this->run();
+
+        converged            = iter_status.converged;
+        iterations           = iter_status.iterations;
+        last_step_difference = iter_status.last_update_norm;
+
         error_table->error_from_exact(dof_handler_local,
                                       solution_local,
                                       expected_solution);

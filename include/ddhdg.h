@@ -107,6 +107,21 @@ namespace Ddhdg
     const bool   multithreading          = true;
   };
 
+  struct NonlinearIteratorStatus
+  {
+    const bool         converged;
+    const unsigned int iterations;
+    const double       last_update_norm;
+
+    NonlinearIteratorStatus(const bool         converged,
+                            const unsigned int iterations,
+                            const double       last_update_norm)
+      : converged(converged)
+      , iterations(iterations)
+      , last_update_norm(last_update_norm)
+    {}
+  };
+
   template <int dim>
   class Solver
   {
@@ -129,15 +144,15 @@ namespace Ddhdg
     set_n_component(
       const std::shared_ptr<const dealii::Function<dim>> n_function);
 
-    void
+    NonlinearIteratorStatus
     run(double                               tolerance,
         const dealii::VectorTools::NormType &norm,
         int                                  max_number_of_iterations = -1);
 
-    void
+    NonlinearIteratorStatus
     run(double tolerance, int max_number_of_iterations = -1);
 
-    void
+    NonlinearIteratorStatus
     run();
 
     double
