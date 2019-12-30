@@ -202,6 +202,12 @@ namespace Ddhdg
     dealii::FEValuesExtractors::Scalar
     get_component_extractor(Component component);
 
+    dealii::FEValuesExtractors::Vector
+    get_displacement_extractor(Displacement displacement);
+
+    dealii::FEValuesExtractors::Scalar
+    get_trace_component_extractor(Component component);
+
     std::shared_ptr<dealii::Function<dim>>
     extend_function_on_all_components(
       std::shared_ptr<const dealii::Function<dim>> f,
@@ -333,42 +339,48 @@ namespace Ddhdg
   template <int dim>
   struct Solver<dim>::ScratchData
   {
-    FEValues<dim>                          fe_values_local;
-    FEFaceValues<dim>                      fe_face_values_local;
-    FEFaceValues<dim>                      fe_face_values;
-    FullMatrix<double>                     ll_matrix;
-    FullMatrix<double>                     lf_matrix;
-    FullMatrix<double>                     fl_matrix;
-    FullMatrix<double>                     tmp_matrix;
-    Vector<double>                         l_rhs;
-    Vector<double>                         tmp_rhs;
-    std::vector<Point<dim>>                cell_quadrature_points;
-    std::vector<Point<dim>>                face_quadrature_points;
-    std::vector<Tensor<2, dim>>            epsilon_cell;
-    std::vector<Tensor<2, dim>>            epsilon_face;
-    std::vector<Tensor<2, dim>>            mu_cell;
-    std::vector<Tensor<2, dim>>            mu_face;
-    std::vector<double>                    T_cell;
-    std::vector<double>                    T_face;
-    std::vector<double>                    r_cell;
-    std::vector<double>                    dr_cell;
-    std::vector<double>                    previous_n;
-    std::vector<Tensor<1, dim>>            previous_E;
-    std::vector<Tensor<1, dim>>            previous_tr_E;
-    std::vector<Tensor<1, dim>>            E;
-    std::vector<double>                    E_div;
-    std::vector<double>                    V;
-    std::vector<Tensor<1, dim>>            V_grad;
-    std::vector<double>                    tr_V;
-    std::vector<Tensor<1, dim>>            W;
-    std::vector<double>                    W_div;
-    std::vector<double>                    n;
-    std::vector<Tensor<1, dim>>            n_grad;
-    std::vector<double>                    tr_n;
-    std::vector<double>                    tr_V_solution_values;
-    std::vector<double>                    tr_n_solution_values;
-    std::vector<std::vector<unsigned int>> fe_local_support_on_face;
-    std::vector<std::vector<unsigned int>> fe_support_on_face;
+    FEValues<dim>                                    fe_values_local;
+    FEFaceValues<dim>                                fe_face_values_local;
+    FEFaceValues<dim>                                fe_face_values;
+    FullMatrix<double>                               ll_matrix;
+    FullMatrix<double>                               lf_matrix;
+    FullMatrix<double>                               fl_matrix;
+    FullMatrix<double>                               tmp_matrix;
+    Vector<double>                                   l_rhs;
+    Vector<double>                                   tmp_rhs;
+    std::vector<Point<dim>>                          cell_quadrature_points;
+    std::vector<Point<dim>>                          face_quadrature_points;
+    std::vector<Tensor<2, dim>>                      epsilon_cell;
+    std::vector<Tensor<2, dim>>                      epsilon_face;
+    std::vector<Tensor<2, dim>>                      mu_cell;
+    std::vector<Tensor<2, dim>>                      mu_face;
+    std::vector<double>                              T_cell;
+    std::vector<double>                              T_face;
+    std::vector<double>                              r_cell;
+    std::vector<double>                              dr_cell;
+    std::map<Component, std::vector<double>>         previous_c_cell;
+    std::map<Component, std::vector<Tensor<1, dim>>> previous_f_cell;
+    std::map<Component, std::vector<Tensor<1, dim>>> previous_f_face;
+    std::map<Component, std::vector<Tensor<1, dim>>> f;
+    std::map<Component, std::vector<double>>         f_div;
+    std::map<Component, std::vector<double>>         c;
+    std::map<Component, std::vector<Tensor<1, dim>>> c_grad;
+    std::map<Component, std::vector<double>>         tr_c;
+    std::map<Component, std::vector<double>>         tr_c_solution_values;
+    std::vector<std::vector<unsigned int>>           fe_local_support_on_face;
+    std::vector<std::vector<unsigned int>>           fe_support_on_face;
+
+    static std::map<Component, std::vector<double>>
+    initialize_double_map_on_components(unsigned int n);
+
+    static std::map<Component, std::vector<Tensor<1, dim>>>
+    initialize_tensor_map_on_components(unsigned int n);
+
+    static std::map<Component, std::vector<double>>
+    initialize_map_for_previous_components(unsigned int n);
+
+    static std::map<Component, std::vector<Tensor<1, dim>>>
+    initialize_map_for_previous_displacements(unsigned int n);
 
     ScratchData(const FiniteElement<dim> &fe,
                 const FiniteElement<dim> &fe_local,
@@ -398,21 +410,19 @@ namespace Ddhdg
       , T_face(face_quadrature_formula.size())
       , r_cell(quadrature_formula.size())
       , dr_cell(quadrature_formula.size())
-      , previous_n(quadrature_formula.size())
-      , previous_E(quadrature_formula.size())
-      , previous_tr_E(face_quadrature_formula.size())
-      , E(fe_local.dofs_per_cell)
-      , E_div(fe_local.dofs_per_cell)
-      , V(fe_local.dofs_per_cell)
-      , V_grad(fe_local.dofs_per_cell)
-      , tr_V(fe.dofs_per_cell)
-      , W(fe_local.dofs_per_cell)
-      , W_div(fe_local.dofs_per_cell)
-      , n(fe_local.dofs_per_cell)
-      , n_grad(fe_local.dofs_per_cell)
-      , tr_n(fe.dofs_per_cell)
-      , tr_V_solution_values(face_quadrature_formula.size())
-      , tr_n_solution_values(face_quadrature_formula.size())
+      , previous_c_cell(
+          initialize_map_for_previous_components(quadrature_formula.size()))
+      , previous_f_cell(
+          initialize_map_for_previous_displacements(quadrature_formula.size()))
+      , previous_f_face(initialize_map_for_previous_displacements(
+          face_quadrature_formula.size()))
+      , f(initialize_tensor_map_on_components(fe_local.dofs_per_cell))
+      , f_div(initialize_double_map_on_components(fe_local.dofs_per_cell))
+      , c(initialize_double_map_on_components(fe_local.dofs_per_cell))
+      , c_grad(initialize_tensor_map_on_components(fe_local.dofs_per_cell))
+      , tr_c(initialize_double_map_on_components(fe.dofs_per_cell))
+      , tr_c_solution_values(
+          initialize_double_map_on_components(face_quadrature_formula.size()))
       , fe_local_support_on_face(GeometryInfo<dim>::faces_per_cell)
       , fe_support_on_face(GeometryInfo<dim>::faces_per_cell)
     {
@@ -458,21 +468,15 @@ namespace Ddhdg
       , T_face(sd.T_face)
       , r_cell(sd.r_cell)
       , dr_cell(sd.dr_cell)
-      , previous_n(sd.previous_n)
-      , previous_E(sd.previous_E)
-      , previous_tr_E(sd.previous_tr_E)
-      , E(sd.E)
-      , E_div(sd.E_div)
-      , V(sd.V)
-      , V_grad(sd.V_grad)
-      , tr_V(sd.tr_V)
-      , W(sd.W)
-      , W_div(sd.W_div)
-      , n(sd.n)
-      , n_grad(sd.n_grad)
-      , tr_n(sd.tr_n)
-      , tr_V_solution_values(sd.tr_V_solution_values)
-      , tr_n_solution_values(sd.tr_n_solution_values)
+      , previous_c_cell(sd.previous_c_cell)
+      , previous_f_cell(sd.previous_f_cell)
+      , previous_f_face(sd.previous_f_face)
+      , f(sd.f)
+      , f_div(sd.f_div)
+      , c(sd.c)
+      , c_grad(sd.c_grad)
+      , tr_c(sd.tr_c)
+      , tr_c_solution_values(sd.tr_c_solution_values)
       , fe_local_support_on_face(sd.fe_local_support_on_face)
       , fe_support_on_face(sd.fe_support_on_face)
     {}

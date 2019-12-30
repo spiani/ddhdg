@@ -39,6 +39,62 @@ namespace Ddhdg
     return new_triangulation;
   }
 
+
+
+  template <int dim>
+  std::map<Component, std::vector<double>>
+  Solver<dim>::ScratchData::initialize_double_map_on_components(
+    const unsigned int n)
+  {
+    std::map<Component, std::vector<double>> m;
+    for (const auto c : Ddhdg::AllComponents)
+      {
+        m.insert({c, std::vector<double>(n)});
+      }
+    return m;
+  }
+
+
+
+  template <int dim>
+  std::map<Component, std::vector<Tensor<1, dim>>>
+  Solver<dim>::ScratchData::initialize_tensor_map_on_components(
+    const unsigned int n)
+  {
+    std::map<Component, std::vector<Tensor<1, dim>>> m;
+    for (const auto c : Ddhdg::AllComponents)
+      {
+        m.insert({c, std::vector<Tensor<1, dim>>(n)});
+      }
+    return m;
+  }
+
+
+
+  template <int dim>
+  std::map<Component, std::vector<double>>
+  Solver<dim>::ScratchData::initialize_map_for_previous_components(
+    const unsigned int n)
+  {
+    std::map<Component, std::vector<double>> m;
+    m.insert({Component::n, std::vector<double>(n)});
+    return m;
+  }
+
+
+
+  template <int dim>
+  std::map<Component, std::vector<Tensor<1, dim>>>
+  Solver<dim>::ScratchData::initialize_map_for_previous_displacements(
+    const unsigned int n)
+  {
+    std::map<Component, std::vector<Tensor<1, dim>>> m;
+    m.insert({Component::V, std::vector<Tensor<1, dim>>(n)});
+    return m;
+  }
+
+
+
   template <int dim>
   Solver<dim>::Solver(const std::shared_ptr<const Problem<dim>>     problem,
                       const std::shared_ptr<const SolverParameters> parameters)
@@ -351,6 +407,50 @@ namespace Ddhdg
     return extractor;
   }
 
+
+
+  template <int dim>
+  dealii::FEValuesExtractors::Vector
+  Solver<dim>::get_displacement_extractor(const Displacement displacement)
+  {
+    dealii::FEValuesExtractors::Vector extractor;
+    switch (displacement)
+      {
+        case Displacement::E:
+          extractor = dealii::FEValuesExtractors::Vector(0);
+          break;
+        case Displacement::W:
+          extractor = dealii::FEValuesExtractors::Vector(dim + 1);
+          break;
+        default:
+          AssertThrow(false, UnknownDisplacement());
+      }
+    return extractor;
+  }
+
+
+
+  template <int dim>
+  dealii::FEValuesExtractors::Scalar
+  Solver<dim>::get_trace_component_extractor(const Component component)
+  {
+    dealii::FEValuesExtractors::Scalar extractor;
+    switch (component)
+      {
+        case Component::V:
+          extractor = dealii::FEValuesExtractors::Scalar(0);
+          break;
+        case Component::n:
+          extractor = dealii::FEValuesExtractors::Scalar(1);
+          break;
+        default:
+          AssertThrow(false, UnknownComponent());
+      }
+    return extractor;
+  }
+
+
+
   template <int dim>
   void
   Solver<dim>::assemble_system_multithreaded(bool trace_reconstruct)
@@ -430,11 +530,11 @@ namespace Ddhdg
     // Get the values of E on the quadrature points of the cell computed during
     // the previous iteration
     scratch.fe_values_local[electric_field].get_function_values(
-      previous_solution_local, scratch.previous_E);
+      previous_solution_local, scratch.previous_f_cell[Component::V]);
 
     // The same for n
     scratch.fe_values_local[electron_density].get_function_values(
-      previous_solution_local, scratch.previous_n);
+      previous_solution_local, scratch.previous_c_cell[Component::n]);
 
     // Get the position of the quadrature points
     for (unsigned int q = 0; q < n_q_points; ++q)
@@ -455,61 +555,67 @@ namespace Ddhdg
     // Compute the value of the recombination term and its derivative respect to
     // n
     recombination_term->compute_multiple_recombination_terms(
-      scratch.previous_n, scratch.cell_quadrature_points, scratch.r_cell);
+      scratch.previous_c_cell[Component::n],
+      scratch.cell_quadrature_points,
+      scratch.r_cell);
     recombination_term->compute_multiple_derivatives_of_recombination_terms(
-      scratch.previous_n, scratch.cell_quadrature_points, scratch.dr_cell);
+      scratch.previous_c_cell[Component::n],
+      scratch.cell_quadrature_points,
+      scratch.dr_cell);
+
+    auto &E      = scratch.f[Component::V];
+    auto &E_div  = scratch.f_div[Component::V];
+    auto &V      = scratch.c[Component::V];
+    auto &V_grad = scratch.c_grad[Component::V];
+
+    auto &W      = scratch.f[Component::n];
+    auto &W_div  = scratch.f_div[Component::n];
+    auto &n      = scratch.c[Component::n];
+    auto &n_grad = scratch.c_grad[Component::n];
 
     for (unsigned int q = 0; q < n_q_points; ++q)
       {
         const double JxW = scratch.fe_values_local.JxW(q);
         for (unsigned int k = 0; k < loc_dofs_per_cell; ++k)
           {
-            scratch.E[k] = scratch.fe_values_local[electric_field].value(k, q);
-            scratch.E_div[k] =
-              scratch.fe_values_local[electric_field].divergence(k, q);
-            scratch.V[k] =
-              scratch.fe_values_local[electric_potential].value(k, q);
-            scratch.V_grad[k] =
+            E[k]     = scratch.fe_values_local[electric_field].value(k, q);
+            E_div[k] = scratch.fe_values_local[electric_field].divergence(k, q);
+            V[k]     = scratch.fe_values_local[electric_potential].value(k, q);
+            V_grad[k] =
               scratch.fe_values_local[electric_potential].gradient(k, q);
 
-            scratch.W[k] =
-              scratch.fe_values_local[electron_displacement].value(k, q);
-            scratch.W_div[k] =
+            W[k] = scratch.fe_values_local[electron_displacement].value(k, q);
+            W_div[k] =
               scratch.fe_values_local[electron_displacement].divergence(k, q);
-            scratch.n[k] =
-              scratch.fe_values_local[electron_density].value(k, q);
-            scratch.n_grad[k] =
+            n[k] = scratch.fe_values_local[electron_density].value(k, q);
+            n_grad[k] =
               scratch.fe_values_local[electron_density].gradient(k, q);
           }
 
         const dealii::Tensor<1, dim> mu_times_previous_E =
-          scratch.mu_cell[q] * scratch.previous_E[q];
+          scratch.mu_cell[q] * scratch.previous_f_cell[Component::V][q];
 
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
           Constants::KB / Constants::Q * scratch.T_cell[q] * scratch.mu_cell[q];
+
+        const double previous_n = scratch.previous_c_cell[Component::n][q];
 
         for (unsigned int i = 0; i < loc_dofs_per_cell; ++i)
           {
             for (unsigned int j = 0; j < loc_dofs_per_cell; ++j)
               {
                 scratch.ll_matrix(i, j) +=
-                  (-scratch.V[j] * scratch.E_div[i] +
-                   scratch.E[j] * scratch.E[i] -
-                   (scratch.epsilon_cell[q] * scratch.E[j]) *
-                     scratch.V_grad[i] -
-                   scratch.n[j] * scratch.V[i] -
-                   scratch.n[j] * scratch.W_div[i] +
-                   scratch.W[j] * scratch.W[i] -
-                   scratch.n[j] * (mu_times_previous_E * scratch.n_grad[i]) +
-                   (einstein_diffusion_coefficient * scratch.W[j]) *
-                     scratch.n_grad[i] -
-                   scratch.dr_cell[q] * scratch.n[j] * scratch.n[i] /
-                     Constants::Q) *
+                  (-V[j] * E_div[i] + E[j] * E[i] -
+                   (scratch.epsilon_cell[q] * E[j]) * V_grad[i] - n[j] * V[i] -
+                   n[j] * W_div[i] + W[j] * W[i] -
+                   n[j] * (mu_times_previous_E * n_grad[i]) +
+                   (einstein_diffusion_coefficient * W[j]) * n_grad[i] -
+                   scratch.dr_cell[q] * n[j] * n[i] / Constants::Q) *
                   JxW;
               }
-            scratch.l_rhs[i] += (scratch.previous_n[q] * scratch.r_cell[q] -
-                                 scratch.previous_n[q] * scratch.dr_cell[q]) /
-                                Constants::Q * scratch.n[i] * JxW;
+            scratch.l_rhs[i] += (previous_n * scratch.r_cell[q] -
+                                 previous_n * scratch.dr_cell[q]) /
+                                Constants::Q * n[i] * JxW;
           }
       }
   }
@@ -521,25 +627,29 @@ namespace Ddhdg
     const unsigned int               face,
     const unsigned int               q)
   {
-    const FEValuesExtractors::Vector electric_field(0);
-    const FEValuesExtractors::Scalar electric_potential(dim);
-    const FEValuesExtractors::Vector electron_displacement(dim + 1);
-    const FEValuesExtractors::Scalar electron_density(2 * dim + 1);
-
-    for (unsigned int k = 0; k < scratch.fe_local_support_on_face[face].size();
-         ++k)
+    for (const auto c : Ddhdg::AllComponents)
       {
-        const unsigned int kk = scratch.fe_local_support_on_face[face][k];
-        scratch.E[k] =
-          scratch.fe_face_values_local[electric_field].value(kk, q);
-        scratch.V[k] =
-          scratch.fe_face_values_local[electric_potential].value(kk, q);
-        scratch.W[k] =
-          scratch.fe_face_values_local[electron_displacement].value(kk, q);
-        scratch.n[k] =
-          scratch.fe_face_values_local[electron_density].value(kk, q);
+        const Displacement               d = component2displacement(c);
+        const FEValuesExtractors::Scalar c_extractor =
+          this->get_component_extractor(c);
+        const FEValuesExtractors::Vector d_extractor =
+          this->get_displacement_extractor(d);
+
+        auto &f  = scratch.f[c];
+        auto &c_ = scratch.c[c];
+
+        for (unsigned int k = 0;
+             k < scratch.fe_local_support_on_face[face].size();
+             ++k)
+          {
+            const unsigned int kk = scratch.fe_local_support_on_face[face][k];
+            f[k]  = scratch.fe_face_values_local[d_extractor].value(kk, q);
+            c_[k] = scratch.fe_face_values_local[c_extractor].value(kk, q);
+          }
       }
   }
+
+
 
   template <int dim>
   inline void
@@ -548,17 +658,21 @@ namespace Ddhdg
     const unsigned int               face,
     const unsigned int               q)
   {
-    const FEValuesExtractors::Scalar electric_field_trace(0);
-    const FEValuesExtractors::Scalar electron_density_trace(1);
-
-    for (unsigned int k = 0; k < scratch.fe_support_on_face[face].size(); ++k)
+    for (const auto c : Ddhdg::AllComponents)
       {
-        scratch.tr_V[k] = scratch.fe_face_values[electric_field_trace].value(
-          scratch.fe_support_on_face[face][k], q);
-        scratch.tr_n[k] = scratch.fe_face_values[electron_density_trace].value(
-          scratch.fe_support_on_face[face][k], q);
+        const FEValuesExtractors::Scalar extractor =
+          this->get_trace_component_extractor(c);
+        auto &tr_c = scratch.tr_c[c];
+        for (unsigned int k = 0; k < scratch.fe_support_on_face[face].size();
+             ++k)
+          {
+            tr_c[k] = scratch.fe_face_values[extractor].value(
+              scratch.fe_support_on_face[face][k], q);
+          }
       }
   }
+
+
 
   template <int dim>
   inline void
@@ -567,6 +681,14 @@ namespace Ddhdg
   {
     const unsigned int n_face_q_points =
       scratch.fe_face_values_local.get_quadrature().size();
+
+    auto &E    = scratch.f[Component::V];
+    auto &V    = scratch.c[Component::V];
+    auto &tr_V = scratch.tr_c[Component::V];
+
+    auto &W    = scratch.f[Component::n];
+    auto &n    = scratch.c[Component::n];
+    auto &tr_n = scratch.tr_c[Component::n];
 
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
@@ -591,10 +713,10 @@ namespace Ddhdg
                 // the restriction of local test function on the border
                 // i is the index of the test function
                 scratch.lf_matrix(ii, jj) +=
-                  (scratch.tr_V[j] * (scratch.E[i] * normal) -
-                   parameters->tau * scratch.tr_V[j] * scratch.V[i] +
-                   scratch.tr_n[j] * (scratch.W[i] * normal) -
-                   parameters->tau * (scratch.tr_n[j] * scratch.n[i])) *
+                  (tr_V[j] * (E[i] * normal) -
+                   parameters->tau * tr_V[j] * V[i] +
+                   scratch.tr_c[Component::n][j] * (W[i] * normal) -
+                   parameters->tau * (tr_n[j] * n[i])) *
                   JxW;
               }
           }
@@ -613,6 +735,10 @@ namespace Ddhdg
     const unsigned int n_face_q_points =
       scratch.fe_face_values_local.get_quadrature().size();
 
+    auto &c_   = scratch.c[c];
+    auto &f    = scratch.f[c];
+    auto &tr_c = scratch.tr_c[c];
+
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
         copy_fe_values_on_scratch(scratch, face, q);
@@ -622,7 +748,7 @@ namespace Ddhdg
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
         const dealii::Tensor<1, dim> mu_times_previous_E =
-          scratch.mu_face[q] * scratch.previous_tr_E[q];
+          scratch.mu_face[q] * scratch.previous_f_face[Component::V][q];
 
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
           Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
@@ -648,18 +774,17 @@ namespace Ddhdg
                 if (c == V)
                   {
                     scratch.fl_matrix(jj, ii) -=
-                      ((scratch.epsilon_face[q] * scratch.E[i]) * normal +
-                       parameters->tau * scratch.V[i]) *
-                      scratch.tr_V[j] * JxW;
+                      ((scratch.epsilon_face[q] * f[i]) * normal +
+                       parameters->tau * c_[i]) *
+                      tr_c[j] * JxW;
                   }
                 if (c == n)
                   {
                     scratch.fl_matrix(jj, ii) -=
-                      (scratch.n[i] * (mu_times_previous_E * normal) -
-                       (einstein_diffusion_coefficient * scratch.W[i]) *
-                         normal +
-                       parameters->tau * scratch.n[i]) *
-                      scratch.tr_n[j] * JxW;
+                      (c_[i] * (mu_times_previous_E * normal) -
+                       (einstein_diffusion_coefficient * f[i]) * normal +
+                       parameters->tau * c_[i]) *
+                      tr_c[j] * JxW;
                   }
               }
           }
@@ -676,6 +801,8 @@ namespace Ddhdg
   {
     if (c != V and c != n)
       AssertThrow(false, UnknownComponent());
+
+    auto &tr_c = scratch.tr_c[c];
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_local.get_quadrature().size();
@@ -697,19 +824,8 @@ namespace Ddhdg
                  ++j)
               {
                 const unsigned int jj = scratch.fe_support_on_face[face][j];
-
-                if (c == V)
-                  {
-                    task_data.cell_matrix(ii, jj) += -parameters->tau *
-                                                     scratch.tr_V[i] *
-                                                     scratch.tr_V[j] * JxW;
-                  }
-                if (c == n)
-                  {
-                    task_data.cell_matrix(ii, jj) += -parameters->tau *
-                                                     scratch.tr_n[i] *
-                                                     scratch.tr_n[j] * JxW;
-                  }
+                task_data.cell_matrix(ii, jj) +=
+                  -parameters->tau * tr_c[i] * tr_c[j] * JxW;
               }
           }
       }
@@ -726,25 +842,10 @@ namespace Ddhdg
     const Ddhdg::DirichletBoundaryCondition<dim> dbc,
     unsigned int                                 face)
   {
-    // Is this ok??? I need a trick to have a variable that is scratch.tr_V
-    // when I am working with the potential and scratch.tr_n when working with
-    // the electron density
-    std::vector<double> *tr_c_pointer;
-    switch (c)
-      {
-        case Component::V:
-          tr_c_pointer = &scratch.tr_V;
-          break;
-        case Component::n:
-          tr_c_pointer = &scratch.tr_n;
-          break;
-        default:
-          AssertThrow(false, UnknownComponent());
-      }
-    std::vector<double> &tr_c = *tr_c_pointer;
-
     if (c != V and c != n)
       AssertThrow(false, UnknownComponent());
+
+    auto &tr_c = scratch.tr_c[c];
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_local.get_quadrature().size();
@@ -791,19 +892,7 @@ namespace Ddhdg
     auto boundary_condition =
       boundary_handler->get_neumann_conditions_for_id(face_id, c);
 
-    std::vector<double> *tr_c_pointer;
-    switch (c)
-      {
-        case Component::V:
-          tr_c_pointer = &scratch.tr_V;
-          break;
-        case Component::n:
-          tr_c_pointer = &scratch.tr_n;
-          break;
-        default:
-          AssertThrow(false, UnknownComponent());
-      }
-    std::vector<double> &tr_c = *tr_c_pointer;
+    auto &tr_c = scratch.tr_c[c];
 
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
@@ -830,6 +919,12 @@ namespace Ddhdg
     const unsigned int n_face_q_points =
       scratch.fe_face_values_local.get_quadrature().size();
 
+    auto &E = scratch.f[Component::V];
+    auto &V = scratch.c[Component::V];
+
+    auto &W = scratch.f[Component::n];
+    auto &n = scratch.c[Component::n];
+
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
         copy_fe_values_on_scratch(scratch, face, q);
@@ -839,7 +934,7 @@ namespace Ddhdg
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
         const dealii::Tensor<1, dim> mu_times_previous_E =
-          scratch.mu_face[q] * scratch.previous_tr_E[q];
+          scratch.mu_face[q] * scratch.previous_f_face[Component::V][q];
 
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
           Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
@@ -857,13 +952,11 @@ namespace Ddhdg
                 const unsigned int jj =
                   scratch.fe_local_support_on_face[face][j];
                 scratch.ll_matrix(ii, jj) +=
-                  (scratch.epsilon_face[q] * scratch.E[j] * normal *
-                     scratch.V[i] +
-                   parameters->tau * scratch.V[j] * scratch.V[i] +
-                   mu_times_previous_E * normal * scratch.n[j] * scratch.n[i] -
-                   einstein_diffusion_coefficient * scratch.W[j] * normal *
-                     scratch.n[i] +
-                   parameters->tau * scratch.n[j] * scratch.n[i]) *
+                  (scratch.epsilon_face[q] * E[j] * normal * V[i] +
+                   parameters->tau * V[j] * V[i] +
+                   mu_times_previous_E * normal * n[j] * n[i] -
+                   einstein_diffusion_coefficient * W[j] * normal * n[i] +
+                   parameters->tau * n[j] * n[i]) *
                   JxW;
               }
           }
@@ -887,17 +980,22 @@ namespace Ddhdg
         const double         JxW    = scratch.fe_face_values.JxW(q);
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
-        for (unsigned int i = 0;
-             i < scratch.fe_local_support_on_face[face].size();
-             ++i)
+        for (const auto c : Ddhdg::AllComponents)
           {
-            const unsigned int ii = scratch.fe_local_support_on_face[face][i];
-            scratch.l_rhs(ii) +=
-              (-scratch.E[i] * normal + scratch.V[i] * parameters->tau) *
-              scratch.tr_V_solution_values[q] * JxW;
-            scratch.l_rhs(ii) +=
-              (-scratch.W[i] * normal + scratch.n[i] * parameters->tau) *
-              scratch.tr_n_solution_values[q] * JxW;
+            auto &f                    = scratch.f[c];
+            auto &c_                   = scratch.c[c];
+            auto &tr_c_solution_values = scratch.tr_c_solution_values[c];
+
+            for (unsigned int i = 0;
+                 i < scratch.fe_local_support_on_face[face].size();
+                 ++i)
+              {
+                const unsigned int ii =
+                  scratch.fe_local_support_on_face[face][i];
+                scratch.l_rhs(ii) +=
+                  (-f[i] * normal + c_[i] * parameters->tau) *
+                  tr_c_solution_values[q] * JxW;
+              }
           }
       }
   }
@@ -948,13 +1046,13 @@ namespace Ddhdg
         // cell
         if (task_data.trace_reconstruct)
           {
-            const FEValuesExtractors::Scalar electric_field_trace(0);
-            const FEValuesExtractors::Scalar electron_density_trace(1);
-
-            scratch.fe_face_values[electric_field_trace].get_function_values(
-              solution, scratch.tr_V_solution_values);
-            scratch.fe_face_values[electron_density_trace].get_function_values(
-              solution, scratch.tr_n_solution_values);
+            for (const auto c : Ddhdg::AllComponents)
+              {
+                const FEValuesExtractors::Scalar extractor =
+                  this->get_trace_component_extractor(c);
+                scratch.fe_face_values[extractor].get_function_values(
+                  solution, scratch.tr_c_solution_values[c]);
+              }
           }
 
         // Now I create some maps to store, for each component, if there is a
@@ -984,9 +1082,10 @@ namespace Ddhdg
           scratch.face_quadrature_points[q] =
             scratch.fe_face_values.quadrature_point(q);
 
-        const FEValuesExtractors::Vector electric_field(0);
+        const FEValuesExtractors::Vector electric_field =
+          this->get_displacement_extractor(Displacement::E);
         scratch.fe_face_values_local[electric_field].get_function_values(
-          previous_solution_local, scratch.previous_tr_E);
+          previous_solution_local, scratch.previous_f_face[Component::V]);
 
         permittivity->compute_absolute_permittivity(
           scratch.face_quadrature_points, scratch.epsilon_face);
