@@ -246,7 +246,13 @@ namespace Ddhdg
       PerTaskData &                                         task_data);
 
     void
+    compute_parameters_on_cell_quadrature_points(ScratchData &scratch);
+
+    void
     add_cell_products_to_ll_matrix(ScratchData &scratch);
+
+    void
+    add_cell_products_to_l_rhs(ScratchData &scratch);
 
     inline void
     copy_fe_values_on_scratch(ScratchData &scratch,

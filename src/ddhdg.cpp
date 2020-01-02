@@ -231,11 +231,13 @@ namespace Ddhdg
     component_map<dim> f_components;
     switch (c)
       {
-          case V: {
+        case V:
+          {
             f_components.insert({dim, f});
             break;
           }
-          case n: {
+        case n:
+          {
             f_components.insert({2 * dim + 1, f});
             break;
           }
@@ -260,7 +262,8 @@ namespace Ddhdg
     component_map<dim> f_components;
     switch (d)
       {
-          case E: {
+        case E:
+          {
             for (unsigned int i = 0; i < dim; i++)
               {
                 f_components.insert(
@@ -268,7 +271,8 @@ namespace Ddhdg
               }
             break;
           }
-          case W: {
+        case W:
+          {
             for (unsigned int i = 0; i < dim; i++)
               {
                 f_components.insert(
@@ -297,11 +301,13 @@ namespace Ddhdg
     component_map<dim> f_components;
     switch (c)
       {
-          case V: {
+        case V:
+          {
             f_components.insert({0, f});
             break;
           }
-          case n: {
+        case n:
+          {
             f_components.insert({1, f});
             break;
           }
@@ -512,20 +518,20 @@ namespace Ddhdg
       }
   }
 
+
+
   template <int dim>
   void
-  Solver<dim>::add_cell_products_to_ll_matrix(
+  Solver<dim>::compute_parameters_on_cell_quadrature_points(
     Ddhdg::Solver<dim>::ScratchData &scratch)
   {
     const unsigned int n_q_points =
       scratch.fe_values_local.get_quadrature().size();
-    const unsigned int loc_dofs_per_cell =
-      scratch.fe_values_local.get_fe().dofs_per_cell;
 
-    const FEValuesExtractors::Vector electric_field(0);
-    const FEValuesExtractors::Scalar electric_potential(dim);
-    const FEValuesExtractors::Vector electron_displacement(dim + 1);
-    const FEValuesExtractors::Scalar electron_density(2 * dim + 1);
+    const FEValuesExtractors::Vector electric_field =
+      this->get_displacement_extractor(Displacement::E);
+    const FEValuesExtractors::Scalar electron_density =
+      this->get_component_extractor(Component::n);
 
     // Get the values of E on the quadrature points of the cell computed during
     // the previous iteration
@@ -562,6 +568,28 @@ namespace Ddhdg
       scratch.previous_c_cell[Component::n],
       scratch.cell_quadrature_points,
       scratch.dr_cell);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::add_cell_products_to_ll_matrix(
+    Ddhdg::Solver<dim>::ScratchData &scratch)
+  {
+    const unsigned int n_q_points =
+      scratch.fe_values_local.get_quadrature().size();
+    const unsigned int loc_dofs_per_cell =
+      scratch.fe_values_local.get_fe().dofs_per_cell;
+
+    const FEValuesExtractors::Vector electric_field =
+      this->get_displacement_extractor(Displacement::E);
+    const FEValuesExtractors::Scalar electric_potential =
+      this->get_component_extractor(Component::V);
+    const FEValuesExtractors::Vector electron_displacement =
+      this->get_displacement_extractor(Displacement::W);
+    const FEValuesExtractors::Scalar electron_density =
+      this->get_component_extractor(Component::n);
 
     auto &E      = scratch.f[Component::V];
     auto &E_div  = scratch.f_div[Component::V];
@@ -598,27 +626,53 @@ namespace Ddhdg
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
           Constants::KB / Constants::Q * scratch.T_cell[q] * scratch.mu_cell[q];
 
+        for (unsigned int i = 0; i < loc_dofs_per_cell; ++i)
+          for (unsigned int j = 0; j < loc_dofs_per_cell; ++j)
+            {
+              scratch.ll_matrix(i, j) +=
+                (-V[j] * E_div[i] + E[j] * E[i] -
+                 (scratch.epsilon_cell[q] * E[j]) * V_grad[i] - n[j] * V[i] -
+                 n[j] * W_div[i] + W[j] * W[i] -
+                 n[j] * (mu_times_previous_E * n_grad[i]) +
+                 (einstein_diffusion_coefficient * W[j]) * n_grad[i] -
+                 scratch.dr_cell[q] * n[j] * n[i] / Constants::Q) *
+                JxW;
+            }
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::add_cell_products_to_l_rhs(
+    Ddhdg::Solver<dim>::ScratchData &scratch)
+  {
+    const unsigned int n_q_points =
+      scratch.fe_values_local.get_quadrature().size();
+    const unsigned int loc_dofs_per_cell =
+      scratch.fe_values_local.get_fe().dofs_per_cell;
+
+    const FEValuesExtractors::Scalar electron_density =
+      this->get_component_extractor(Component::n);
+
+    for (unsigned int q = 0; q < n_q_points; ++q)
+      {
+        const double JxW        = scratch.fe_values_local.JxW(q);
         const double previous_n = scratch.previous_c_cell[Component::n][q];
 
         for (unsigned int i = 0; i < loc_dofs_per_cell; ++i)
           {
-            for (unsigned int j = 0; j < loc_dofs_per_cell; ++j)
-              {
-                scratch.ll_matrix(i, j) +=
-                  (-V[j] * E_div[i] + E[j] * E[i] -
-                   (scratch.epsilon_cell[q] * E[j]) * V_grad[i] - n[j] * V[i] -
-                   n[j] * W_div[i] + W[j] * W[i] -
-                   n[j] * (mu_times_previous_E * n_grad[i]) +
-                   (einstein_diffusion_coefficient * W[j]) * n_grad[i] -
-                   scratch.dr_cell[q] * n[j] * n[i] / Constants::Q) *
-                  JxW;
-              }
+            const double n =
+              scratch.fe_values_local[electron_density].value(i, q);
             scratch.l_rhs[i] += (previous_n * scratch.r_cell[q] -
                                  previous_n * scratch.dr_cell[q]) /
-                                Constants::Q * n[i] * JxW;
+                                Constants::Q * n * JxW;
           }
       }
   }
+
+
 
   template <int dim>
   inline void
@@ -1026,12 +1080,20 @@ namespace Ddhdg
       }
     scratch.fe_values_local.reinit(loc_cell);
 
+    // We use the following function to copy every value that we need from the
+    // fe_values objects into the scratch. This also compute the physical
+    // parameters (like permittivity or the recombination term) on the
+    // quadrature points of the cell
+    this->compute_parameters_on_cell_quadrature_points(scratch);
+
     // Integrals on the overall cell
     // This function computes every L2 product that we need to compute in order
-    // to solve the problem related to the current cell. Moreover, this function
-    // also compute the l2 products that are needed to compute the right hand
-    // term
+    // to assemble the matrix for the current cell.
     this->add_cell_products_to_ll_matrix(scratch);
+
+    // This function, instead, computes the l2 products that are needed for
+    // the right hand term
+    this->add_cell_products_to_l_rhs(scratch);
 
     // Now we must perform the L2 product on the boundary, i.e. for each face of
     // the cell
