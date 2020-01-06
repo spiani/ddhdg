@@ -72,30 +72,6 @@ namespace Ddhdg
 
 
   template <int dim>
-  std::map<Component, std::vector<double>>
-  Solver<dim>::ScratchData::initialize_map_for_previous_components(
-    const unsigned int n)
-  {
-    std::map<Component, std::vector<double>> m;
-    m.insert({Component::n, std::vector<double>(n)});
-    return m;
-  }
-
-
-
-  template <int dim>
-  std::map<Component, std::vector<Tensor<1, dim>>>
-  Solver<dim>::ScratchData::initialize_map_for_previous_displacements(
-    const unsigned int n)
-  {
-    std::map<Component, std::vector<Tensor<1, dim>>> m;
-    m.insert({Component::V, std::vector<Tensor<1, dim>>(n)});
-    return m;
-  }
-
-
-
-  template <int dim>
   Solver<dim>::Solver(const std::shared_ptr<const Problem<dim>>     problem,
                       const std::shared_ptr<const SolverParameters> parameters)
     : triangulation(copy_triangulation(problem->triangulation))
@@ -133,12 +109,12 @@ namespace Ddhdg
     std::cout << "   Number of degrees of freedom: " << dof_handler.n_dofs()
               << std::endl;
 
-    previous_solution.reinit(dof_handler.n_dofs());
-    solution.reinit(dof_handler.n_dofs());
+    current_solution.reinit(dof_handler.n_dofs());
+    update.reinit(dof_handler.n_dofs());
     system_rhs.reinit(dof_handler.n_dofs());
 
-    previous_solution_local.reinit(dof_handler_local.n_dofs());
-    solution_local.reinit(dof_handler_local.n_dofs());
+    current_solution_local.reinit(dof_handler_local.n_dofs());
+    update_local.reinit(dof_handler_local.n_dofs());
 
     constraints.clear();
     DoFTools::make_hanging_node_constraints(dof_handler, constraints);
@@ -340,17 +316,17 @@ namespace Ddhdg
 
     dealii::VectorTools::interpolate(this->dof_handler_local,
                                      *V_function_extended,
-                                     this->solution_local,
+                                     this->current_solution_local,
                                      this->get_component_mask(V));
 
     dealii::VectorTools::interpolate(this->dof_handler,
                                      *V_function_trace_extended,
-                                     this->solution,
+                                     this->current_solution,
                                      this->get_trace_component_mask(V));
 
     dealii::VectorTools::interpolate(this->dof_handler_local,
                                      *E_function_extended,
-                                     this->solution_local,
+                                     this->current_solution_local,
                                      this->get_component_mask(E));
   }
 
@@ -376,19 +352,19 @@ namespace Ddhdg
     // Set n on the cells
     dealii::VectorTools::interpolate(this->dof_handler_local,
                                      *n_function_extended,
-                                     this->solution_local,
+                                     this->current_solution_local,
                                      this->get_component_mask(n));
 
     // Set n on the trace
     dealii::VectorTools::interpolate(this->dof_handler,
                                      *n_function_trace_extended,
-                                     this->solution,
+                                     this->current_solution,
                                      this->get_trace_component_mask(n));
 
     // Set W on the cells
     dealii::VectorTools::interpolate(this->dof_handler_local,
                                      *W_function_extended,
-                                     this->solution_local,
+                                     this->current_solution_local,
                                      this->get_component_mask(W));
   }
 
@@ -522,25 +498,27 @@ namespace Ddhdg
 
   template <int dim>
   void
-  Solver<dim>::compute_parameters_on_cell_quadrature_points(
+  Solver<dim>::prepare_data_on_cell_quadrature_points(
     Ddhdg::Solver<dim>::ScratchData &scratch)
   {
     const unsigned int n_q_points =
       scratch.fe_values_local.get_quadrature().size();
 
-    const FEValuesExtractors::Vector electric_field =
-      this->get_displacement_extractor(Displacement::E);
-    const FEValuesExtractors::Scalar electron_density =
-      this->get_component_extractor(Component::n);
+    // Copy the values of the previous solution regarding the previous cell in
+    // the scratch
+    for (const auto c : Ddhdg::AllComponents)
+      {
+        const Displacement               d = component2displacement(c);
+        const FEValuesExtractors::Scalar c_extractor =
+          this->get_component_extractor(c);
+        const FEValuesExtractors::Vector d_extractor =
+          this->get_displacement_extractor(d);
 
-    // Get the values of E on the quadrature points of the cell computed during
-    // the previous iteration
-    scratch.fe_values_local[electric_field].get_function_values(
-      previous_solution_local, scratch.previous_f_cell[Component::V]);
-
-    // The same for n
-    scratch.fe_values_local[electron_density].get_function_values(
-      previous_solution_local, scratch.previous_c_cell[Component::n]);
+        scratch.fe_values_local[c_extractor].get_function_values(
+          current_solution_local, scratch.previous_c_cell[c]);
+        scratch.fe_values_local[d_extractor].get_function_values(
+          current_solution_local, scratch.previous_f_cell[c]);
+      }
 
     // Get the position of the quadrature points
     for (unsigned int q = 0; q < n_q_points; ++q)
@@ -653,23 +631,97 @@ namespace Ddhdg
     const unsigned int loc_dofs_per_cell =
       scratch.fe_values_local.get_fe().dofs_per_cell;
 
+    const FEValuesExtractors::Vector electric_field =
+      this->get_displacement_extractor(Displacement::E);
+    const FEValuesExtractors::Scalar electric_potential =
+      this->get_component_extractor(Component::V);
+    const FEValuesExtractors::Vector electron_displacement =
+      this->get_displacement_extractor(Displacement::W);
     const FEValuesExtractors::Scalar electron_density =
       this->get_component_extractor(Component::n);
 
+    const auto &V0 = scratch.previous_c_cell[Component::V];
+    const auto &E0 = scratch.previous_f_cell[Component::V];
+    const auto &n0 = scratch.previous_c_cell[Component::n];
+    const auto &W0 = scratch.previous_f_cell[Component::n];
+
     for (unsigned int q = 0; q < n_q_points; ++q)
       {
-        const double JxW        = scratch.fe_values_local.JxW(q);
-        const double previous_n = scratch.previous_c_cell[Component::n][q];
+        const double JxW = scratch.fe_values_local.JxW(q);
+
+        const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
+          Constants::KB / Constants::Q * scratch.T_cell[q] * scratch.mu_cell[q];
 
         for (unsigned int i = 0; i < loc_dofs_per_cell; ++i)
           {
-            const double n =
+            const dealii::Tensor<1, dim> q1 =
+              scratch.fe_values_local[electric_field].value(i, q);
+            const double q1_div =
+              scratch.fe_values_local[electric_field].divergence(i, q);
+            const double z1 =
+              scratch.fe_values_local[electric_potential].value(i, q);
+            const dealii::Tensor<1, dim> z1_grad =
+              scratch.fe_values_local[electric_potential].gradient(i, q);
+            const dealii::Tensor<1, dim> q2 =
+              scratch.fe_values_local[electron_displacement].value(i, q);
+            const double q2_div =
+              scratch.fe_values_local[electron_displacement].divergence(i, q);
+            const double z2 =
               scratch.fe_values_local[electron_density].value(i, q);
-            scratch.l_rhs[i] += (previous_n * scratch.r_cell[q] -
-                                 previous_n * scratch.dr_cell[q]) /
-                                Constants::Q * n * JxW;
+            const dealii::Tensor<1, dim> z2_grad =
+              scratch.fe_values_local[electron_density].gradient(i, q);
+
+            scratch.l_rhs[i] +=
+              (V0[q] * q1_div - E0[q] * q1 +
+               (scratch.epsilon_cell[q] * E0[q]) * z1_grad + n0[q] * z1 +
+               n0[q] * q2_div - W0[q] * q2 +
+               scratch.r_cell[q] / Constants::Q * z2 +
+               n0[q] * (scratch.mu_cell[q] * E0[q]) * z2_grad -
+               einstein_diffusion_coefficient * W0[q] * z2_grad) *
+              JxW;
           }
       }
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::prepare_data_on_face_quadrature_points(
+    Ddhdg::Solver<dim>::ScratchData &scratch)
+  {
+    const unsigned int n_face_q_points =
+      scratch.fe_face_values_local.get_quadrature().size();
+
+    for (unsigned int q = 0; q < n_face_q_points; ++q)
+      scratch.face_quadrature_points[q] =
+        scratch.fe_face_values.quadrature_point(q);
+
+    for (const auto c : Ddhdg::AllComponents)
+      {
+        const Displacement               d = component2displacement(c);
+        const FEValuesExtractors::Scalar c_extractor =
+          this->get_component_extractor(c);
+        const FEValuesExtractors::Vector d_extractor =
+          this->get_displacement_extractor(d);
+        const FEValuesExtractors::Scalar tr_c_extractor =
+          this->get_trace_component_extractor(c);
+
+        scratch.fe_face_values_local[c_extractor].get_function_values(
+          current_solution_local, scratch.previous_c_face[c]);
+        scratch.fe_face_values_local[d_extractor].get_function_values(
+          current_solution_local, scratch.previous_f_face[c]);
+        scratch.fe_face_values[tr_c_extractor].get_function_values(
+          current_solution, scratch.previous_tr_c_face[c]);
+      }
+
+    permittivity->compute_absolute_permittivity(scratch.face_quadrature_points,
+                                                scratch.epsilon_face);
+
+    electron_mobility->compute_electron_mobility(scratch.face_quadrature_points,
+                                                 scratch.mu_face);
+
+    temperature->value_list(scratch.face_quadrature_points, scratch.T_face);
   }
 
 
@@ -777,6 +829,59 @@ namespace Ddhdg
       }
   }
 
+
+
+  template <int dim>
+  inline void
+  Solver<dim>::add_lf_matrix_terms_to_l_rhs(
+    Ddhdg::Solver<dim>::ScratchData &scratch,
+    const unsigned int               face)
+  {
+    const unsigned int n_face_q_points =
+      scratch.fe_face_values_local.get_quadrature().size();
+
+    const FEValuesExtractors::Vector electric_field =
+      this->get_displacement_extractor(Displacement::E);
+    const FEValuesExtractors::Scalar electric_potential =
+      this->get_component_extractor(Component::V);
+    const FEValuesExtractors::Vector electron_displacement =
+      this->get_displacement_extractor(Displacement::W);
+    const FEValuesExtractors::Scalar electron_density =
+      this->get_component_extractor(Component::n);
+
+    const auto &tr_V0 = scratch.previous_tr_c_face[Component::V];
+    const auto &tr_n0 = scratch.previous_tr_c_face[Component::n];
+
+    for (unsigned int q = 0; q < n_face_q_points; ++q)
+      {
+        const double         JxW    = scratch.fe_face_values.JxW(q);
+        const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
+
+        for (unsigned int i = 0;
+             i < scratch.fe_local_support_on_face[face].size();
+             ++i)
+          {
+            const unsigned int ii = scratch.fe_local_support_on_face[face][i];
+
+            const dealii::Tensor<1, dim> q1 =
+              scratch.fe_face_values_local[electric_field].value(ii, q);
+            const double z1 =
+              scratch.fe_face_values_local[electric_potential].value(ii, q);
+            const dealii::Tensor<1, dim> q2 =
+              scratch.fe_face_values_local[electron_displacement].value(ii, q);
+            const double z2 =
+              scratch.fe_face_values_local[electron_density].value(ii, q);
+
+            scratch.l_rhs(ii) +=
+              (-tr_V0[q] * (q1 * normal) + parameters->tau * tr_V0[q] * z1 -
+               tr_n0[q] * (q2 * normal) + parameters->tau * tr_n0[q] * z2) *
+              JxW;
+          }
+      }
+  }
+
+
+
   template <int dim>
   template <Component c>
   inline void
@@ -846,6 +951,70 @@ namespace Ddhdg
   }
 
 
+
+  template <int dim>
+  template <Component c>
+  inline void
+  Solver<dim>::add_fl_matrix_terms_to_f_rhs(
+    Ddhdg::Solver<dim>::ScratchData &scratch,
+    Ddhdg::Solver<dim>::PerTaskData &task_data,
+    const unsigned int               face)
+  {
+    if (c != V and c != n)
+      AssertThrow(false, UnknownComponent());
+
+    const unsigned int n_face_q_points =
+      scratch.fe_face_values_local.get_quadrature().size();
+
+    const FEValuesExtractors::Scalar tr_c_extractor =
+      this->get_trace_component_extractor(c);
+
+    auto &c0 = scratch.previous_c_face[c];
+    auto &f0 = scratch.previous_f_face[c];
+
+    for (unsigned int q = 0; q < n_face_q_points; ++q)
+      {
+        const double         JxW    = scratch.fe_face_values.JxW(q);
+        const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
+
+        const double epsilon_times_previous_E_times_normal =
+          scratch.epsilon_face[q] * scratch.previous_f_face[Component::V][q] *
+          normal;
+
+        const double mu_times_previous_E_times_normal =
+          scratch.mu_face[q] * scratch.previous_f_face[Component::V][q] *
+          normal;
+
+        const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
+          Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
+
+        for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
+             ++i)
+          {
+            const unsigned int ii = scratch.fe_support_on_face[face][i];
+            const double       k =
+              scratch.fe_face_values[tr_c_extractor].value(ii, q);
+            if (c == V)
+              {
+                task_data.cell_vector[ii] +=
+                  (-epsilon_times_previous_E_times_normal -
+                   parameters->tau * c0[q]) *
+                  k * JxW;
+              }
+            if (c == n)
+              {
+                task_data.cell_vector[ii] +=
+                  (-c0[q] * mu_times_previous_E_times_normal +
+                   einstein_diffusion_coefficient * f0[q] * normal -
+                   parameters->tau * c0[q]) *
+                  k * JxW;
+              }
+          }
+      }
+  }
+
+
+
   template <int dim>
   template <Component c>
   inline void
@@ -888,6 +1057,42 @@ namespace Ddhdg
 
 
   template <int dim>
+  template <Component c>
+  inline void
+  Solver<dim>::add_cell_matrix_terms_to_f_rhs(
+    Ddhdg::Solver<dim>::ScratchData &scratch,
+    Ddhdg::Solver<dim>::PerTaskData &task_data,
+    const unsigned int               face)
+  {
+    if (c != V and c != n)
+      AssertThrow(false, UnknownComponent());
+
+    const unsigned int n_face_q_points =
+      scratch.fe_face_values_local.get_quadrature().size();
+
+    const FEValuesExtractors::Scalar tr_c_extractor =
+      this->get_trace_component_extractor(c);
+
+    const auto &tr_c0 = scratch.previous_tr_c_face[c];
+
+    for (unsigned int q = 0; q < n_face_q_points; ++q)
+      {
+        const double JxW = scratch.fe_face_values.JxW(q);
+
+        for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
+             ++i)
+          {
+            const unsigned int ii = scratch.fe_support_on_face[face][i];
+            const double       k =
+              scratch.fe_face_values[tr_c_extractor].value(ii, q);
+            task_data.cell_vector[ii] += parameters->tau * tr_c0[q] * k * JxW;
+          }
+      }
+  }
+
+
+
+  template <int dim>
   template <Ddhdg::Component c>
   inline void
   Solver<dim>::apply_dbc_on_face(
@@ -899,7 +1104,8 @@ namespace Ddhdg
     if (c != V and c != n)
       AssertThrow(false, UnknownComponent());
 
-    auto &tr_c = scratch.tr_c[c];
+    auto &tr_c  = scratch.tr_c[c];
+    auto &tr_c0 = scratch.previous_tr_c_face[c];
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_local.get_quadrature().size();
@@ -913,7 +1119,7 @@ namespace Ddhdg
 
         const Point<dim> quadrature_point =
           scratch.fe_face_values.quadrature_point(q);
-        const double dbc_value = dbc.evaluate(quadrature_point);
+        const double dbc_value = dbc.evaluate(quadrature_point) - tr_c0[q];
 
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)
@@ -1018,6 +1224,62 @@ namespace Ddhdg
   }
 
 
+
+  template <int dim>
+  inline void
+  Solver<dim>::add_border_products_to_l_rhs(
+    Ddhdg::Solver<dim>::ScratchData &scratch,
+    const unsigned int               face)
+  {
+    const unsigned int n_face_q_points =
+      scratch.fe_face_values_local.get_quadrature().size();
+
+    const FEValuesExtractors::Scalar electric_potential =
+      this->get_component_extractor(Component::V);
+    const FEValuesExtractors::Scalar electron_density =
+      this->get_component_extractor(Component::n);
+
+    auto &V0 = scratch.previous_c_face[Component::V];
+    auto &E0 = scratch.previous_f_face[Component::V];
+    auto &n0 = scratch.previous_c_face[Component::n];
+    auto &W0 = scratch.previous_f_face[Component::n];
+
+    for (unsigned int q = 0; q < n_face_q_points; ++q)
+      {
+        const double         JxW    = scratch.fe_face_values.JxW(q);
+        const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
+
+        const double epsilon_times_E0_times_normal =
+          (scratch.epsilon_face[q] * E0[q]) * normal;
+
+        const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
+          Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
+
+        const double J_flux = (n0[q] * (scratch.mu_face[q] * E0[q]) -
+                               (einstein_diffusion_coefficient * W0[q])) *
+                              normal;
+
+        for (unsigned int i = 0;
+             i < scratch.fe_local_support_on_face[face].size();
+             ++i)
+          {
+            const unsigned int ii = scratch.fe_local_support_on_face[face][i];
+
+            const double z1 =
+              scratch.fe_face_values_local[electric_potential].value(ii, q);
+            const double z2 =
+              scratch.fe_face_values_local[electron_density].value(ii, q);
+
+            scratch.l_rhs[ii] += (-epsilon_times_E0_times_normal * z1 -
+                                  parameters->tau * V0[q] * z1 - J_flux * z2 -
+                                  parameters->tau * n0[q] * z2) *
+                                 JxW;
+          }
+      }
+  }
+
+
+
   template <int dim>
   inline void
   Solver<dim>::add_trace_terms_to_l_rhs(
@@ -1084,7 +1346,7 @@ namespace Ddhdg
     // fe_values objects into the scratch. This also compute the physical
     // parameters (like permittivity or the recombination term) on the
     // quadrature points of the cell
-    this->compute_parameters_on_cell_quadrature_points(scratch);
+    this->prepare_data_on_cell_quadrature_points(scratch);
 
     // Integrals on the overall cell
     // This function computes every L2 product that we need to compute in order
@@ -1113,7 +1375,7 @@ namespace Ddhdg
                 const FEValuesExtractors::Scalar extractor =
                   this->get_trace_component_extractor(c);
                 scratch.fe_face_values[extractor].get_function_values(
-                  solution, scratch.tr_c_solution_values[c]);
+                  update, scratch.tr_c_solution_values[c]);
               }
           }
 
@@ -1137,25 +1399,24 @@ namespace Ddhdg
           }
 
         // Before assembling the other parts of the matrix, we need the values
-        // of epsilon, mu and D_n on the quadrature points of the current face
-        const unsigned int n_face_q_points =
-          scratch.fe_face_values_local.get_quadrature().size();
-        for (unsigned int q = 0; q < n_face_q_points; ++q)
-          scratch.face_quadrature_points[q] =
-            scratch.fe_face_values.quadrature_point(q);
+        // of epsilon, mu and D_n on the quadrature points of the current face.
+        // Moreover, we want to populate the scratch object with the values of
+        // the solution at the previous step. All this jobs are accomplished by
+        // the next function
+        prepare_data_on_face_quadrature_points(scratch);
 
-        const FEValuesExtractors::Vector electric_field =
-          this->get_displacement_extractor(Displacement::E);
-        scratch.fe_face_values_local[electric_field].get_function_values(
-          previous_solution_local, scratch.previous_f_face[Component::V]);
-
-        permittivity->compute_absolute_permittivity(
-          scratch.face_quadrature_points, scratch.epsilon_face);
-
-        electron_mobility->compute_electron_mobility(
-          scratch.face_quadrature_points, scratch.mu_face);
-
-        temperature->value_list(scratch.face_quadrature_points, scratch.T_face);
+        // The following function adds some terms to l_rhs. Usually, all the
+        // functions are coupled (like assemble_matrix_XXX and
+        // add_matrix_XXX_terms_to_l_rhs) because the first function is the
+        // function that assembles the matrix and the second one is the function
+        // that adds the corresponding terms to l_rhs (i.e. the product of the
+        // matrix with the previous solution, so that the solution of the system
+        // is the update from the previous solution to the new one).
+        // The following function is the only exception: indeed, the terms that
+        // it generates must be are always needed while the terms that its
+        // corresponding function generates are useful only if we are not
+        // reconstructing the solution from the trace
+        add_lf_matrix_terms_to_l_rhs(scratch, face);
 
         // Assembly the other matrices (the ll_matrix has been assembled
         // calling the add_cell_products_to_ll_matrix method)
@@ -1166,7 +1427,9 @@ namespace Ddhdg
             if (!has_dirichlet_conditions[V])
               {
                 assemble_fl_matrix<V>(scratch, face);
+                add_fl_matrix_terms_to_f_rhs<V>(scratch, task_data, face);
                 assemble_cell_matrix<V>(scratch, task_data, face);
+                add_cell_matrix_terms_to_f_rhs<V>(scratch, task_data, face);
               }
             else
               {
@@ -1179,7 +1442,9 @@ namespace Ddhdg
             if (!has_dirichlet_conditions[n])
               {
                 assemble_fl_matrix<n>(scratch, face);
+                add_fl_matrix_terms_to_f_rhs<n>(scratch, task_data, face);
                 assemble_cell_matrix<n>(scratch, task_data, face);
+                add_cell_matrix_terms_to_f_rhs<n>(scratch, task_data, face);
               }
             else
               {
@@ -1193,6 +1458,7 @@ namespace Ddhdg
         // These are the last terms of the ll matrix, the ones that are
         // generated by L2 products only on the boundary of the cell
         add_border_products_to_ll_matrix(scratch, face);
+        add_border_products_to_l_rhs(scratch, face);
 
         if (task_data.trace_reconstruct)
           add_trace_terms_to_l_rhs(scratch, face);
@@ -1214,9 +1480,11 @@ namespace Ddhdg
     else
       {
         scratch.ll_matrix.vmult(scratch.tmp_rhs, scratch.l_rhs);
-        loc_cell->set_dof_values(scratch.tmp_rhs, solution_local);
+        loc_cell->set_dof_values(scratch.tmp_rhs, update_local);
       }
   }
+
+
 
   template <int dim>
   void
@@ -1229,6 +1497,8 @@ namespace Ddhdg
                                              system_matrix,
                                              system_rhs);
   }
+
+
 
   template <int dim>
   void
@@ -1245,7 +1515,7 @@ namespace Ddhdg
       {
         SolverGMRES<> linear_solver(solver_control);
         linear_solver.solve(system_matrix,
-                            solution,
+                            update,
                             system_rhs,
                             PreconditionIdentity());
         std::cout << "    Number of GMRES iterations: "
@@ -1255,10 +1525,12 @@ namespace Ddhdg
       {
         SparseDirectUMFPACK Ainv;
         Ainv.initialize(system_matrix);
-        Ainv.vmult(solution, system_rhs);
+        Ainv.vmult(update, system_rhs);
       }
-    constraints.distribute(solution);
+    constraints.distribute(update);
   }
+
+
 
   template <int dim>
   NonlinearIteratorStatus
@@ -1271,9 +1543,6 @@ namespace Ddhdg
 
     dealii::Vector<double> difference_per_cell(triangulation->n_active_cells());
 
-    dealii::Vector<double> difference;
-    difference.reinit(dof_handler_local.n_dofs());
-
     bool   convergence_reached    = false;
     int    step                   = 0;
     double global_difference_norm = 0.;
@@ -1283,10 +1552,11 @@ namespace Ddhdg
          step++)
       {
         std::cout << "Computing step number " << step << std::endl;
-        previous_solution       = solution;
-        previous_solution_local = solution_local;
-        solution                = 0;
-        solution_local          = 0;
+
+        this->update        = 0;
+        this->update_local  = 0;
+        this->system_matrix = 0;
+        this->system_rhs    = 0;
 
         if (parameters->multithreading)
           assemble_system_multithreaded(false);
@@ -1300,12 +1570,8 @@ namespace Ddhdg
         else
           assemble_system(true);
 
-        difference = 0.;
-        difference += solution_local;
-        difference -= previous_solution_local;
-
         VectorTools::integrate_difference(dof_handler_local,
-                                          difference,
+                                          update_local,
                                           dealii::Functions::ZeroFunction<dim>(
                                             2 * dim + 2),
                                           difference_per_cell,
@@ -1318,6 +1584,10 @@ namespace Ddhdg
                                             norm);
         std::cout << "Difference in norm compared to the previous step: "
                   << global_difference_norm << std::endl;
+
+        this->current_solution += this->update;
+        this->current_solution_local += this->update_local;
+
         if (global_difference_norm < tolerance)
           {
             std::cout
@@ -1383,8 +1653,8 @@ namespace Ddhdg
     FunctionByComponents<dim> expected_solution_multidim =
       FunctionByComponents<dim>(n_of_components, c_map);
 
-    VectorTools::integrate_difference(dof_handler_local,
-                                      solution_local,
+    VectorTools::integrate_difference(this->dof_handler_local,
+                                      this->current_solution_local,
                                       expected_solution_multidim,
                                       difference_per_cell,
                                       QGauss<dim>(fe.degree + 1),
@@ -1424,7 +1694,7 @@ namespace Ddhdg
       DataComponentInterpretation::component_is_scalar;
 
     data_out.add_data_vector(dof_handler_local,
-                             solution_local,
+                             current_solution_local,
                              names,
                              component_interpretation);
 
@@ -1458,7 +1728,7 @@ namespace Ddhdg
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       face_component_type(2, DataComponentInterpretation::component_is_scalar);
     data_out_face.add_data_vector(dof_handler,
-                                  solution,
+                                  current_solution,
                                   face_name,
                                   face_component_type);
     data_out_face.build_patches(fe.degree);
@@ -1537,7 +1807,7 @@ namespace Ddhdg
         last_step_difference = iter_status.last_update_norm;
 
         error_table->error_from_exact(dof_handler_local,
-                                      solution_local,
+                                      current_solution_local,
                                       expected_solution);
 
         // this->output_results("solution_" + std::to_string(cycle) + ".vtk",

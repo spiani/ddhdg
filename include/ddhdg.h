@@ -246,13 +246,16 @@ namespace Ddhdg
       PerTaskData &                                         task_data);
 
     void
-    compute_parameters_on_cell_quadrature_points(ScratchData &scratch);
+    prepare_data_on_cell_quadrature_points(ScratchData &scratch);
 
     void
     add_cell_products_to_ll_matrix(ScratchData &scratch);
 
     void
     add_cell_products_to_l_rhs(ScratchData &scratch);
+
+    void
+    prepare_data_on_face_quadrature_points(ScratchData &scratch);
 
     inline void
     copy_fe_values_on_scratch(ScratchData &scratch,
@@ -267,15 +270,30 @@ namespace Ddhdg
     inline void
     assemble_lf_matrix(ScratchData &scratch, unsigned int face);
 
+    inline void
+    add_lf_matrix_terms_to_l_rhs(ScratchData &scratch, unsigned int face);
+
     template <Component c>
     inline void
     assemble_fl_matrix(ScratchData &scratch, unsigned int face);
+
+    template <Component C>
+    inline void
+    add_fl_matrix_terms_to_f_rhs(ScratchData &                    scratch,
+                                 Ddhdg::Solver<dim>::PerTaskData &task_data,
+                                 unsigned int                     face);
 
     template <Component c>
     inline void
     assemble_cell_matrix(ScratchData &scratch,
                          PerTaskData &task_data,
                          unsigned int face);
+
+    template <Component C>
+    inline void
+    add_cell_matrix_terms_to_f_rhs(ScratchData &                    scratch,
+                                   Ddhdg::Solver<dim>::PerTaskData &task_data,
+                                   unsigned int                     face);
 
     template <Component c>
     inline void
@@ -295,6 +313,9 @@ namespace Ddhdg
     add_border_products_to_ll_matrix(ScratchData &scratch, unsigned int face);
 
     inline void
+    add_border_products_to_l_rhs(ScratchData &scratch, unsigned int face);
+
+    inline void
     add_trace_terms_to_l_rhs(ScratchData &scratch, unsigned int face);
 
     void
@@ -311,12 +332,12 @@ namespace Ddhdg
 
     FESystem<dim>   fe_local;
     DoFHandler<dim> dof_handler_local;
-    Vector<double>  solution_local;
-    Vector<double>  previous_solution_local;
+    Vector<double>  update_local;
+    Vector<double>  current_solution_local;
     FESystem<dim>   fe;
     DoFHandler<dim> dof_handler;
-    Vector<double>  solution;
-    Vector<double>  previous_solution;
+    Vector<double>  update;
+    Vector<double>  current_solution;
     Vector<double>  system_rhs;
 
     AffineConstraints<double> constraints;
@@ -365,8 +386,10 @@ namespace Ddhdg
     std::vector<double>                              r_cell;
     std::vector<double>                              dr_cell;
     std::map<Component, std::vector<double>>         previous_c_cell;
+    std::map<Component, std::vector<double>>         previous_c_face;
     std::map<Component, std::vector<Tensor<1, dim>>> previous_f_cell;
     std::map<Component, std::vector<Tensor<1, dim>>> previous_f_face;
+    std::map<Component, std::vector<double>>         previous_tr_c_face;
     std::map<Component, std::vector<Tensor<1, dim>>> f;
     std::map<Component, std::vector<double>>         f_div;
     std::map<Component, std::vector<double>>         c;
@@ -381,12 +404,6 @@ namespace Ddhdg
 
     static std::map<Component, std::vector<Tensor<1, dim>>>
     initialize_tensor_map_on_components(unsigned int n);
-
-    static std::map<Component, std::vector<double>>
-    initialize_map_for_previous_components(unsigned int n);
-
-    static std::map<Component, std::vector<Tensor<1, dim>>>
-    initialize_map_for_previous_displacements(unsigned int n);
 
     ScratchData(const FiniteElement<dim> &fe,
                 const FiniteElement<dim> &fe_local,
@@ -417,11 +434,15 @@ namespace Ddhdg
       , r_cell(quadrature_formula.size())
       , dr_cell(quadrature_formula.size())
       , previous_c_cell(
-          initialize_map_for_previous_components(quadrature_formula.size()))
+          initialize_double_map_on_components(quadrature_formula.size()))
+      , previous_c_face(
+          initialize_double_map_on_components(face_quadrature_formula.size()))
       , previous_f_cell(
-          initialize_map_for_previous_displacements(quadrature_formula.size()))
-      , previous_f_face(initialize_map_for_previous_displacements(
-          face_quadrature_formula.size()))
+          initialize_tensor_map_on_components(quadrature_formula.size()))
+      , previous_f_face(
+          initialize_tensor_map_on_components(face_quadrature_formula.size()))
+      , previous_tr_c_face(
+          initialize_double_map_on_components(face_quadrature_formula.size()))
       , f(initialize_tensor_map_on_components(fe_local.dofs_per_cell))
       , f_div(initialize_double_map_on_components(fe_local.dofs_per_cell))
       , c(initialize_double_map_on_components(fe_local.dofs_per_cell))
@@ -475,8 +496,10 @@ namespace Ddhdg
       , r_cell(sd.r_cell)
       , dr_cell(sd.dr_cell)
       , previous_c_cell(sd.previous_c_cell)
+      , previous_c_face(sd.previous_c_face)
       , previous_f_cell(sd.previous_f_cell)
       , previous_f_face(sd.previous_f_face)
+      , previous_tr_c_face(sd.previous_tr_c_face)
       , f(sd.f)
       , f_div(sd.f_div)
       , c(sd.c)
