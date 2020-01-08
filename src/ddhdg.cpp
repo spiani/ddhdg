@@ -569,32 +569,42 @@ namespace Ddhdg
     const FEValuesExtractors::Scalar electron_density =
       this->get_component_extractor(Component::n);
 
-    auto &E      = scratch.f[Component::V];
-    auto &E_div  = scratch.f_div[Component::V];
-    auto &V      = scratch.c[Component::V];
-    auto &V_grad = scratch.c_grad[Component::V];
+    // The following are just aliases (and some of them refer to the same
+    // vector). These may seem useless, but the make the code that assemble the
+    // matrix a lot more understandable
+    auto &E = scratch.f[Component::V];
+    auto &V = scratch.c[Component::V];
 
-    auto &W      = scratch.f[Component::n];
-    auto &W_div  = scratch.f_div[Component::n];
-    auto &n      = scratch.c[Component::n];
-    auto &n_grad = scratch.c_grad[Component::n];
+    auto &W = scratch.f[Component::n];
+    auto &n = scratch.c[Component::n];
+
+    auto &q1      = scratch.f[Component::V];
+    auto &q1_div  = scratch.f_div[Component::V];
+    auto &z1      = scratch.c[Component::V];
+    auto &z1_grad = scratch.c_grad[Component::V];
+
+    auto &q2      = scratch.f[Component::n];
+    auto &q2_div  = scratch.f_div[Component::n];
+    auto &z2      = scratch.c[Component::n];
+    auto &z2_grad = scratch.c_grad[Component::n];
 
     for (unsigned int q = 0; q < n_q_points; ++q)
       {
         const double JxW = scratch.fe_values_local.JxW(q);
         for (unsigned int k = 0; k < loc_dofs_per_cell; ++k)
           {
-            E[k]     = scratch.fe_values_local[electric_field].value(k, q);
-            E_div[k] = scratch.fe_values_local[electric_field].divergence(k, q);
-            V[k]     = scratch.fe_values_local[electric_potential].value(k, q);
-            V_grad[k] =
+            q1[k] = scratch.fe_values_local[electric_field].value(k, q);
+            q1_div[k] =
+              scratch.fe_values_local[electric_field].divergence(k, q);
+            z1[k] = scratch.fe_values_local[electric_potential].value(k, q);
+            z1_grad[k] =
               scratch.fe_values_local[electric_potential].gradient(k, q);
 
-            W[k] = scratch.fe_values_local[electron_displacement].value(k, q);
-            W_div[k] =
+            q2[k] = scratch.fe_values_local[electron_displacement].value(k, q);
+            q2_div[k] =
               scratch.fe_values_local[electron_displacement].divergence(k, q);
-            n[k] = scratch.fe_values_local[electron_density].value(k, q);
-            n_grad[k] =
+            z2[k] = scratch.fe_values_local[electron_density].value(k, q);
+            z2_grad[k] =
               scratch.fe_values_local[electron_density].gradient(k, q);
           }
 
@@ -608,12 +618,12 @@ namespace Ddhdg
           for (unsigned int j = 0; j < loc_dofs_per_cell; ++j)
             {
               scratch.ll_matrix(i, j) +=
-                (-V[j] * E_div[i] + E[j] * E[i] -
-                 (scratch.epsilon_cell[q] * E[j]) * V_grad[i] - n[j] * V[i] -
-                 n[j] * W_div[i] + W[j] * W[i] -
-                 n[j] * (mu_times_previous_E * n_grad[i]) +
-                 (einstein_diffusion_coefficient * W[j]) * n_grad[i] -
-                 scratch.dr_cell[q] * n[j] * n[i] / Constants::Q) *
+                (-V[j] * q1_div[i] + E[j] * q1[i] -
+                 (scratch.epsilon_cell[q] * E[j]) * z1_grad[i] - n[j] * z1[i] -
+                 n[j] * q2_div[i] + W[j] * q2[i] -
+                 n[j] * (mu_times_previous_E * z2_grad[i]) +
+                 (einstein_diffusion_coefficient * W[j]) * z2_grad[i] -
+                 scratch.dr_cell[q] * n[j] * z2[i] / Constants::Q) *
                 JxW;
             }
       }
@@ -788,12 +798,12 @@ namespace Ddhdg
     const unsigned int n_face_q_points =
       scratch.fe_face_values_local.get_quadrature().size();
 
-    auto &E    = scratch.f[Component::V];
-    auto &V    = scratch.c[Component::V];
+    auto &q1   = scratch.f[Component::V];
+    auto &z1   = scratch.c[Component::V];
     auto &tr_V = scratch.tr_c[Component::V];
 
-    auto &W    = scratch.f[Component::n];
-    auto &n    = scratch.c[Component::n];
+    auto &q2   = scratch.f[Component::n];
+    auto &z2   = scratch.c[Component::n];
     auto &tr_n = scratch.tr_c[Component::n];
 
     for (unsigned int q = 0; q < n_face_q_points; ++q)
@@ -819,10 +829,10 @@ namespace Ddhdg
                 // the restriction of local test function on the border
                 // i is the index of the test function
                 scratch.lf_matrix(ii, jj) +=
-                  (tr_V[j] * (E[i] * normal) -
-                   parameters->tau * tr_V[j] * V[i] +
-                   scratch.tr_c[Component::n][j] * (W[i] * normal) -
-                   parameters->tau * (tr_n[j] * n[i])) *
+                  (tr_V[j] * (q1[i] * normal) -
+                   parameters->tau * tr_V[j] * z1[i] +
+                   scratch.tr_c[Component::n][j] * (q2[i] * normal) -
+                   parameters->tau * (tr_n[j] * z2[i])) *
                   JxW;
               }
           }
@@ -894,9 +904,9 @@ namespace Ddhdg
     const unsigned int n_face_q_points =
       scratch.fe_face_values_local.get_quadrature().size();
 
-    auto &c_   = scratch.c[c];
-    auto &f    = scratch.f[c];
-    auto &tr_c = scratch.tr_c[c];
+    auto &c_ = scratch.c[c];
+    auto &f  = scratch.f[c];
+    auto &xi = scratch.tr_c[c];
 
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
@@ -912,38 +922,36 @@ namespace Ddhdg
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
           Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
 
-        for (unsigned int i = 0;
-             i < scratch.fe_local_support_on_face[face].size();
+        for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)
           {
-            const unsigned int ii = scratch.fe_local_support_on_face[face][i];
+            const unsigned int ii = scratch.fe_support_on_face[face][i];
             for (unsigned int j = 0;
-                 j < scratch.fe_support_on_face[face].size();
+                 j < scratch.fe_local_support_on_face[face].size();
                  ++j)
               {
-                const unsigned int jj = scratch.fe_support_on_face[face][j];
+                const unsigned int jj =
+                  scratch.fe_local_support_on_face[face][j];
 
                 // Integrals of the local functions restricted on the
-                // border. Here j is the index of the test function
-                // (because we are saving the elements in the matrix
-                // swapped) The sign is reversed to be used in the
+                // border. The sign is reversed to be used in the
                 // Schur complement (and therefore this is the
                 // opposite of the right matrix that describes the
                 // problem on this cell)
                 if (c == V)
                   {
-                    scratch.fl_matrix(jj, ii) -=
-                      ((scratch.epsilon_face[q] * f[i]) * normal +
-                       parameters->tau * c_[i]) *
-                      tr_c[j] * JxW;
+                    scratch.fl_matrix(ii, jj) -=
+                      ((scratch.epsilon_face[q] * f[j]) * normal +
+                       parameters->tau * c_[j]) *
+                      xi[i] * JxW;
                   }
                 if (c == n)
                   {
-                    scratch.fl_matrix(jj, ii) -=
-                      (c_[i] * (mu_times_previous_E * normal) -
-                       (einstein_diffusion_coefficient * f[i]) * normal +
-                       parameters->tau * c_[i]) *
-                      tr_c[j] * JxW;
+                    scratch.fl_matrix(ii, jj) -=
+                      (c_[j] * (mu_times_previous_E * normal) -
+                       (einstein_diffusion_coefficient * f[j]) * normal +
+                       parameters->tau * c_[j]) *
+                      xi[i] * JxW;
                   }
               }
           }
@@ -992,14 +1000,14 @@ namespace Ddhdg
              ++i)
           {
             const unsigned int ii = scratch.fe_support_on_face[face][i];
-            const double       k =
+            const double       xi =
               scratch.fe_face_values[tr_c_extractor].value(ii, q);
             if (c == V)
               {
                 task_data.cell_vector[ii] +=
                   (-epsilon_times_previous_E_times_normal -
                    parameters->tau * c0[q]) *
-                  k * JxW;
+                  xi * JxW;
               }
             if (c == n)
               {
@@ -1007,7 +1015,7 @@ namespace Ddhdg
                   (-c0[q] * mu_times_previous_E_times_normal +
                    einstein_diffusion_coefficient * f0[q] * normal -
                    parameters->tau * c0[q]) *
-                  k * JxW;
+                  xi * JxW;
               }
           }
       }
@@ -1026,6 +1034,7 @@ namespace Ddhdg
       AssertThrow(false, UnknownComponent());
 
     auto &tr_c = scratch.tr_c[c];
+    auto &xi   = scratch.tr_c[c];
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_local.get_quadrature().size();
@@ -1048,7 +1057,7 @@ namespace Ddhdg
               {
                 const unsigned int jj = scratch.fe_support_on_face[face][j];
                 task_data.cell_matrix(ii, jj) +=
-                  -parameters->tau * tr_c[i] * tr_c[j] * JxW;
+                  -parameters->tau * tr_c[j] * xi[i] * JxW;
               }
           }
       }
@@ -1083,9 +1092,9 @@ namespace Ddhdg
              ++i)
           {
             const unsigned int ii = scratch.fe_support_on_face[face][i];
-            const double       k =
+            const double       xi =
               scratch.fe_face_values[tr_c_extractor].value(ii, q);
-            task_data.cell_vector[ii] += parameters->tau * tr_c0[q] * k * JxW;
+            task_data.cell_vector[ii] += parameters->tau * tr_c0[q] * xi * JxW;
           }
       }
   }
@@ -1181,9 +1190,11 @@ namespace Ddhdg
 
     auto &E = scratch.f[Component::V];
     auto &V = scratch.c[Component::V];
-
     auto &W = scratch.f[Component::n];
     auto &n = scratch.c[Component::n];
+
+    auto &z1 = scratch.c[Component::V];
+    auto &z2 = scratch.c[Component::n];
 
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
@@ -1212,11 +1223,11 @@ namespace Ddhdg
                 const unsigned int jj =
                   scratch.fe_local_support_on_face[face][j];
                 scratch.ll_matrix(ii, jj) +=
-                  (scratch.epsilon_face[q] * E[j] * normal * V[i] +
-                   parameters->tau * V[j] * V[i] +
-                   mu_times_previous_E * normal * n[j] * n[i] -
-                   einstein_diffusion_coefficient * W[j] * normal * n[i] +
-                   parameters->tau * n[j] * n[i]) *
+                  (scratch.epsilon_face[q] * E[j] * normal * z1[i] +
+                   parameters->tau * V[j] * z1[i] +
+                   mu_times_previous_E * normal * n[j] * z2[i] -
+                   einstein_diffusion_coefficient * W[j] * normal * z2[i] +
+                   parameters->tau * n[j] * z2[i]) *
                   JxW;
               }
           }
