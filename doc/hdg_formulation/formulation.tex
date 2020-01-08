@@ -1,0 +1,435 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage[italian]{babel}
+\usepackage[activate={true,nocompatibility},final,tracking=true,kerning=true,spacing=true,
+factor=1100,stretch=20,shrink=20]{microtype}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{scalerel,stackengine}
+\usepackage{nicefrac}
+
+\microtypecontext{spacing=nonfrench}
+\setlength{\parindent}{0pt}
+
+
+\newcommand{\Def}{\stackrel{\mathrm{def}}{=}}
+\newcommand{\diver}[1]{\ensuremath{\nabla \cdot #1}}
+
+\newcommand{\uu}{u}
+\newcommand{\q}{\mathbf{q}}
+\newcommand{\skeleton}{\mathcal{S}}
+\newcommand{\triangulation}{\mathcal{T}}
+
+\stackMath
+\newcommand\reallywidehat[1]{%
+\savestack{\tmpbox}{\stretchto{%
+  \scaleto{%
+    \scalerel*[\widthof{\ensuremath{#1}}]{\kern-.6pt\bigwedge\kern-.6pt}%
+    {\rule[-\textheight/2]{1ex}{\textheight}}%WIDTH-LIMITED BIG WEDGE
+  }{\textheight}% 
+}{0.5ex}}%
+\stackon[1pt]{#1}{\tmpbox}%
+}
+\parskip 1ex
+
+
+\begin{document}
+In the formulation that I used,\footnote{
+  which is freely taken from { \it Sevilla, Ruben \& Huerta, Antonio. (2016). Tutorial on 
+Hybridizable   Discontinuous Galerkin (HDG) for Second--Order Elliptic Problems. 
+10.1007/978-3-319-31925-4\_5}
+}
+I start from this problem 
+\[ 
+   \begin{cases}
+      - \Delta \uu = f         & \mbox{in } \Omega \\
+      \uu = \uu_{\mathrm{D}}     & \mbox{on } \partial \Omega
+   \end{cases}
+\]
+
+and I rewrite it in mixed form (from now on I will neglect the boundary conditions):
+
+  \[
+    \begin{cases}
+      \diver{\q} = f                 & \mbox{in } \Omega \\
+      \q + \nabla \uu = \mathbf{0}    & \mbox{in } \Omega \\
+    \end{cases}
+  \]
+  
+Let me introduce a function $\hat{\uu}$ defined on the skeleton $\skeleton$ of  
+triangulation $\mathcal{T}$. If we suppose to known in advance the function $\hat{\uu}$, on every 
+cell $K_i \in \triangulation$ we want to solve the following problem
+
+      \[
+      \begin{cases}
+       \diver{\q}_i = f                  & \mbox{in } K_i  \\      
+       \q_i + \nabla \uu_i = \mathbf{0}     & \mbox{in } K_i \\
+       \uu_i = \hat{\uu}           & \mbox{on } \partial K_i
+      \end{cases}
+    \]
+  
+that can be rewritten in a weak form as \\
+{  \it Let $\mathcal{V}_i \Def H^1(K_i) \times \left[H(\mathrm{div}; K_i)\right]^d$. Find $(\uu_i, 
+    \q_i) \in \mathcal{V}_i$ such that $\forall (v_i, \mathbf{w}_i) \in \mathcal{V}_i$ }
+  \[
+   \begin{cases}
+      -\left(\nabla v_i, \q_i\right)_{K_i} + \left<v_i, \mathbf{n}_i \cdot 
+          \q_i\right>_{\partial K_i} = \left(v_i, f\right)_{K_i} \\
+      -\left(\mathbf{w}, \q_i\right)_{K_i} \! + \left(\diver{\mathbf{w}},\uu 
+          \right)_{K_i} \! -  \left<\mathbf{n}_i \cdot \mathbf{w}, \hat{\uu}
+          \right>_{\partial K_i} = 0
+    \end{cases}
+  \]
+In this formulation, all the derivatives are on the test functions. In particular, the first 
+equation uses the fact that
+\[ \left(v_i, \diver{\q_i} \right) = -\left(\nabla v_i, \q_i\right)_{K_i} + \left<v_i, \mathbf{n}_i 
+    \cdot \q_i\right>_{\partial K_i}  \]
+  
+and, in the second one, for some reasons that I do not remember (and that I suspect were not so 
+good) I changed the signs. Moreover, I inserted $\hat{\uu}$ instead of $\uu$ inside the boundary 
+term because we want that $\uu = \hat{\uu}$ on the boundary.
+
+At this point, we have $n$ problems (where $n$ is the number of cells) that are completely 
+uncorrelated, beside for the presence of the variable $\hat{\uu}$ that instead is the same for every
+problem.
+
+We add now an equation to enforce normal continuity for $\q$: for all $\mu \in H^1(\skeleton)$
+\[  \sum_{K_i \in \triangulation} \sum_{\mathrm{face } F \mathrm{ of } K} \left<
+\mathbf{n}_i \cdot \q_i, \mu\right>_{F} = 0 \]
+The reason why $\mu$ must be in $H^1$ is not completely clear to me.
+
+In any case, now we have our problem that can be written as \\
+{\it Let $\mathcal{V} \Def \prod_{i} \mathcal{V}_i$; find $(\uu, \q) \in \mathrm{V}$ and 
+$\hat{\uu} \in H^1(\skeleton)$ so that for every couple $(v, \mathbf{w}) \in \mathcal{V}$ and
+every function $\mu \in H^1(\skeleton)$ we have}
+\[
+    \begin{cases}
+      -\left(\nabla v, \q\right)_{\mathcal{V}} + \left<v, \mathbf{n} \cdot 
+          \q\right>_{\partial \mathcal{V}} = \left(v, f\right)_{\mathcal{V}} \\
+      -\left(\mathbf{w}, \q\right)_{\mathcal{V}} \! + \left(\diver{\mathbf{w}},\uu 
+          \right)_{\mathcal{V}} \! -  \left<\mathbf{n} \cdot \mathbf{w}, \hat{\uu}
+          \right>_{\partial \mathcal{V}} = 0 \\
+     \displaystyle \sum_{K_i \in \triangulation} \sum_{\mathrm{face } F \mathrm{ of } K} \left< \mu,
+          \mathbf{n}_i \cdot \q_i\right>_{F} = 0 
+    \end{cases}
+\]
+where the subscript $i$ identify the $i$--th component in the space $\mathcal{V}$ and 
+\[ \left( f, g \right)_{\mathcal{V}} \Def \sum_{i} \left(f_{i}, g_{i}\right)_{K_i}\]
+\[ \left< f, g \right>_{\partial\mathcal{V}} \Def \sum_{i} \left<f_i, g_i \right>_{\partial K_i} \]
+
+The last step is to change $\q$ with 
+\[\hat{\q} \Def \q + \tau \left(\uu - \hat{\uu} \right)\mathbf{n} \]
+for stabilizing the method. In this way we have
+\[
+     \begin{cases}
+      -\left(\nabla v, \q\right)_{\mathcal{V}} + \left<v, \mathbf{n} \cdot 
+          \q\right>_{\partial \mathcal{V}} +\tau \left<v, \uu - \hat{\uu} \right>_{\partial 
+\mathcal{V}}  = \left(v, f\right)_{\mathcal{V}} \\
+      -\left(\mathbf{w}, \q\right)_{\mathcal{V}} \! + \left(\diver{\mathbf{w}},\uu 
+          \right)_{\mathcal{V}} \! -  \left<\mathbf{n} \cdot \mathbf{w}, \hat{\uu}
+          \right>_{\partial \mathcal{V}} = 0 \\
+     \displaystyle \sum_{K_i \in \triangulation} \sum_{\mathrm{face } F \mathrm{ of } K} \left< 
+          \mu, \mathbf{n}_i \cdot \q_i\right>_{F} +\tau \left<\mu, \uu_i - \hat{\uu} \right>_{F} 
+= 0 
+    \end{cases}
+\]
+
+\section{Drift diffusion}
+Now I am trying to solve this
+\[
+ \begin{cases}
+  \nabla V + \mathbf{E} = 0 \\
+  \diver{\left( \varepsilon \mathbf{E} \right)} = n \\
+  \nabla n + \mathbf{W} = 0 \\
+  \diver{\left(\mu_n \mathbf{E} n - D_n \mathbf{W}\right)} = \frac{1}{q}R_n(n) \\
+ \end{cases}
+\]
+
+In weak form ($\nu$ is the normal to avoid confusion with $n$):
+\[
+ \begin{cases}
+  -(V, \diver{\mathbf{Q}_{1}}) + \left<\widehat{V}, \mathbf{Q}_{1} \cdot \nu \right> + 
+      \left(\mathbf{E}, \mathbf{Q}_{1} \right) = 0 \\
+  - \left(\varepsilon \mathbf{E}, \nabla Z_{1}\right) + \left<\reallywidehat{\varepsilon \mathbf{E} 
+      \cdot \nu}, Z_{1} \right> - (n, Z_{1}) = 0 \\
+  -(n, \diver{\mathbf{Q}_{2}}) + \left<\widehat{n}, \mathbf{Q}_{2} \cdot \nu \right> + 
+      \left(\mathbf{W}, \mathbf{Q}_{2} \right) = 0 \\
+  - \left(\mu_n \mathbf{E} n - D_n \mathbf{W}, \nabla Z_{2} \right) + \left<\left(\mu_n n 
+      \mathbf{E} \cdot \nu - D_n \mathbf{W} \cdot \nu\right)^{\wedge}\!\!, Z_{2} \right> \! = \!
+      \left(\frac{1}{q}R_n(n), Z_2\right) \\
+  \left< \reallywidehat{\varepsilon \mathbf{E} \cdot \nu}, \mu_1 \right> = 0 \\
+  \left<(\mu_n n \mathbf{E} \cdot \nu - D_n \mathbf{W} \cdot \nu)^{\wedge}, 
+      \mu_{2} \right> = 0
+ \end{cases}
+\]
+
+For what concerns the fluxes, I made the following choice: $\widehat{V}$ and $\widehat{n}$ are 
+independent variables, while
+\[
+ \reallywidehat{\varepsilon \mathbf{E} \cdot \nu} \Def \varepsilon \mathbf{E} \cdot \nu + \tau 
+    \big( V - \widehat{V} \big)
+\]
+\[
+  \left(\mu_n n \mathbf{E} \cdot \nu - D_n \mathbf{W} \cdot \nu\right)^\wedge \Def \mu_n n 
+\mathbf{E} \cdot \nu - D_n \mathbf{W} \cdot \nu + \tau \left( n - \widehat{n} \right)
+\]
+
+This choice brings us to the following system
+\begin{equation} \label{eq:formulation1nonlinear}
+ \begin{cases}
+  -(V, \diver{\mathbf{Q}_{1}}) + \left<\widehat{V}, \mathbf{Q}_{1} \cdot \nu \right> + 
+      \left(\mathbf{E}, \mathbf{Q}_{1} \right) = 0 \\
+  - \left(\varepsilon \mathbf{E}, \nabla Z_{1}\right) + \left<\varepsilon \mathbf{E} \cdot \nu, 
+       Z_{1}\right> + \tau \big< V - \widehat{V}, Z_{1} \big> - (n, Z_{1}) = 0 \\
+  -(n, \diver{\mathbf{Q}_{2}}) + \left<\widehat{n}, \mathbf{Q}_{2} \cdot \nu \right> + 
+      \left(\mathbf{W}, \mathbf{Q}_{2} \right) = 0 \\
+  \begin{aligned}
+  - \left(\mu_n \mathbf{E} n, \nabla Z_{2} \right) + \left( D_n \mathbf{W}, \nabla Z_{2} \right) + 
+      \left<\mu_n n \mathbf{E} \cdot \nu, Z_{2} \right> \hphantom{- \left< D_n \mathbf{W} \cdot \nu, 
+      Z_{2} \right> } \\
+      - \left< D_n \mathbf{W} \cdot \nu, Z_{2} \right> + \tau \left< \left(n - 
+         \widehat{n}\right), Z_{2} \right>  = 
+      \left(\frac{1}{q}R_n(n), Z_2\right)
+  \end{aligned} \\
+   \left<\varepsilon \mathbf{E} \cdot \nu, \mu_{1}\right> + \tau \big< V - \widehat{V}, \mu_{1} 
+       \big> = 0 \\
+  \left<\mu_n n \mathbf{E} \cdot \nu, \mu_{2} \right> - \left<D_n \mathbf{W} \cdot \nu, \mu_{2} 
+       \right> + \tau \left< n - \widehat{n}, \mu_{2} \right> = 0
+ \end{cases}
+\end{equation}
+
+Now, we still have two non linear terms: $(\mu_n \mathbf{E} n, \nabla Z_{2})$ and 
+$<\mu_n n \mathbf{E} \cdot \nu, Z_{2}>$.
+
+To linearize the system, I will substitute the electric field with the one computed at the previous 
+iteration
+\[  \left(\mu_n \mathbf{E} n, \nabla Z_{2} \right) \rightarrow \left(\mu_n \mathbf{E}_{0} n, \nabla 
+Z_{2} \right) \]
+\[ <\mu_n n \mathbf{E} \cdot \nu, Z_{2}> \rightarrow <\mu_n n \mathbf{E}_{0} \cdot \nu, Z_{2}>\]
+where $\mathbf{E}_0$ is a fixed vector obtained at the previous iteration.
+
+Therefore, the final problem is:
+\[
+ \begin{cases}
+  {\color{red} -(V, \diver{\mathbf{Q}_{1}})}
+      {\color{Green} + \left<\widehat{V}, \mathbf{Q}_{1} \cdot \nu \right>}
+      {\color{red} + \left(\mathbf{E}, \mathbf{Q}_{1} \right)} = 0 \\
+  {\color{red} - \left(\varepsilon \mathbf{E}, \nabla Z_{1}\right)}
+      {\color{Dandelion} + \left<\varepsilon \mathbf{E} \cdot \nu, Z_{1}\right>}
+      {\color{Dandelion} + \tau \big< V , Z_{1} \big> }
+      {\color{Green} - \tau \big< \widehat{V}, Z_{1} \big>}
+      {\color{red} - (n,Z_{1})} = 0 \\
+  {\color{red} -(n, \diver{\mathbf{Q}_{2}})}
+      {\color{Green} + \left<\widehat{n}, \mathbf{Q}_{2} \cdot \nu \right>}
+      {\color{red} + \left(\mathbf{W}, \mathbf{Q}_{2} \right)} = 0 \\
+  \begin{aligned}
+      {\color{red} - \left(\mu_n \mathbf{E}_{0} n, \nabla Z_{2} \right)}
+          {\color{red} + \left( D_n \mathbf{W}, \nabla Z_{2} \right)}
+          {\color{Dandelion} + \left<\mu_n n \mathbf{E}_{0} \cdot \nu, Z_{2} \right>}
+          \hphantom{- \left< D_n \mathbf{W} \cdot \nu, Z_{2} \right> } \\
+      {\color{Dandelion} - \left< D_n \mathbf{W} \cdot \nu, Z_{2} \right>}
+          {\color{Dandelion} + \tau \left<n, Z_{2}\right> } 
+          {\color{Green} - \tau \left<\widehat{n}, Z_{2}\right>} = 
+          {\left(\frac{1}{q}R_n(n), Z_2\right)}
+  \end{aligned} \\
+  {\color{blue} \left<\varepsilon \mathbf{E} \cdot \nu, \mu_{1}\right>}
+      {\color{blue} + \tau \big< V, \mu_{1}\big>}
+      {\color{Magenta} - \tau \big<\widehat{V}, \mu_{1} \big>} = 0 \\
+  {\color{blue} \left<\mu_n n \mathbf{E}_{0} \cdot \nu, \mu_{2} \right>}
+      {\color{blue} -\left<D_n \mathbf{W} \cdot \nu, \mu_{2} \right>}
+      {\color{blue} + \tau \left< n, \mu_{2} \right>}
+      {\color{Magenta} - \tau \left<\widehat{n}, \mu_{2} \right>} = 0
+ \end{cases}
+\]
+
+\section{Another linearization}
+Let us suppose that the functions we are looking for ($V$, $\widehat{V}$, $\mathbf{E}$, $n$, 
+$\widehat{n}$, and $\mathbf{W}$) can be written as
+\[
+ \begin{split}
+    V           & = V_{0} + \delta V \\
+    \widehat{V} & = \widehat{V_{0}} + \widehat{\delta V} \\
+    \mathbf{E}  & = \mathbf{E}_{0} + \delta \mathbf{E} \\
+    n           & = n_{0} + \delta n \\
+    \widehat{n} & = \widehat{n_{0}} + \widehat{\delta n} \\
+    \mathbf{W}  & = \mathbf{W}_{0} + \delta \mathbf{W}
+ \end{split}
+\]
+
+where  $V_0$, $\widehat{V_{0}}$, $\mathbf{E}_0$, $n_0$, $\widehat{n_{0}}$, and $\mathbf{W}_0$ are 
+some arbitrary chosen functions. Then, the system~\ref{eq:formulation1nonlinear} becomes
+\begin{equation} \label{eq:horrible}
+ \begin{cases}
+  -(V_0 + \delta V, \diver{\mathbf{Q}_{1}}) + \left<\widehat{V_{0}} + \widehat{\delta V}, 
+      \mathbf{Q}_{1} \cdot \nu \right> + \left(\mathbf{E}_{0} + \delta \mathbf{E}, \mathbf{Q}_{1} 
+      \right) = 0 \\[20pt]
+  \begin{aligned}
+  - \left(\varepsilon \left(\mathbf{E}_{0} + \delta \mathbf{E}\right), \nabla Z_{1}\right) + 
+       \left<\varepsilon \left(\mathbf{E}_{0} + \delta \mathbf{E}\right) \cdot \nu, 
+       Z_{1}\right> \\ & \hspace{-122pt} + \tau \big< V_{0} + \delta V - \widehat{V_{0}} - 
+      \widehat{\delta V}, Z_{1} \big> - (n_{0} + \delta n , Z_{1}) = 0
+  \end{aligned} \\[20pt]
+  -(n_{0} + \delta n, \diver{\mathbf{Q}_{2}}) + \left<\widehat{n_{0}} + \widehat{\delta n}, 
+      \mathbf{Q}_{2} \cdot \nu \right> + 
+      \left(\mathbf{W}_{0} + \delta \mathbf{W}, \mathbf{Q}_{2} \right) = 0 \\[20pt]
+  \begin{aligned}
+  - \left(\mu_n \left(n_{0} + \delta n \right) \left(\mathbf{E}_{0} + \delta \mathbf{E}\right), 
+      \nabla Z_{2} \right) + \left( D_n \left(\mathbf{W}_{0} + \delta \mathbf{W}\right), \nabla 
+      Z_{2} \right) \\
+      & \hspace{-255pt} + \left<\mu_n \left(n_{0} + \delta n \right) \left(\mathbf{E}_{0} + \delta 
+      \mathbf{E}\right) \cdot \nu, Z_{2} \right> - \left< D_n \left(\mathbf{W}_{0} + \delta 
+      \mathbf{W}\right) \cdot \nu, Z_{2} \right> \\
+      & \hspace{-219pt} + \tau \left< n_{0} + \delta n - \widehat{n_{0}} - \widehat{\delta 
+      n}, Z_{2} \right>  = \left({q^{-1}}R_n(n_{0} + \delta n), Z_2\right)
+  \end{aligned} \\[35pt]
+  \left<\varepsilon \left(\mathbf{E}_{0} + \delta \mathbf{E}\right) \cdot \nu, \mu_{1}\right> + 
+      \tau \big< V_{0} + \delta V - \widehat{V_{0}} - \widehat{\delta V}, \mu_{1} \big> = 0 \\[20pt]
+  \begin{aligned}
+  \left<\mu_n \left(n_{0} + \delta n \right) \left(\mathbf{E}_{0} + \delta \mathbf{E}\right) \cdot 
+      \nu, \mu_{2} \right> - \left<D_n \left(\mathbf{W}_{0} + \delta \mathbf{W}\right) \cdot \nu, 
+      \mu_{2} \right> \\ & \hspace{-108pt} + \tau \left< n_{0} + \delta n - \widehat{n_{0}} - 
+      \widehat{\delta n}, \mu_{2} \right> = 0
+  \end{aligned}
+ \end{cases}
+\end{equation}
+
+To linearize the previous system, we approximate
+\[ R_n(n_{0} + \delta n) \approx R_n(n_0) + \frac{\mathrm{d}R_n}{\mathrm{d}n}|_{n = 
+n_0}\delta{}n \]
+and
+\[ \left(n_{0} + \delta n \right) \left(\mathbf{E}_{0} + \delta \mathbf{E}\right) \approx n_0 
+\mathbf{E}_0 + n_0 \delta{}\mathbf{E}  + \delta{}n \mathbf{E}_0 \]
+
+To simplify a little bit the notation, we will use the following symbols
+\[
+ R_{n_0} \Def R_n(n_0)
+\]
+\[
+ R_{n_0}' \Def \frac{\mathrm{d}R_n}{\mathrm{d}n}|_{n = n_0}
+\]
+
+Therefore, the system~\ref{eq:horrible} becomes
+\begin{equation*}
+ \begin{cases}
+  \begin{aligned}
+   -(\delta V, \diver{\mathbf{Q}_{1}}) + \big<\widehat{\delta V}, \mathbf{Q}_{1} \cdot \nu \big> 
+          + \left(\delta \mathbf{E}, \mathbf{Q}_{1} \right) \\
+      & \hspace{-56.6pt} = (V_0, \diver{\mathbf{Q}_{1}}) - \big<\widehat{V_{0}}, \mathbf{Q}_{1} 
+          \cdot \nu \big> - \left(\mathbf{E}_{0}, \mathbf{Q}_{1} \right)
+  \end{aligned} \\[20pt]
+  \begin{aligned}
+  - \left(\varepsilon\delta \mathbf{E}, \nabla Z_{1}\right) + \left<\varepsilon  \delta \mathbf{E} 
+          \cdot \nu, Z_{1}\right> + \tau \big< \delta V - \widehat{\delta V}, Z_{1} \big> -
+          ( \delta n , Z_{1}) \\
+      & \hspace{-230pt}  = \left(\varepsilon \mathbf{E}_{0}, \nabla Z_{1}\right) 
+          - \left<\varepsilon \mathbf{E}_{0} \cdot \nu, Z_{1}\right> - \tau \big< V_{0}
+          - \widehat{V_{0}}, Z_{1} \big> + (n_{0}, Z_{1})
+  \end{aligned} \\[20pt]
+    \begin{aligned}
+  -(\delta n, \diver{\mathbf{Q}_{2}}) + \big<\widehat{\delta n}, \mathbf{Q}_{2} \cdot \nu \big> 
+          + \left(\delta \mathbf{W}, \mathbf{Q}_{2} \right) \\
+      & \hspace{-64.5pt} = (n_0, \diver{\mathbf{Q}_{2}}) - \big<\widehat{n_{0}}, \mathbf{Q}_{2} 
+          \cdot \nu \big> - \left(\mathbf{W}_{0}, \mathbf{Q}_{2} \right)
+  \end{aligned} \\[20pt]
+  \begin{aligned}
+  - \left(\mu_n (n_{0} \delta \mathbf{E} + \delta n \mathbf{E}_{0}), \nabla Z_{2} \right) + \left( 
+          D_n  \delta \mathbf{W}, \nabla Z_{2} \right)-\left({q^{-1}}R_{n_0}'\delta n, Z_2\right) \\
+      & \hspace{-290pt} + \left<\mu_n (n_{0} \delta \mathbf{E} + 
+          \delta n \mathbf{E}_{0}) \cdot \nu, Z_{2} \right>  - \left< D_n \delta \mathbf{W} \cdot 
+          \nu, Z_{2} \right> + \tau \big< \delta n - \widehat{\delta n}, Z_{2} \big> \\
+      & \hspace{-314pt} = \left({q^{-1}}R_{n_0}, Z_2\right) + \left(\mu_n n_{0} 
+          \mathbf{E}_{0}, \nabla Z_{2} \right) - \left(D_n\mathbf{W}_{0}, \nabla Z_{2} \right) -
+          \left<\mu_n n_{0} \mathbf{E}_{0} \cdot \nu, Z_{2} \right> \\
+      & \hspace{-155pt} + \big< D_n 
+          \left( \mathbf{W}_{0} \right) \cdot \nu, Z_{2} \big> - \tau \big< n_{0} - 
+          \widehat{n_{0}}, Z_{2} \big>
+  \end{aligned} \\[35pt]
+  \begin{aligned}
+  \left<\varepsilon \delta \mathbf{E} \cdot \nu, \mu_{1}\right> + 
+      \tau \big< \delta V - \widehat{\delta V}, \mu_{1} \big> = 
+      -\left<\varepsilon \mathbf{E}_{0} \cdot \nu, \mu_{1}\right> - \tau \big< V_{0} - 
+      \widehat{V_{0}} , \mu_{1} \big>
+  \end{aligned} \\[15pt]
+  \begin{aligned}
+  \left<\mu_n (n_{0} \delta \mathbf{E} + \delta n \mathbf{E}_{0}) \cdot \nu, \mu_{2} \right> - 
+      \left<D_n \delta \mathbf{W} \cdot \nu, \mu_{2} \right> + \tau \big< \delta n - 
+      \widehat{\delta n}, \mu_{2} \big> \\
+  & \hspace{-239.5pt} = - \left<\mu_n n_{0} \mathbf{E}_{0} \cdot \nu, \mu_{2} \right> + \left<D_n 
+      \mathbf{W}_{0} \cdot \nu, \mu_{2} \right> - \tau \big< n_{0} - \widehat{n_{0}}, \mu_{2} \big>
+  \end{aligned}
+ \end{cases}
+\end{equation*}
+
+or, equivalently,
+
+\begin{equation*}
+ \begin{cases}
+  \begin{aligned}
+   {\color{red} -(\delta V, \diver{\mathbf{Q}_{1}})}
+         {\color{Green} + \big<\widehat{\delta V}, \mathbf{Q}_{1} \cdot \nu \big>}
+         {\color{red} + \left(\delta \mathbf{E}, \mathbf{Q}_{1} \right)} \\
+       & \hspace{-39.5pt} = {\color{red} (V_0, \diver{\mathbf{Q}_{1}})}
+           {\color{Green} - \big<\widehat{V_{0}}, \mathbf{Q}_{1} \cdot \nu \big>} 
+           {\color{red} - \left(\mathbf{E}_{0}, \mathbf{Q}_{1} \right)}
+  \end{aligned} \\[20pt]
+  \begin{aligned}
+  {\color{red} - \left(\varepsilon\delta \mathbf{E}, \nabla Z_{1}\right)}
+          {\color{Dandelion} + \left<\varepsilon  \delta \mathbf{E} \cdot \nu, Z_{1}\right>}
+          {\color{Dandelion} + \tau \big< \delta V, Z_{1} \big>}
+          {\color{Green} - \tau \big<\widehat{\delta V}, Z_{1} \big>} 
+          {\color{red} - ( \delta n , Z_{1})} \\
+      & \hspace{-261pt}  = {\color{red} \left(\varepsilon \mathbf{E}_{0}, \nabla Z_{1}\right)}
+          {\color{Dandelion} - \left<\varepsilon \mathbf{E}_{0} \cdot \nu, Z_{1}\right>}
+          {\color{Dandelion} - \tau \big< V_{0}, Z_{1} \big>}
+          {\color{Green} + \tau \big<\widehat{V_{0}}, Z_{1} \big>}
+          {\color{red} + (n_{0}, Z_{1})}
+  \end{aligned} \\[20pt]
+    \begin{aligned}
+  {\color{red} -(\delta n, \diver{\mathbf{Q}_{2}})}
+          {\color{Green} + \big<\widehat{\delta n}, \mathbf{Q}_{2} \cdot \nu \big>} 
+          {\color{red} + \left(\delta \mathbf{W}, \mathbf{Q}_{2} \right)} \\
+      & \hspace{-47pt} = {\color{red} (n_0, \diver{\mathbf{Q}_{2}})}
+          {\color{Green} - \big<\widehat{n_{0}}, \mathbf{Q}_{2} \cdot \nu \big>}
+          {\color{red} - \left(\mathbf{W}_{0}, \mathbf{Q}_{2} \right)}
+  \end{aligned} \\[20pt]
+  \begin{aligned}
+  {\color{red}-\left(\mu_n(n_{0}\delta\mathbf{E} + \delta n \mathbf{E}_{0}), \nabla Z_{2}\right)}
+          {\color{red} + \left( D_n  \delta \mathbf{W}, \nabla Z_{2} \right)}
+          {\color{red} -\left({q^{-1}}R_{n_0}'\delta n,Z_2\right)} \\
+      & \hspace{-281.5pt} %
+          {\color{Dandelion} + \left<\mu_n (n_{0} \delta \mathbf{E} + \delta n \mathbf{E}_{0}) 
+                \!\cdot\! \nu, Z_{2} \right>}
+          {\color{Dandelion} - \left< D_n \delta \mathbf{W} \!\cdot\! \nu, Z_{2} \right>}
+          {\color{Dandelion} +\! \tau \big<\! \delta n , Z_{2} \!\big>}
+          {\color{Green} -\! \tau \big<\!\widehat{\delta n}, Z_{2} \!\big>} \\
+      & \hspace{-205.5pt} = {\color{red} \left({q^{-1}}R_{n_0}, Z_2\right)}
+          {\color{red} + \left(\mu_n n_{0} \mathbf{E}_{0}, \nabla Z_{2} \right)}
+          {\color{red} - \left(D_n\mathbf{W}_{0}, \nabla Z_{2} \right)} \\
+      & \hspace{-248pt} {\color{Dandelion}-\left<\mu_n n_{0}\mathbf{E}_{0}\cdot\nu,Z_{2}\right>}
+          {\color{Dandelion} + \big< D_n \mathbf{W}_{0} \cdot \nu, Z_{2} \big>}
+          {\color{Dandelion}- \tau \big< n_{0}, Z_{2} \big>}
+          {\color{Green} + \tau \big<\widehat{n_{0}}, Z_{2} \big>}
+  \end{aligned} \\[35pt]
+  \begin{aligned}
+  {\color{blue}\left<\varepsilon \delta \mathbf{E} \cdot \nu, \mu_{1}\right>}
+      {\color{blue} + \tau \big< \delta V, \mu_{1} \big>}
+      {\color{Magenta} - \tau \big<\widehat{\delta V}, \mu_{1} \big>} \\
+      & \hspace{-22pt} = {\color{blue} -\left<\varepsilon \mathbf{E}_{0} \cdot \nu, \mu_{1}\right>}
+          {\color{blue} - \tau \big< V_{0} , \mu_{1} \big>}
+          {\color{Magenta} + \tau \big< \widehat{V_{0}}, \mu_{1} \big>}
+  \end{aligned} \\[15pt]
+  \begin{aligned}
+  {\color{blue}\left<\mu_n(n_{0}\delta\mathbf{E}+\delta n\mathbf{E}_{0}) \cdot \nu, \mu_{2} \right>}
+      {\color{blue} - \left<D_n \delta \mathbf{W} \cdot \nu, \mu_{2} \right>}
+      {\color{blue}+ \tau \big< \delta n, \mu_{2} \big>}
+      {\color{Magenta} - \tau \big<\widehat{\delta n}, \mu_{2} \big>} \\
+  & \hspace{-281pt} = {\color{blue} - \left<\mu_n n_{0} \mathbf{E}_{0} \cdot \nu, \mu_{2} \right>}
+      {\color{blue} + \left<D_n \mathbf{W}_{0} \cdot \nu, \mu_{2} \right>}
+      {\color{blue} - \tau \big< n_{0}, \mu_{2} \big>}
+      {\color{Magenta} + \tau \big<\widehat{n_{0}}, \mu_{2} \big>}
+  \end{aligned}
+ \end{cases}
+\end{equation*}
+
+\end{document}
