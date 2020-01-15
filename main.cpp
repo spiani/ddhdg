@@ -18,12 +18,19 @@
 
 const unsigned int dim = 2;
 
+
+DeclExceptionMsg(
+  TooManyCommandLineArguments,
+  "Only one argument is allowed: the path of the parameters file");
+
+
 bool
 file_exists(const std::string &file_path)
 {
   struct stat buffer;
   return (stat(file_path.c_str(), &buffer) == 0);
 }
+
 
 class ProblemParameters : public dealii::ParameterHandler
 {
@@ -182,6 +189,10 @@ public:
   void
   read_parameters_file(const std::string &parameters_file_path)
   {
+    if (parameters_file_path == "-")
+      {
+        return read_parameters_from_stdin();
+      }
     std::cout << "Reading parameter file " << parameters_file_path << std::endl;
     parse_input(parameters_file_path);
     after_reading_operations();
@@ -191,7 +202,7 @@ public:
   read_parameters_from_stdin()
   {
     std::cout << "Reading parameter file from standard input.." << std::endl;
-    parse_input(std::cin, std::string("File name"));
+    parse_input(std::cin, std::string("standard input"));
     after_reading_operations();
   }
 
@@ -247,6 +258,7 @@ private:
   }
 };
 
+
 int
 main(int argc, char **argv)
 {
@@ -254,8 +266,12 @@ main(int argc, char **argv)
   dealii::deallog.depth_console(2);
 
   // Read the content of the parameter file
+  AssertThrow(argc <= 2, TooManyCommandLineArguments())
   ProblemParameters prm;
-  prm.read_parameters_file();
+  if (argc == 2)
+    prm.read_parameters_file(argv[1]);
+  else
+    prm.read_parameters_file();
 
   // Create a triangulation
   std::shared_ptr<dealii::Triangulation<dim>> triangulation =
