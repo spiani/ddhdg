@@ -161,11 +161,13 @@ namespace Ddhdg
       Component                                    c) const;
 
     void
-    output_results(const std::string &solution_filename) const;
+    output_results(const std::string &solution_filename,
+                   bool               save_update = false) const;
 
     void
     output_results(const std::string &solution_filename,
-                   const std::string &trace_filename) const;
+                   const std::string &trace_filename,
+                   bool               save_update = false) const;
 
     void
     print_convergence_table(

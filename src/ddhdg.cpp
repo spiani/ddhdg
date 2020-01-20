@@ -834,7 +834,7 @@ namespace Ddhdg
                 scratch.lf_matrix(ii, jj) +=
                   (tr_V[j] * (q1[i] * normal) -
                    parameters->tau * tr_V[j] * z1[i] +
-                   scratch.tr_c[Component::n][j] * (q2[i] * normal) -
+                   tr_n[j] * (q2[i] * normal) -
                    parameters->tau * (tr_n[j] * z2[i])) *
                   JxW;
               }
@@ -1694,7 +1694,8 @@ namespace Ddhdg
 
   template <int dim>
   void
-  Solver<dim>::output_results(const std::string &solution_filename) const
+  Solver<dim>::output_results(const std::string &solution_filename,
+                              const bool         save_update) const
   {
     std::ofstream output(solution_filename);
     DataOut<dim>  data_out;
@@ -1707,6 +1708,10 @@ namespace Ddhdg
     for (int i = 0; i < dim; i++)
       names.emplace_back("electron_displacement");
     names.emplace_back("electron_density");
+
+    std::vector<std::string> update_names;
+    for (auto n : names)
+      update_names.emplace_back(n + "_updates");
 
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       component_interpretation(
@@ -1722,6 +1727,12 @@ namespace Ddhdg
                              names,
                              component_interpretation);
 
+    if (save_update)
+      data_out.add_data_vector(dof_handler_local,
+                               update_local,
+                               update_names,
+                               component_interpretation);
+
     data_out.build_patches(StaticMappingQ1<dim>::mapping,
                            fe.degree,
                            DataOut<dim>::curved_inner_cells);
@@ -1731,24 +1742,27 @@ namespace Ddhdg
   template <>
   void
   Solver<1>::output_results(const std::string &solution_filename,
-                            const std::string &trace_filename) const
+                            const std::string &trace_filename,
+                            const bool         save_update) const
   {
     (void)solution_filename;
     (void)trace_filename;
+    (void)save_update;
     AssertThrow(false, NoTraceIn1D());
   }
 
   template <int dim>
   void
   Solver<dim>::output_results(const std::string &solution_filename,
-                              const std::string &trace_filename) const
+                              const std::string &trace_filename,
+                              const bool         save_update) const
   {
-    output_results(solution_filename);
+    output_results(solution_filename, save_update);
 
     std::ofstream            face_output(trace_filename);
     DataOutFaces<dim>        data_out_face(false);
-    std::vector<std::string> face_name(2, "u_hat");
-    face_name[1] = "v_hat";
+    std::vector<std::string> face_name(2, "electric_potential");
+    face_name[1] = "electron_density";
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       face_component_type(2, DataComponentInterpretation::component_is_scalar);
     data_out_face.add_data_vector(dof_handler,
