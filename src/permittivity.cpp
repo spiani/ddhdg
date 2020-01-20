@@ -20,6 +20,8 @@ namespace Ddhdg
       }
   }
 
+
+
   template <int dim>
   dealii::Tensor<2, dim>
   HomogeneousPermittivity<dim>::compute_absolute_permittivity(
@@ -34,6 +36,8 @@ namespace Ddhdg
       epsilon[i][i] = epsilon0;
     return epsilon;
   }
+
+
 
   template <int dim>
   void
@@ -55,6 +59,8 @@ namespace Ddhdg
           epsilon[q][i][i] = epsilon0;
       }
   }
+
+
 
   template class Permittivity<1>;
   template class Permittivity<2>;

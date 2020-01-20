@@ -71,7 +71,8 @@ public:
     add_parameter(
       "recombination term zero order term",
       recombination_term_constant_term,
-      "A function of the space that represent the value of the recombination term when n = 0");
+      "A function of the space that represent the value of the recombination"
+      "term when n = 0");
     add_parameter(
       "recombination term first order term",
       recombination_term_constant_term,
@@ -84,11 +85,13 @@ public:
       add_parameter(
         "V boundary function",
         V_boundary_function_str,
-        "The function that will be used to specify the Dirichlet boundary conditions for V");
+        "The function that will be used to specify the Dirichlet boundary "
+        "conditions for V");
       add_parameter(
         "n boundary function",
         n_boundary_function_str,
-        "The function that will be used to specify the Dirichlet boundary conditions for n");
+        "The function that will be used to specify the Dirichlet boundary "
+        "conditions for n");
     }
     leave_subsection();
     enter_subsection("domain geometry");

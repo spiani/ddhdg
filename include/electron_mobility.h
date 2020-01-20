@@ -15,6 +15,9 @@ namespace Ddhdg
     virtual void
     compute_electron_mobility(const std::vector<dealii::Point<dim>> &P,
                               std::vector<dealii::Tensor<2, dim>> &  mu) const;
+
+    virtual ~ElectronMobility()
+    {}
   };
 
   template <int dim>
@@ -34,5 +37,8 @@ namespace Ddhdg
     virtual void
     compute_electron_mobility(const std::vector<dealii::Point<dim>> &P,
                               std::vector<dealii::Tensor<2, dim>> &  mu) const;
+
+    virtual ~HomogeneousElectronMobility()
+    {}
   };
 } // namespace Ddhdg

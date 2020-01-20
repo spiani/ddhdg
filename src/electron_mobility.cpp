@@ -20,6 +20,8 @@ namespace Ddhdg
       }
   }
 
+
+
   template <int dim>
   dealii::Tensor<2, dim>
   HomogeneousElectronMobility<dim>::compute_electron_mobility(
@@ -34,6 +36,8 @@ namespace Ddhdg
       mu[i][i] = this->mu;
     return mu;
   }
+
+
 
   template <int dim>
   void
@@ -55,6 +59,8 @@ namespace Ddhdg
           mu[q][i][i] = this->mu;
       }
   }
+
+
 
   template class ElectronMobility<1>;
   template class ElectronMobility<2>;

@@ -16,13 +16,16 @@ namespace Ddhdg
     compute_absolute_permittivity(
       const std::vector<dealii::Point<dim>> &P,
       std::vector<dealii::Tensor<2, dim>> &  epsilon) const;
+
+    virtual ~Permittivity()
+    {}
   };
 
   template <int dim>
   class HomogeneousPermittivity : public Permittivity<dim>
   {
   public:
-    HomogeneousPermittivity(double epsilon)
+    explicit HomogeneousPermittivity(double epsilon)
       : epsilon0(epsilon)
     {}
 
@@ -31,10 +34,12 @@ namespace Ddhdg
     virtual dealii::Tensor<2, dim>
     compute_absolute_permittivity(const dealii::Point<dim> &q) const;
 
-
     virtual void
     compute_absolute_permittivity(
       const std::vector<dealii::Point<dim>> &P,
       std::vector<dealii::Tensor<2, dim>> &  epsilon) const;
+
+    virtual ~HomogeneousPermittivity()
+    {}
   };
 } // namespace Ddhdg

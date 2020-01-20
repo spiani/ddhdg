@@ -31,6 +31,9 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<dealii::Point<dim>> &P,
       std::vector<double> &                  r) const;
+
+    virtual ~RecombinationTerm()
+    {}
   };
 
   template <int dim>
@@ -73,6 +76,9 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<dealii::Point<dim>> &P,
       std::vector<double> &                  r) const;
+
+    virtual ~LinearRecombinationTerm()
+    {}
 
   private:
     const std::string constant_term;
