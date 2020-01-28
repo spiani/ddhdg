@@ -37,6 +37,7 @@ namespace Ddhdg
     const std::shared_ptr<const ElectronMobility<dim>>  electron_mobility;
     const std::shared_ptr<const RecombinationTerm<dim>> recombination_term;
     const std::shared_ptr<const dealii::Function<dim>>  temperature;
+    const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
 
     explicit Problem(
@@ -45,6 +46,7 @@ namespace Ddhdg
       const std::shared_ptr<const ElectronMobility<dim>>  electron_mobility,
       const std::shared_ptr<const RecombinationTerm<dim>> recombination_term,
       const std::shared_ptr<const dealii::Function<dim>>  temperature,
+      const std::shared_ptr<const dealii::Function<dim>>  doping,
       const std::shared_ptr<const BoundaryConditionHandler<dim>>
         boundary_handler)
       : triangulation(triangulation)
@@ -52,6 +54,7 @@ namespace Ddhdg
       , electron_mobility(electron_mobility)
       , recombination_term(recombination_term)
       , temperature(temperature)
+      , doping(doping)
       , boundary_handler(boundary_handler)
     {}
   };
@@ -328,6 +331,7 @@ namespace Ddhdg
     const std::shared_ptr<const ElectronMobility<dim>>  electron_mobility;
     const std::shared_ptr<const RecombinationTerm<dim>> recombination_term;
     const std::shared_ptr<const dealii::Function<dim>>  temperature;
+    const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
 
     const std::shared_ptr<const SolverParameters> parameters;
@@ -385,6 +389,7 @@ namespace Ddhdg
     std::vector<Tensor<2, dim>>                      mu_face;
     std::vector<double>                              T_cell;
     std::vector<double>                              T_face;
+    std::vector<double>                              doping_cell;
     std::vector<double>                              r_cell;
     std::vector<double>                              dr_cell;
     std::map<Component, std::vector<double>>         previous_c_cell;
@@ -433,6 +438,7 @@ namespace Ddhdg
       , mu_face(face_quadrature_formula.size())
       , T_cell(quadrature_formula.size())
       , T_face(face_quadrature_formula.size())
+      , doping_cell(quadrature_formula.size())
       , r_cell(quadrature_formula.size())
       , dr_cell(quadrature_formula.size())
       , previous_c_cell(
@@ -495,6 +501,7 @@ namespace Ddhdg
       , mu_face(sd.mu_face)
       , T_cell(sd.T_cell)
       , T_face(sd.T_face)
+      , doping_cell(sd.doping_cell)
       , r_cell(sd.r_cell)
       , dr_cell(sd.dr_cell)
       , previous_c_cell(sd.previous_c_cell)

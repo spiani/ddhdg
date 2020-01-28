@@ -30,14 +30,20 @@ class ParameterSubsection:
 class PhysicalQuantitiesParameters(ParameterSubsection):
     subsection_name = "physical quantities"
 
-    def __init__(self, recombination=0., recombination_der=0., temperature="q / kb"):
+    def __init__(self, recombination=0., recombination_der=0.,
+                 temperature="q / kb", doping="0."):
         self._recombination_zero_term = recombination
         self._recombination_first_term = recombination_der
         self._temperature = temperature
+        self._doping = doping
 
     @property
     def temperature(self):
         return self._temperature
+
+    @property
+    def doping(self):
+        return self._doping
 
     @property
     def recombination_term_zero_order_term(self):

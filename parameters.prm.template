@@ -10,6 +10,7 @@ subsection physical quantities
   set recombination term first order term = 0
   set recombination term zero order term  = -1./5000*x^2 - 1./2500*y^2 - 3./2500*y - 1./2500
   set temperature                         = q / kb
+  set doping                              = 0.
 end
 
 subsection nonlinear solver

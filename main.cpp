@@ -68,6 +68,9 @@ public:
     add_parameter("temperature",
                   temperature_str,
                   "A function that defines the temperature on the domain");
+    add_parameter("doping",
+                  doping_str,
+                  "A function that defines the temperature on the domain");
     add_parameter(
       "recombination term zero order term",
       recombination_term_constant_term,
@@ -166,6 +169,9 @@ public:
   std::string                                  temperature_str = "25.";
   std::shared_ptr<dealii::FunctionParser<dim>> temperature;
 
+  std::string                                  doping_str = "0.";
+  std::shared_ptr<dealii::FunctionParser<dim>> doping;
+
   std::string recombination_term_constant_term = "0.";
   std::string recombination_term_linear_factor = "0.";
 
@@ -218,6 +224,7 @@ private:
     V_boundary_function = std::make_shared<dealii::FunctionParser<dim>>(1);
     n_boundary_function = std::make_shared<dealii::FunctionParser<dim>>(1);
     temperature         = std::make_shared<dealii::FunctionParser<dim>>(1);
+    doping              = std::make_shared<dealii::FunctionParser<dim>>(1);
     V_starting_point    = std::make_shared<dealii::FunctionParser<dim>>(1);
     n_starting_point    = std::make_shared<dealii::FunctionParser<dim>>(1);
 
@@ -241,6 +248,9 @@ private:
       dealii::FunctionParser<dim>::default_variable_names(),
       temperature_str,
       Ddhdg::Constants::constants);
+    doping->initialize(dealii::FunctionParser<dim>::default_variable_names(),
+                       doping_str,
+                       Ddhdg::Constants::constants);
     V_starting_point->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
       V_starting_point_str,
@@ -269,7 +279,7 @@ main(int argc, char **argv)
   dealii::deallog.depth_console(2);
 
   // Read the content of the parameter file
-  AssertThrow(argc <= 2, TooManyCommandLineArguments())
+  AssertThrow(argc <= 2, TooManyCommandLineArguments());
   ProblemParameters prm;
   if (argc == 2)
     prm.read_parameters_file(argv[1]);
@@ -319,6 +329,7 @@ main(int argc, char **argv)
                                                 electron_mobility,
                                                 recombination_term,
                                                 prm.temperature,
+                                                prm.doping,
                                                 boundary_handler);
 
   // Choose the parameters for the solver

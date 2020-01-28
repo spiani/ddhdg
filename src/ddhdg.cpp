@@ -79,6 +79,7 @@ namespace Ddhdg
     , electron_mobility(problem->electron_mobility)
     , recombination_term(problem->recombination_term)
     , temperature(problem->temperature)
+    , doping(problem->doping)
     , boundary_handler(problem->boundary_handler)
     , parameters(parameters)
     , fe_local(FE_DGQ<dim>(parameters->V_degree),
@@ -536,6 +537,9 @@ namespace Ddhdg
     // Compute the value of T
     temperature->value_list(scratch.cell_quadrature_points, scratch.T_cell);
 
+    // Compute the value of the doping
+    doping->value_list(scratch.cell_quadrature_points, scratch.doping_cell);
+
     // Compute the value of the recombination term and its derivative respect to
     // n
     recombination_term->compute_multiple_recombination_terms(
@@ -687,7 +691,7 @@ namespace Ddhdg
             scratch.l_rhs[i] +=
               (V0[q] * q1_div - E0[q] * q1 +
                (scratch.epsilon_cell[q] * E0[q]) * z1_grad + n0[q] * z1 +
-               n0[q] * q2_div - W0[q] * q2 +
+               +scratch.doping_cell[q] * z1 + n0[q] * q2_div - W0[q] * q2 +
                scratch.r_cell[q] / Constants::Q * z2 +
                n0[q] * (scratch.mu_cell[q] * E0[q]) * z2_grad -
                einstein_diffusion_coefficient * W0[q] * z2_grad) *
