@@ -208,13 +208,11 @@ namespace Ddhdg
     component_map<dim> f_components;
     switch (c)
       {
-        case V:
-          {
+          case V: {
             f_components.insert({dim, f});
             break;
           }
-        case n:
-          {
+          case n: {
             f_components.insert({2 * dim + 1, f});
             break;
           }
@@ -239,8 +237,7 @@ namespace Ddhdg
     component_map<dim> f_components;
     switch (d)
       {
-        case E:
-          {
+          case E: {
             for (unsigned int i = 0; i < dim; i++)
               {
                 f_components.insert(
@@ -248,8 +245,7 @@ namespace Ddhdg
               }
             break;
           }
-        case W:
-          {
+          case W: {
             for (unsigned int i = 0; i < dim; i++)
               {
                 f_components.insert(
@@ -278,13 +274,11 @@ namespace Ddhdg
     component_map<dim> f_components;
     switch (c)
       {
-        case V:
-          {
+          case V: {
             f_components.insert({0, f});
             break;
           }
-        case n:
-          {
+          case n: {
             f_components.insert({1, f});
             break;
           }
@@ -669,6 +663,9 @@ namespace Ddhdg
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
           Constants::KB / Constants::Q * scratch.T_cell[q] * scratch.mu_cell[q];
 
+        auto J = n0[q] * (scratch.mu_cell[q] * E0[q]) -
+                 (einstein_diffusion_coefficient * W0[q]);
+
         for (unsigned int i = 0; i < loc_dofs_per_cell; ++i)
           {
             const dealii::Tensor<1, dim> q1 =
@@ -692,9 +689,7 @@ namespace Ddhdg
               (V0[q] * q1_div - E0[q] * q1 +
                (scratch.epsilon_cell[q] * E0[q]) * z1_grad + n0[q] * z1 +
                +scratch.doping_cell[q] * z1 + n0[q] * q2_div - W0[q] * q2 +
-               scratch.r_cell[q] / Constants::Q * z2 +
-               n0[q] * (scratch.mu_cell[q] * E0[q]) * z2_grad -
-               einstein_diffusion_coefficient * W0[q] * z2_grad) *
+               scratch.r_cell[q] / Constants::Q * z2 + J * z2_grad) *
               JxW;
           }
       }
