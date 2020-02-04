@@ -1441,7 +1441,7 @@ namespace Ddhdg
         // matrix with the previous solution, so that the solution of the system
         // is the update from the previous solution to the new one).
         // The following function is the only exception: indeed, the terms that
-        // it generates must be are always needed while the terms that its
+        // it generates are always needed while the terms that its
         // corresponding function generates are useful only if we are not
         // reconstructing the solution from the trace
         add_lf_matrix_terms_to_l_rhs(scratch, face);
