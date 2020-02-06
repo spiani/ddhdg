@@ -147,6 +147,12 @@ namespace Ddhdg
     set_n_component(
       const std::shared_ptr<const dealii::Function<dim>> n_function);
 
+    void
+    set_current_solution(
+      const std::shared_ptr<const dealii::Function<dim>> V_function,
+      const std::shared_ptr<const dealii::Function<dim>> n_function,
+      const bool use_projection = false);
+
     NonlinearIteratorStatus
     run(double                               tolerance,
         const dealii::VectorTools::NormType &norm,

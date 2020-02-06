@@ -363,6 +363,286 @@ namespace Ddhdg
                                      this->get_component_mask(W));
   }
 
+  template <int dim>
+  void
+  Solver<dim>::set_current_solution(
+    const std::shared_ptr<const dealii::Function<dim>> V_function,
+    const std::shared_ptr<const dealii::Function<dim>> n_function,
+    const bool                                         use_projection)
+  {
+    if (!this->initialized)
+      this->setup_system();
+
+    if (!use_projection)
+      {
+        this->set_V_component(V_function);
+        this->set_n_component(n_function);
+        return;
+      }
+
+    const QGauss<dim>     quadrature_formula(fe.degree + 1);
+    const QGauss<dim - 1> face_quadrature_formula(fe.degree + 1);
+
+    // In this scope, the code takes care of project the right solution in the
+    // FEM space of the cells. After that, we will project the solution on the
+    // trace. I split the code in two parts because, in this way, it is possible
+    // to handle the situations in which the space of the cell is different from
+    // the space of the trace (for example, for HDG(A))
+    {
+      // Create sparsity pattern for the cells (currently, we have only the one
+      // for the traces)
+      AffineConstraints<double> projection_constraints;
+      projection_constraints.clear();
+      DoFTools::make_hanging_node_constraints(dof_handler_local,
+                                              projection_constraints);
+      projection_constraints.close();
+      SparsityPattern projection_sparsity_pattern;
+      {
+        DynamicSparsityPattern dsp(dof_handler_local.n_dofs());
+        DoFTools::make_sparsity_pattern(dof_handler_local,
+                                        dsp,
+                                        constraints,
+                                        false);
+        projection_sparsity_pattern.copy_from(dsp);
+      }
+
+      const UpdateFlags local_flags(update_values | update_gradients |
+                                    update_JxW_values |
+                                    update_quadrature_points);
+      const UpdateFlags flags(update_values | update_normal_vectors |
+                              update_quadrature_points | update_JxW_values);
+
+      FEValues<dim>     fe_values_local(this->fe_local,
+                                    quadrature_formula,
+                                    local_flags);
+      FEFaceValues<dim> fe_face_values(this->fe_local,
+                                       face_quadrature_formula,
+                                       flags);
+
+      const unsigned int n_q_points = fe_values_local.get_quadrature().size();
+      const unsigned int n_face_q_points =
+        fe_face_values.get_quadrature().size();
+
+      const unsigned int loc_dofs_per_cell =
+        fe_values_local.get_fe().dofs_per_cell;
+
+      const FEValuesExtractors::Vector electric_field =
+        this->get_displacement_extractor(Displacement::E);
+      const FEValuesExtractors::Scalar electric_potential =
+        this->get_component_extractor(Component::V);
+      const FEValuesExtractors::Vector electron_displacement =
+        this->get_displacement_extractor(Displacement::W);
+      const FEValuesExtractors::Scalar electron_density =
+        this->get_component_extractor(Component::n);
+
+      SparseMatrix<double> projection_matrix;
+      projection_matrix.reinit(projection_sparsity_pattern);
+      Vector<double> projection_rhs;
+      projection_rhs.reinit(dof_handler_local.n_dofs());
+
+      FullMatrix<double> local_matrix(loc_dofs_per_cell, loc_dofs_per_cell);
+      Vector<double>     local_residual(loc_dofs_per_cell);
+      std::vector<types::global_dof_index> dof_indices(loc_dofs_per_cell);
+
+      // Temporary buffer for the values of the local base function on a
+      // quadrature point
+      std::vector<double>         V(loc_dofs_per_cell);
+      std::vector<Tensor<1, dim>> E(loc_dofs_per_cell);
+      std::vector<double>         E_div(loc_dofs_per_cell);
+      std::vector<double>         n(loc_dofs_per_cell);
+      std::vector<Tensor<1, dim>> W(loc_dofs_per_cell);
+      std::vector<double>         W_div(loc_dofs_per_cell);
+
+      std::vector<Point<dim>> cell_quadrature_points(n_q_points);
+      std::vector<Point<dim>> face_quadrature_points(n_face_q_points);
+
+      std::vector<double> evaluated_v(n_q_points);
+      std::vector<double> evaluated_n(n_q_points);
+
+      std::vector<double> evaluated_v_face(n_face_q_points);
+      std::vector<double> evaluated_n_face(n_face_q_points);
+
+      for (const auto &cell : this->dof_handler_local.active_cell_iterators())
+        {
+          local_matrix   = 0.;
+          local_residual = 0.;
+
+          fe_values_local.reinit(cell);
+
+          cell->get_dof_indices(dof_indices);
+
+          // Get the position of the quadrature points
+          for (unsigned int q = 0; q < n_q_points; ++q)
+            cell_quadrature_points[q] = fe_values_local.quadrature_point(q);
+
+          // Evaluated the analytic functions over the quadrature points
+          V_function->value_list(cell_quadrature_points, evaluated_v);
+          n_function->value_list(cell_quadrature_points, evaluated_n);
+
+          for (unsigned int q = 0; q < n_q_points; ++q)
+            {
+              // Copy data of the shape function
+              for (unsigned int k = 0; k < loc_dofs_per_cell; ++k)
+                {
+                  V[k]     = fe_values_local[electric_potential].value(k, q);
+                  E[k]     = fe_values_local[electric_field].value(k, q);
+                  E_div[k] = fe_values_local[electric_field].divergence(k, q);
+                  n[k]     = fe_values_local[electron_density].value(k, q);
+                  W[k]     = fe_values_local[electron_displacement].value(k, q);
+                  W_div[k] =
+                    fe_values_local[electron_displacement].divergence(k, q);
+                }
+
+              const double JxW = fe_values_local.JxW(q);
+
+              for (unsigned int i = 0; i < loc_dofs_per_cell; ++i)
+                {
+                  for (unsigned int j = 0; j < loc_dofs_per_cell; ++j)
+                    {
+                      local_matrix(i, j) += (V[j] * V[i] + E[i] * E[j] +
+                                             n[i] * n[j] + W[i] * W[j]) *
+                                            JxW;
+                    }
+                  local_residual[i] += (evaluated_v[q] * (V[i] + E_div[i]) +
+                                        evaluated_n[q] * (n[i] + W_div[i])) *
+                                       JxW;
+                }
+            }
+          for (unsigned int face_number = 0;
+               face_number < GeometryInfo<dim>::faces_per_cell;
+               ++face_number)
+            {
+              fe_face_values.reinit(cell, face_number);
+
+              for (unsigned int q = 0; q < n_face_q_points; ++q)
+                face_quadrature_points[q] = fe_face_values.quadrature_point(q);
+
+              V_function->value_list(face_quadrature_points, evaluated_v_face);
+              n_function->value_list(face_quadrature_points, evaluated_n_face);
+
+              for (unsigned int q = 0; q < n_face_q_points; ++q)
+                face_quadrature_points[q] = fe_face_values.quadrature_point(q);
+
+              for (unsigned int q = 0; q < n_face_q_points; ++q)
+                {
+                  const double JxW    = fe_face_values.JxW(q);
+                  const auto   normal = fe_face_values.normal_vector(q);
+
+                  for (unsigned int k = 0; k < loc_dofs_per_cell; ++k)
+                    {
+                      const auto E_face =
+                        fe_face_values[electric_field].value(k, q);
+                      const auto W_face =
+                        fe_face_values[electron_displacement].value(k, q);
+                      local_residual[k] +=
+                        (-evaluated_v_face[q] * (E_face * normal) -
+                         evaluated_n_face[q] * (W_face * normal)) *
+                        JxW;
+                    }
+                }
+            }
+          projection_constraints.distribute_local_to_global(local_matrix,
+                                                            local_residual,
+                                                            dof_indices,
+                                                            projection_matrix,
+                                                            projection_rhs);
+        }
+      SolverControl solver_control(projection_matrix.m() * 10,
+                                   1e-10 * projection_rhs.l2_norm());
+      SolverGMRES<> linear_solver(solver_control);
+      linear_solver.solve(projection_matrix,
+                          current_solution_local,
+                          projection_rhs,
+                          PreconditionIdentity());
+    }
+
+    // This is the part for the trace
+    {
+      const UpdateFlags flags(update_values | update_normal_vectors |
+                              update_quadrature_points | update_JxW_values);
+
+      FEFaceValues<dim>  fe_face_trace_values(this->fe,
+                                             face_quadrature_formula,
+                                             flags);
+      const unsigned int n_face_q_points =
+        fe_face_trace_values.get_quadrature().size();
+
+      const unsigned int dofs_per_cell =
+        fe_face_trace_values.get_fe().dofs_per_cell;
+
+      const FEValuesExtractors::Scalar electric_potential =
+        this->get_trace_component_extractor(Component::V);
+      const FEValuesExtractors::Scalar electron_density =
+        this->get_trace_component_extractor(Component::n);
+
+      std::vector<double> V(dofs_per_cell);
+      std::vector<double> n(dofs_per_cell);
+
+      std::vector<Point<dim>> face_quadrature_points(n_face_q_points);
+
+      std::vector<double> evaluated_v_face(n_face_q_points);
+      std::vector<double> evaluated_n_face(n_face_q_points);
+
+      FullMatrix<double> local_trace_matrix(dofs_per_cell, dofs_per_cell);
+      Vector<double>     local_trace_residual(dofs_per_cell);
+      std::vector<types::global_dof_index> dof_indices(dofs_per_cell);
+
+      for (const auto &cell : dof_handler.active_cell_iterators())
+        {
+          local_trace_matrix   = 0;
+          local_trace_residual = 0;
+          cell->get_dof_indices(dof_indices);
+          for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
+               ++face)
+            {
+              fe_face_trace_values.reinit(cell, face);
+              for (unsigned int q = 0; q < n_face_q_points; ++q)
+                face_quadrature_points[q] =
+                  fe_face_trace_values.quadrature_point(q);
+
+              V_function->value_list(face_quadrature_points, evaluated_v_face);
+              n_function->value_list(face_quadrature_points, evaluated_n_face);
+
+              for (unsigned int q = 0; q < n_face_q_points; ++q)
+                {
+                  // Copy data of the shape function
+                  for (unsigned int k = 0; k < dofs_per_cell; ++k)
+                    {
+                      V[k] =
+                        fe_face_trace_values[electric_potential].value(k, q);
+                      n[k] = fe_face_trace_values[electron_density].value(k, q);
+                    }
+
+                  const double JxW = fe_face_trace_values.JxW(q);
+
+                  for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                    {
+                      for (unsigned int j = 0; j < dofs_per_cell; ++j)
+                        {
+                          local_trace_matrix(i, j) +=
+                            (V[j] * V[i] + n[i] * n[j]) * JxW;
+                        }
+                      local_trace_residual[i] += (evaluated_v_face[q] * V[i] +
+                                                  evaluated_n_face[q] * n[i]) *
+                                                 JxW;
+                    }
+                }
+            }
+          this->constraints.distribute_local_to_global(local_trace_matrix,
+                                                       local_trace_residual,
+                                                       dof_indices,
+                                                       system_matrix,
+                                                       system_rhs);
+        }
+      SolverControl solver_control(system_matrix.m() * 10,
+                                   1e-10 * system_rhs.l2_norm());
+      SolverGMRES<> linear_solver(solver_control);
+      linear_solver.solve(system_matrix,
+                          current_solution,
+                          system_rhs,
+                          PreconditionIdentity());
+    }
+  }
 
 
   template <int dim>
@@ -1835,8 +2115,9 @@ namespace Ddhdg
 
     for (unsigned int cycle = 0; cycle < n_cycles; ++cycle)
       {
-        this->set_V_component(initial_V_function);
-        this->set_n_component(initial_n_function);
+        this->set_current_solution(initial_V_function,
+                                   initial_n_function,
+                                   true);
         const NonlinearIteratorStatus iter_status = this->run();
 
         converged            = iter_status.converged;
