@@ -2001,14 +2001,14 @@ namespace Ddhdg
     component_interpretation[2 * dim + 1] =
       DataComponentInterpretation::component_is_scalar;
 
-    data_out.add_data_vector(dof_handler_local,
-                             current_solution_local,
+    data_out.add_data_vector(this->dof_handler_local,
+                             this->current_solution_local,
                              names,
                              component_interpretation);
 
     if (save_update)
-      data_out.add_data_vector(dof_handler_local,
-                               update_local,
+      data_out.add_data_vector(this->dof_handler_local,
+                               this->update_local,
                                update_names,
                                component_interpretation);
 
@@ -2040,14 +2040,26 @@ namespace Ddhdg
 
     std::ofstream            face_output(trace_filename);
     DataOutFaces<dim>        data_out_face(false);
-    std::vector<std::string> face_name(2, "electric_potential");
-    face_name[1] = "electron_density";
+    std::vector<std::string> face_names(2, "electric_potential");
+    face_names[1] = "electron_density";
+
+    std::vector<std::string> update_face_names;
+    for (auto n : face_names)
+      update_face_names.emplace_back(n + "_updates");
+
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       face_component_type(2, DataComponentInterpretation::component_is_scalar);
-    data_out_face.add_data_vector(dof_handler,
-                                  current_solution,
-                                  face_name,
+    data_out_face.add_data_vector(this->dof_handler,
+                                  this->current_solution,
+                                  face_names,
                                   face_component_type);
+
+    if (save_update)
+      data_out_face.add_data_vector(this->dof_handler,
+                                    this->update,
+                                    update_face_names,
+                                    face_component_type);
+
     data_out_face.build_patches(fe.degree);
     data_out_face.write_vtk(face_output);
   }
