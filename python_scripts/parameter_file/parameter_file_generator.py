@@ -137,7 +137,7 @@ class ExpectedSolutionsParameters(ParameterSubsection):
 class ExecutionParameters:
     def __init__(self, V_degree=1, n_degree=1, initial_refinements=0,
                  refinements=2, iterative_linear_solver=False,
-                 multithreading=True, tau=1.,
+                 multithreading=True, V_tau=1., n_tau=1.,
                  nonlinear_solver_parameters=NonlinearSolverParameters(),
                  physical_quantities_parameters=PhysicalQuantitiesParameters(),
                  domain_parameters=DomainParameters(),
@@ -168,7 +168,8 @@ class ExecutionParameters:
                 )
             )
 
-        self._tau = float(tau)
+        self._V_tau = float(V_tau)
+        self._n_tau = float(n_tau)
 
         self._subsections = []
 
@@ -215,8 +216,12 @@ class ExecutionParameters:
         return self._iterative_linear_solver
 
     @property
-    def tau(self):
-        return self._tau
+    def V_tau(self):
+        return self._V_tau
+
+    @property
+    def n_tau(self):
+        return self._n_tau
 
     def to_prm_file(self):
         multithreading_str = 'true' if self._multithreading else 'false'
@@ -229,7 +234,8 @@ class ExecutionParameters:
         output += 'set number of refinement cycles = {}\n'.format(self._refinements)
         output += 'set use iterative linear solver = {}\n'.format(ils_str)
         output += 'set multithreading              = {}\n'.format(multithreading_str)
-        output += 'set tau                         = {}\n'.format(self.tau)
+        output += 'set V tau                       = {}\n'.format(self.n_tau)
+        output += 'set n tau                       = {}\n'.format(self.V_tau)
         output += '\n'
 
         for subsection in self._subsections:

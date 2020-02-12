@@ -4,7 +4,8 @@ set V degree                        = 3
 set n degree                        = 3
 set use iterative linear solver     = false
 set multithreading                  = true
-set tau                             = 1.
+set V tau                           = 1.
+set n tau                           = 1.
 
 subsection physical quantities
   set recombination term first order term = 0

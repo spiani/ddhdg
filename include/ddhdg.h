@@ -66,7 +66,8 @@ namespace Ddhdg
                      double       nonlinear_solver_tolerance,
                      int          nonlinear_solver_max_number_of_iterations,
                      VectorTools::NormType norm_type = VectorTools::H1_norm,
-                     double                tau       = 1.,
+                     double                V_tau     = 1.,
+                     double                n_tau     = 1.,
                      bool                  iterative_linear_solver = false,
                      bool                  multithreading          = true)
       : V_degree(V_degree)
@@ -75,7 +76,7 @@ namespace Ddhdg
       , nonlinear_solver_max_number_of_iterations(
           nonlinear_solver_max_number_of_iterations)
       , nonlinear_solver_tolerance_norm(norm_type)
-      , tau(tau)
+      , tau{{Component::V, V_tau}, {Component::n, n_tau}}
       , iterative_linear_solver(iterative_linear_solver)
       , multithreading(multithreading)
     {}
@@ -84,7 +85,8 @@ namespace Ddhdg
                      double       nonlinear_solver_tolerance,
                      int          nonlinear_solver_max_number_of_iterations,
                      VectorTools::NormType norm_type = VectorTools::H1_norm,
-                     double                tau       = 1.,
+                     double                V_tau     = 1.,
+                     double                n_tau     = 1.,
                      bool                  iterative_linear_solver = false,
                      bool                  multithreading          = true)
       : V_degree(degree)
@@ -93,7 +95,7 @@ namespace Ddhdg
       , nonlinear_solver_max_number_of_iterations(
           nonlinear_solver_max_number_of_iterations)
       , nonlinear_solver_tolerance_norm(norm_type)
-      , tau(tau)
+      , tau{{Component::V, V_tau}, {Component::n, n_tau}}
       , iterative_linear_solver(iterative_linear_solver)
       , multithreading(multithreading)
     {}
@@ -105,7 +107,7 @@ namespace Ddhdg
     const int                   nonlinear_solver_max_number_of_iterations;
     const VectorTools::NormType nonlinear_solver_tolerance_norm;
 
-    const double tau                     = 1.;
+    const std::map<Component, double> tau;
     const bool   iterative_linear_solver = false;
     const bool   multithreading          = true;
   };

@@ -56,7 +56,14 @@ public:
       "n degree",
       n_degree,
       "The degree of the polynomials used to approximate the electron density");
-    add_parameter("tau", tau, "The value of the stabilization constant");
+    add_parameter(
+      "V tau",
+      V_tau,
+      "The value of the stabilization constant for the electric potential");
+    add_parameter(
+      "n tau",
+      n_tau,
+      "The value of the stabilization constant for the electron density");
     add_parameter("use iterative linear solver",
                   iterative_linear_solver,
                   "Shall the code use an iterative linear solver (GMRES)?");
@@ -140,7 +147,8 @@ public:
   unsigned int V_degree = 1;
   unsigned int n_degree = 1;
 
-  double tau = 1.;
+  double V_tau = 1.;
+  double n_tau = 1.;
 
   bool iterative_linear_solver = true;
   bool multithreading          = true;
@@ -340,7 +348,8 @@ main(int argc, char **argv)
       prm.nonlinear_solver_tolerance,
       prm.nonlinear_solver_max_number_of_iterations,
       Ddhdg::VectorTools::H1_norm,
-      prm.tau,
+      prm.V_tau,
+      prm.n_tau,
       prm.iterative_linear_solver,
       prm.multithreading);
 
