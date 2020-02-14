@@ -4,6 +4,8 @@ cmake-build-*/
 */*/__pycache__/*
 clean_results.sh
 load_environment.sh
+doc/hdg_formulation/formulation.aux
+doc/hdg_formulation/formulation.log
+doc/hdg_formulation/formulation.tex.backup
 .idea
 *.vtk
-*.txt
