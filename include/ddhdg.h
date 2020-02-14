@@ -108,8 +108,8 @@ namespace Ddhdg
     const VectorTools::NormType nonlinear_solver_tolerance_norm;
 
     const std::map<Component, double> tau;
-    const bool   iterative_linear_solver = false;
-    const bool   multithreading          = true;
+    const bool                        iterative_linear_solver = false;
+    const bool                        multithreading          = true;
   };
 
   struct NonlinearIteratorStatus
@@ -526,6 +526,16 @@ namespace Ddhdg
       , fe_local_support_on_face(sd.fe_local_support_on_face)
       , fe_support_on_face(sd.fe_support_on_face)
     {}
+
+    inline dealii::Tensor<2, dim>
+    compute_einstein_diffusion_coefficient(const unsigned int q,
+                                           const bool on_face = true) const
+    {
+      if (on_face)
+        return Constants::KB / Constants::Q * this->T_face[q] *
+               this->mu_face[q];
+      return Constants::KB / Constants::Q * this->T_cell[q] * this->mu_cell[q];
+    }
   };
 
 } // end of namespace Ddhdg

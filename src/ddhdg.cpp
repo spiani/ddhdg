@@ -892,7 +892,7 @@ namespace Ddhdg
           scratch.mu_cell[q] * scratch.previous_f_cell[Component::V][q];
 
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
-          Constants::KB / Constants::Q * scratch.T_cell[q] * scratch.mu_cell[q];
+          scratch.compute_einstein_diffusion_coefficient(q, false);
 
         for (unsigned int i = 0; i < loc_dofs_per_cell; ++i)
           for (unsigned int j = 0; j < loc_dofs_per_cell; ++j)
@@ -941,7 +941,7 @@ namespace Ddhdg
         const double JxW = scratch.fe_values_local.JxW(q);
 
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
-          Constants::KB / Constants::Q * scratch.T_cell[q] * scratch.mu_cell[q];
+          scratch.compute_einstein_diffusion_coefficient(q, false);
 
         auto J = n0[q] * (scratch.mu_cell[q] * E0[q]) -
                  (einstein_diffusion_coefficient * W0[q]);
@@ -1210,7 +1210,7 @@ namespace Ddhdg
           scratch.mu_face[q] * scratch.previous_f_face[Component::V][q];
 
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
-          Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
+          scratch.compute_einstein_diffusion_coefficient(q);
 
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)
@@ -1290,7 +1290,7 @@ namespace Ddhdg
           normal;
 
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
-          Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
+          scratch.compute_einstein_diffusion_coefficient(q);
 
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)
@@ -1395,7 +1395,7 @@ namespace Ddhdg
             const unsigned int ii = scratch.fe_support_on_face[face][i];
             const double       xi =
               scratch.fe_face_values[tr_c_extractor].value(ii, q);
-            task_data.cell_vector[ii] += - sign * tau * tr_c0[q] * xi * JxW;
+            task_data.cell_vector[ii] += -sign * tau * tr_c0[q] * xi * JxW;
           }
       }
   }
@@ -1514,7 +1514,7 @@ namespace Ddhdg
         const double n0 = scratch.previous_c_face[Component::n][q];
 
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
-          Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
+          scratch.compute_einstein_diffusion_coefficient(q);
 
         for (unsigned int i = 0;
              i < scratch.fe_local_support_on_face[face].size();
@@ -1575,7 +1575,7 @@ namespace Ddhdg
           (scratch.epsilon_face[q] * E0[q]) * normal;
 
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
-          Constants::KB / Constants::Q * scratch.T_face[q] * scratch.mu_face[q];
+          scratch.compute_einstein_diffusion_coefficient(q);
 
         const double J_flux = (n0[q] * (scratch.mu_face[q] * E0[q]) -
                                (einstein_diffusion_coefficient * W0[q])) *
