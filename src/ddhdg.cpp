@@ -1099,6 +1099,14 @@ namespace Ddhdg
         const double         JxW    = scratch.fe_face_values.JxW(q);
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
+        const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
+          scratch.compute_einstein_diffusion_coefficient(q);
+
+        const double V_tau_stabilized =
+          scratch.epsilon_face[q] * normal * normal * V_tau;
+        const double n_tau_stabilized =
+          einstein_diffusion_coefficient * normal * normal * n_tau;
+
         for (unsigned int i = 0;
              i < scratch.fe_local_support_on_face[face].size();
              ++i)
@@ -1114,8 +1122,10 @@ namespace Ddhdg
                 // the restriction of local test function on the border
                 // i is the index of the test function
                 scratch.lf_matrix(ii, jj) +=
-                  (tr_V[j] * (q1[i] * normal) - V_tau * tr_V[j] * z1[i] +
-                   tr_n[j] * (q2[i] * normal) + n_tau * (tr_n[j] * z2[i])) *
+                  (tr_V[j] * (q1[i] * normal) -
+                   V_tau_stabilized * tr_V[j] * z1[i] +
+                   tr_n[j] * (q2[i] * normal) +
+                   n_tau_stabilized * (tr_n[j] * z2[i])) *
                   JxW;
               }
           }
@@ -1153,6 +1163,14 @@ namespace Ddhdg
         const double         JxW    = scratch.fe_face_values.JxW(q);
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
+        const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
+          scratch.compute_einstein_diffusion_coefficient(q);
+
+        const double V_tau_stabilized =
+          scratch.epsilon_face[q] * normal * normal * V_tau;
+        const double n_tau_stabilized =
+          einstein_diffusion_coefficient * normal * normal * n_tau;
+
         for (unsigned int i = 0;
              i < scratch.fe_local_support_on_face[face].size();
              ++i)
@@ -1169,8 +1187,8 @@ namespace Ddhdg
               scratch.fe_face_values_local[electron_density].value(ii, q);
 
             scratch.l_rhs(ii) +=
-              (-tr_V0[q] * (q1 * normal) + V_tau * tr_V0[q] * z1 -
-               tr_n0[q] * (q2 * normal) - n_tau * tr_n0[q] * z2) *
+              (-tr_V0[q] * (q1 * normal) + V_tau_stabilized * tr_V0[q] * z1 -
+               tr_n0[q] * (q2 * normal) - n_tau_stabilized * tr_n0[q] * z2) *
               JxW;
           }
       }
@@ -1212,6 +1230,12 @@ namespace Ddhdg
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
           scratch.compute_einstein_diffusion_coefficient(q);
 
+        const dealii::Tensor<2, dim> stabilizing_tensor =
+          (c == Component::V) ? scratch.epsilon_face[q] :
+                                einstein_diffusion_coefficient;
+        const double tau_stabilized =
+          stabilizing_tensor * normal * normal * tau;
+
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)
           {
@@ -1232,7 +1256,7 @@ namespace Ddhdg
                   {
                     scratch.fl_matrix(ii, jj) -=
                       ((scratch.epsilon_face[q] * f[j]) * normal +
-                       tau * c_[j]) *
+                       tau_stabilized * c_[j]) *
                       xi[i] * JxW;
                   }
                 if (c == n)
@@ -1244,7 +1268,7 @@ namespace Ddhdg
                       ((c_[j] * mu_times_previous_E + n0 * mu_times_E) *
                          normal -
                        (einstein_diffusion_coefficient * f[j]) * normal -
-                       tau * c_[j]) *
+                       tau_stabilized * c_[j]) *
                       xi[i] * JxW;
                   }
               }
@@ -1292,6 +1316,12 @@ namespace Ddhdg
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
           scratch.compute_einstein_diffusion_coefficient(q);
 
+        const dealii::Tensor<2, dim> stabilizing_tensor =
+          (c == Component::V) ? scratch.epsilon_face[q] :
+                                einstein_diffusion_coefficient;
+        const double tau_stabilized =
+          stabilizing_tensor * normal * normal * tau;
+
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)
           {
@@ -1301,15 +1331,16 @@ namespace Ddhdg
             if (c == V)
               {
                 task_data.cell_vector[ii] +=
-                  (-epsilon_times_previous_E_times_normal - tau * c0[q]) * xi *
-                  JxW;
+                  (-epsilon_times_previous_E_times_normal -
+                   tau_stabilized * c0[q]) *
+                  xi * JxW;
               }
             if (c == n)
               {
                 task_data.cell_vector[ii] +=
                   (-c0[q] * mu_times_previous_E_times_normal +
                    einstein_diffusion_coefficient * f0[q] * normal +
-                   tau * c0[q]) *
+                   tau_stabilized * c0[q]) *
                   xi * JxW;
               }
           }
@@ -1342,7 +1373,15 @@ namespace Ddhdg
         copy_fe_values_on_scratch(scratch, face, q);
         copy_fe_values_for_trace(scratch, face, q);
 
-        const double JxW = scratch.fe_face_values.JxW(q);
+        const double         JxW    = scratch.fe_face_values.JxW(q);
+        const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
+
+        const dealii::Tensor<2, dim> stabilizing_tensor =
+          (c == Component::V) ?
+            scratch.epsilon_face[q] :
+            scratch.compute_einstein_diffusion_coefficient(q);
+        const double tau_stabilized =
+          stabilizing_tensor * normal * normal * tau;
 
         // Integrals of trace functions (both test and trial)
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
@@ -1355,7 +1394,7 @@ namespace Ddhdg
               {
                 const unsigned int jj = scratch.fe_support_on_face[face][j];
                 task_data.cell_matrix(ii, jj) +=
-                  sign * tau * tr_c[j] * xi[i] * JxW;
+                  sign * tau_stabilized * tr_c[j] * xi[i] * JxW;
               }
           }
       }
@@ -1387,7 +1426,15 @@ namespace Ddhdg
 
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
-        const double JxW = scratch.fe_face_values.JxW(q);
+        const double         JxW    = scratch.fe_face_values.JxW(q);
+        const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
+
+        const dealii::Tensor<2, dim> stabilizing_tensor =
+          (c == Component::V) ?
+            scratch.epsilon_face[q] :
+            scratch.compute_einstein_diffusion_coefficient(q);
+        const double tau_stabilized =
+          stabilizing_tensor * normal * normal * tau;
 
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)
@@ -1395,7 +1442,8 @@ namespace Ddhdg
             const unsigned int ii = scratch.fe_support_on_face[face][i];
             const double       xi =
               scratch.fe_face_values[tr_c_extractor].value(ii, q);
-            task_data.cell_vector[ii] += -sign * tau * tr_c0[q] * xi * JxW;
+            task_data.cell_vector[ii] +=
+              -sign * tau_stabilized * tr_c0[q] * xi * JxW;
           }
       }
   }
@@ -1516,6 +1564,11 @@ namespace Ddhdg
         const dealii::Tensor<2, dim> einstein_diffusion_coefficient =
           scratch.compute_einstein_diffusion_coefficient(q);
 
+        const double V_tau_stabilized =
+          scratch.epsilon_face[q] * normal * normal * V_tau;
+        const double n_tau_stabilized =
+          einstein_diffusion_coefficient * normal * normal * n_tau;
+
         for (unsigned int i = 0;
              i < scratch.fe_local_support_on_face[face].size();
              ++i)
@@ -1530,12 +1583,12 @@ namespace Ddhdg
                   scratch.fe_local_support_on_face[face][j];
                 scratch.ll_matrix(ii, jj) +=
                   (scratch.epsilon_face[q] * E[j] * normal * z1[i] +
-                   V_tau * V[j] * z1[i] +
+                   V_tau_stabilized * V[j] * z1[i] +
                    (n[j] * mu_times_previous_E +
                     scratch.mu_face[q] * E[j] * n0) *
                      normal * z2[i] -
                    einstein_diffusion_coefficient * W[j] * normal * z2[i] -
-                   n_tau * n[j] * z2[i]) *
+                   n_tau_stabilized * n[j] * z2[i]) *
                   JxW;
               }
           }
@@ -1581,6 +1634,11 @@ namespace Ddhdg
                                (einstein_diffusion_coefficient * W0[q])) *
                               normal;
 
+        const double V_tau_stabilized =
+          scratch.epsilon_face[q] * normal * normal * V_tau;
+        const double n_tau_stabilized =
+          einstein_diffusion_coefficient * normal * normal * n_tau;
+
         for (unsigned int i = 0;
              i < scratch.fe_local_support_on_face[face].size();
              ++i)
@@ -1592,10 +1650,10 @@ namespace Ddhdg
             const double z2 =
               scratch.fe_face_values_local[electron_density].value(ii, q);
 
-            scratch.l_rhs[ii] +=
-              (-epsilon_times_E0_times_normal * z1 - V_tau * V0[q] * z1 -
-               J_flux * z2 + n_tau * n0[q] * z2) *
-              JxW;
+            scratch.l_rhs[ii] += (-epsilon_times_E0_times_normal * z1 -
+                                  V_tau_stabilized * V0[q] * z1 - J_flux * z2 +
+                                  n_tau_stabilized * n0[q] * z2) *
+                                 JxW;
           }
       }
   }
@@ -1627,14 +1685,22 @@ namespace Ddhdg
             const double tau  = this->parameters->tau.at(c);
             const double sign = (c == Component::n) ? -1 : 1;
 
+            const dealii::Tensor<2, dim> stabilizing_tensor =
+              (c == Component::V) ?
+                scratch.epsilon_face[q] :
+                scratch.compute_einstein_diffusion_coefficient(q);
+            const double tau_stabilized =
+              stabilizing_tensor * normal * normal * tau;
+
             for (unsigned int i = 0;
                  i < scratch.fe_local_support_on_face[face].size();
                  ++i)
               {
                 const unsigned int ii =
                   scratch.fe_local_support_on_face[face][i];
-                scratch.l_rhs(ii) += (-f[i] * normal + sign * tau * c_[i]) *
-                                     tr_c_solution_values[q] * JxW;
+                scratch.l_rhs(ii) +=
+                  (-f[i] * normal + sign * tau_stabilized * c_[i]) *
+                  tr_c_solution_values[q] * JxW;
               }
           }
       }
