@@ -126,11 +126,16 @@ public:
     leave_subsection();
     enter_subsection("nonlinear solver");
     add_parameter(
-      "tolerance",
-      nonlinear_solver_tolerance,
-      "If the distance between the current solution and the "
-      "previous one (in H1 norm) is smaller than this tolerance, the algorithm "
-      "will stop");
+      "absolute tolerance",
+      nonlinear_solver_absolute_tolerance,
+      "If the update is smaller than this value (i.e. in every node "
+      "the difference between the old solution and the new one is smaller than "
+      "this value) then the iteration stops");
+    add_parameter(
+      "relative tolerance",
+      nonlinear_solver_relative_tolerance,
+      "If the ratio between the update and the old solution is smaller "
+      "than this value (in every node) then the iteration stops");
     add_parameter("max number of iterations",
                   nonlinear_solver_max_number_of_iterations,
                   "If this number of iterations is reached, the code will stop "
@@ -153,7 +158,8 @@ public:
   bool iterative_linear_solver = true;
   bool multithreading          = true;
 
-  double nonlinear_solver_tolerance                = 1e-7;
+  double nonlinear_solver_absolute_tolerance       = 1e-12;
+  double nonlinear_solver_relative_tolerance       = 1e-12;
   int    nonlinear_solver_max_number_of_iterations = 100;
 
   std::string expected_V_solution_str = "0.";
@@ -345,9 +351,9 @@ main(int argc, char **argv)
     std::make_shared<const Ddhdg::SolverParameters>(
       prm.V_degree,
       prm.n_degree,
-      prm.nonlinear_solver_tolerance,
+      prm.nonlinear_solver_absolute_tolerance,
+      prm.nonlinear_solver_relative_tolerance,
       prm.nonlinear_solver_max_number_of_iterations,
-      Ddhdg::VectorTools::H1_norm,
       prm.V_tau,
       prm.n_tau,
       prm.iterative_linear_solver,

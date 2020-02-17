@@ -1924,21 +1924,20 @@ namespace Ddhdg
 
   template <int dim>
   NonlinearIteratorStatus
-  Solver<dim>::run(const double                         tolerance,
-                   const dealii::VectorTools::NormType &norm,
-                   const int max_number_of_iterations)
+  Solver<dim>::run(const double absolute_tol,
+                   const double relative_tol,
+                   const int    max_number_of_iterations)
   {
     if (!this->initialized)
       setup_system();
 
-    dealii::Vector<double> difference_per_cell(triangulation->n_active_cells());
-
-    bool   convergence_reached    = false;
-    int    step                   = 0;
-    double global_difference_norm = 0.;
+    bool   convergence_reached         = false;
+    int    step                        = 0;
+    double local_update_norm           = 0.;
+    double current_solution_local_norm = 0.;
 
     for (step = 1;
-         step <= max_number_of_iterations && max_number_of_iterations > 0;
+         step <= max_number_of_iterations || max_number_of_iterations < 0;
          step++)
       {
         std::cout << "Computing step number " << step << std::endl;
@@ -1960,29 +1959,27 @@ namespace Ddhdg
         else
           assemble_system(true);
 
-        VectorTools::integrate_difference(dof_handler_local,
-                                          update_local,
-                                          dealii::Functions::ZeroFunction<dim>(
-                                            2 * dim + 2),
-                                          difference_per_cell,
-                                          QGauss<dim>(fe.degree + 1),
-                                          norm);
+        local_update_norm = this->update_local.linfty_norm();
+        current_solution_local_norm =
+          this->current_solution_local.linfty_norm();
 
-        global_difference_norm =
-          VectorTools::compute_global_error(*triangulation,
-                                            difference_per_cell,
-                                            norm);
         std::cout << "Difference in norm compared to the previous step: "
-                  << global_difference_norm << std::endl;
+                  << local_update_norm << std::endl;
 
         this->current_solution += this->update;
         this->current_solution_local += this->update_local;
 
-        if (global_difference_norm < tolerance)
+        if (local_update_norm < absolute_tol)
           {
-            std::cout
-              << "Difference is smaller than tolerance. CONVERGENCE REACHED"
-              << std::endl;
+            std::cout << "Update is smaller than absolute tolerance. "
+                      << "CONVERGENCE REACHED" << std::endl;
+            convergence_reached = true;
+            break;
+          }
+        if (local_update_norm < relative_tol * current_solution_local_norm)
+          {
+            std::cout << "Update is smaller than relative tolerance. "
+                      << "CONVERGENCE REACHED" << std::endl;
             convergence_reached = true;
             break;
           }
@@ -1990,26 +1987,21 @@ namespace Ddhdg
 
     return NonlinearIteratorStatus(convergence_reached,
                                    step,
-                                   global_difference_norm);
+                                   local_update_norm);
   }
 
-  template <int dim>
-  NonlinearIteratorStatus
-  Solver<dim>::run(const double tolerance, const int max_number_of_iterations)
-  {
-    return this->run(tolerance,
-                     parameters->nonlinear_solver_tolerance_norm,
-                     max_number_of_iterations);
-  }
+
 
   template <int dim>
   NonlinearIteratorStatus
   Solver<dim>::run()
   {
-    return this->run(parameters->nonlinear_solver_tolerance,
-                     parameters->nonlinear_solver_tolerance_norm,
+    return this->run(parameters->nonlinear_solver_absolute_tolerance,
+                     parameters->nonlinear_solver_relative_tolerance,
                      parameters->nonlinear_solver_max_number_of_iterations);
   }
+
+
 
   template <int dim>
   double

@@ -61,40 +61,40 @@ namespace Ddhdg
 
   struct SolverParameters
   {
-    SolverParameters(unsigned int V_degree,
-                     unsigned int n_degree,
-                     double       nonlinear_solver_tolerance,
-                     int          nonlinear_solver_max_number_of_iterations,
-                     VectorTools::NormType norm_type = VectorTools::H1_norm,
-                     double                V_tau     = 1.,
-                     double                n_tau     = 1.,
-                     bool                  iterative_linear_solver = false,
-                     bool                  multithreading          = true)
+    SolverParameters(const unsigned int V_degree,
+                     const unsigned int n_degree,
+                     const double       nonlinear_solver_absolute_tolerance,
+                     const double       nonlinear_solver_relative_tolerance,
+                     const int    nonlinear_solver_max_number_of_iterations,
+                     const double V_tau                   = 1.,
+                     const double n_tau                   = 1.,
+                     const bool   iterative_linear_solver = false,
+                     const bool   multithreading          = true)
       : V_degree(V_degree)
       , n_degree(n_degree)
-      , nonlinear_solver_tolerance(nonlinear_solver_tolerance)
+      , nonlinear_solver_absolute_tolerance(nonlinear_solver_absolute_tolerance)
+      , nonlinear_solver_relative_tolerance(nonlinear_solver_relative_tolerance)
       , nonlinear_solver_max_number_of_iterations(
           nonlinear_solver_max_number_of_iterations)
-      , nonlinear_solver_tolerance_norm(norm_type)
       , tau{{Component::V, V_tau}, {Component::n, n_tau}}
       , iterative_linear_solver(iterative_linear_solver)
       , multithreading(multithreading)
     {}
 
-    SolverParameters(unsigned int degree,
-                     double       nonlinear_solver_tolerance,
-                     int          nonlinear_solver_max_number_of_iterations,
-                     VectorTools::NormType norm_type = VectorTools::H1_norm,
-                     double                V_tau     = 1.,
-                     double                n_tau     = 1.,
-                     bool                  iterative_linear_solver = false,
-                     bool                  multithreading          = true)
+    SolverParameters(const unsigned int degree,
+                     const double       nonlinear_solver_absolute_tolerance,
+                     const double       nonlinear_solver_relative_tolerance,
+                     const int    nonlinear_solver_max_number_of_iterations,
+                     const double V_tau                   = 1.,
+                     const double n_tau                   = 1.,
+                     const bool   iterative_linear_solver = false,
+                     const bool   multithreading          = true)
       : V_degree(degree)
       , n_degree(degree)
-      , nonlinear_solver_tolerance(nonlinear_solver_tolerance)
+      , nonlinear_solver_absolute_tolerance(nonlinear_solver_absolute_tolerance)
+      , nonlinear_solver_relative_tolerance(nonlinear_solver_relative_tolerance)
       , nonlinear_solver_max_number_of_iterations(
           nonlinear_solver_max_number_of_iterations)
-      , nonlinear_solver_tolerance_norm(norm_type)
       , tau{{Component::V, V_tau}, {Component::n, n_tau}}
       , iterative_linear_solver(iterative_linear_solver)
       , multithreading(multithreading)
@@ -103,9 +103,9 @@ namespace Ddhdg
     const unsigned int V_degree;
     const unsigned int n_degree;
 
-    const double                nonlinear_solver_tolerance;
-    const int                   nonlinear_solver_max_number_of_iterations;
-    const VectorTools::NormType nonlinear_solver_tolerance_norm;
+    const double nonlinear_solver_absolute_tolerance;
+    const double nonlinear_solver_relative_tolerance;
+    const int    nonlinear_solver_max_number_of_iterations;
 
     const std::map<Component, double> tau;
     const bool                        iterative_linear_solver = false;
@@ -142,26 +142,21 @@ namespace Ddhdg
     }
 
     void
-    set_V_component(
-      const std::shared_ptr<const dealii::Function<dim>> V_function);
+    set_V_component(std::shared_ptr<const dealii::Function<dim>> V_function);
 
     void
-    set_n_component(
-      const std::shared_ptr<const dealii::Function<dim>> n_function);
+    set_n_component(std::shared_ptr<const dealii::Function<dim>> n_function);
 
     void
     set_current_solution(
-      const std::shared_ptr<const dealii::Function<dim>> V_function,
-      const std::shared_ptr<const dealii::Function<dim>> n_function,
-      const bool use_projection = false);
+      std::shared_ptr<const dealii::Function<dim>> V_function,
+      std::shared_ptr<const dealii::Function<dim>> n_function,
+      bool                                         use_projection = false);
 
     NonlinearIteratorStatus
-    run(double                               tolerance,
-        const dealii::VectorTools::NormType &norm,
-        int                                  max_number_of_iterations = -1);
-
-    NonlinearIteratorStatus
-    run(double tolerance, int max_number_of_iterations = -1);
+    run(double absolute_tol,
+        double relative_tol,
+        int    max_number_of_iterations = -1);
 
     NonlinearIteratorStatus
     run();

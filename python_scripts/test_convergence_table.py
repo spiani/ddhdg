@@ -10,7 +10,8 @@ N_FUNCTION = '-2 / x^2'
 def test_convergence_table(degree, refinements):
     nonlinear_solver_parameters = NonlinearSolverParameters(
         iterations = 15,
-        tolerance = 1e-10
+        absolute_tolerance = 1e-10,
+        relative_tolerance = 1e-10
     )
 
     physical_quantities_parameters = PhysicalQuantitiesParameters()

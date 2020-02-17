@@ -57,17 +57,23 @@ class PhysicalQuantitiesParameters(ParameterSubsection):
 class NonlinearSolverParameters(ParameterSubsection):
     subsection_name = "nonlinear solver"
 
-    def __init__(self, iterations=100, tolerance=1e-7):
+    def __init__(self, iterations=100, absolute_tolerance=1e-9,
+                 relative_tolerance=1e-9):
         self._iterations = int(iterations)
-        self._tolerance = tolerance
+        self._absolute_tolerance = absolute_tolerance
+        self._relative_tolerance = relative_tolerance
 
     @property
     def max_number_of_iterations(self):
         return self._iterations
 
     @property
-    def tolerance(self):
-        return self._tolerance
+    def absolute_tolerance(self):
+        return self._absolute_tolerance
+
+    @property
+    def relative_tolerance(self):
+        return self._relative_tolerance
 
 
 class DomainParameters(ParameterSubsection):
