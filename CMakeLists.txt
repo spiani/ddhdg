@@ -23,10 +23,13 @@ SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 
+option(WITH_PYTHON_INTERFACE "Compile also the python interface" OFF)
+
 include_directories("include")
 add_subdirectory("src")
 
 add_executable(MAIN main.cpp)
-target_link_libraries (MAIN DDHDG)
+
+target_link_libraries(MAIN DDHDG)
 
 DEAL_II_SETUP_TARGET(MAIN)
