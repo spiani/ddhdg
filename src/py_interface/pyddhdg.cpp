@@ -24,7 +24,7 @@ namespace pyddhdg
 
 
   template <int dim>
-  PythonFunction<dim>::PythonFunction(const std::string& f_expr)
+  PythonFunction<dim>::PythonFunction(const std::string &f_expr)
     : f_expr(f_expr)
     , f(std::make_shared<dealii::FunctionParser<dim>>(1))
   {
@@ -130,7 +130,8 @@ namespace pyddhdg
 
     py::class_<RecombinationTerm<2>>(m, "RecombinationTerm");
 
-    py::class_<LinearRecombinationTerm<2>, RecombinationTerm<2>>(m, "LinearRecombinationTerm")
+    py::class_<LinearRecombinationTerm<2>, RecombinationTerm<2>>(
+      m, "LinearRecombinationTerm")
       .def(py::init<const PythonFunction<2> &, const PythonFunction<2> &>())
       .def("get_constant_term", &LinearRecombinationTerm<2>::get_constant_term)
       .def("get_linear_coefficient",
@@ -168,6 +169,26 @@ namespace pyddhdg
                     Temperature<2> &,
                     Doping<2> &,
                     BoundaryConditionHandler<2> &>());
+
+    py::class_<Ddhdg::SolverParameters>(m, "SolverParameters")
+      .def(py::init<const unsigned int,
+                    const unsigned int,
+                    const double,
+                    const double,
+                    const int,
+                    const double,
+                    const double,
+                    const bool,
+                    const bool>(),
+           py::arg("v_degree")                 = 1,
+           py::arg("n_degree")                 = 1,
+           py::arg("abs_tolerance")            = 1e-9,
+           py::arg("rel_tolerance")            = 1e-9,
+           py::arg("max_number_of_iterations") = 100,
+           py::arg("v tau")                    = 1.,
+           py::arg("n tau")                    = 1.,
+           py::arg("iterative linear solver")  = false,
+           py::arg("multithreading")           = true);
   }
 
 } // namespace pyddhdg
