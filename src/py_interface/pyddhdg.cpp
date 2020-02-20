@@ -1,17 +1,29 @@
 #include "py_interface/pyddhdg.h"
 
-#include <pybind11/pybind11.h>
-
-namespace py = pybind11;
+#include <utility>
 
 namespace pyddhdg
 {
+  template <int dim>
+  HomogeneousPermittivity<dim>::HomogeneousPermittivity(const double epsilon)
+    : epsilon(epsilon)
+  {}
+
+
+
   template <int dim>
   std::shared_ptr<Ddhdg::Permittivity<dim>>
   HomogeneousPermittivity<dim>::generate_ddhdg_permittivity()
   {
     return std::make_shared<Ddhdg::HomogeneousPermittivity<dim>>(this->epsilon);
   }
+
+
+
+  template <int dim>
+  HomogeneousElectronMobility<dim>::HomogeneousElectronMobility(const double mu)
+    : mu(mu)
+  {}
 
 
 
@@ -24,8 +36,8 @@ namespace pyddhdg
 
 
   template <int dim>
-  PythonFunction<dim>::PythonFunction(const std::string &f_expr)
-    : f_expr(f_expr)
+  PythonFunction<dim>::PythonFunction(std::string f_expr)
+    : f_expr(std::move(f_expr))
     , f(std::make_shared<dealii::FunctionParser<dim>>(1))
   {
     f->initialize(dealii::FunctionParser<dim>::default_variable_names(),
@@ -50,6 +62,20 @@ namespace pyddhdg
   {
     return this->f_expr;
   }
+
+
+
+  template <int dim>
+  Temperature<dim>::Temperature(const std::string &f_expr)
+    : PythonFunction<dim>(f_expr)
+  {}
+
+
+
+  template <int dim>
+  Doping<dim>::Doping(const std::string &f_expr)
+    : PythonFunction<dim>(f_expr)
+  {}
 
 
 
@@ -89,6 +115,92 @@ namespace pyddhdg
   }
 
 
+
+  template <int dim>
+  BoundaryConditionHandler<dim>::BoundaryConditionHandler()
+    : bc_handler(std::make_shared<Ddhdg::BoundaryConditionHandler<dim>>())
+  {}
+
+
+
+  template <int dim>
+  std::shared_ptr<Ddhdg::BoundaryConditionHandler<dim>>
+  BoundaryConditionHandler<dim>::get_ddhdg_boundary_condition_handler()
+  {
+    return this->bc_handler;
+  }
+
+
+
+  template <int dim>
+  void
+  BoundaryConditionHandler<dim>::add_boundary_condition_from_function(
+    const dealii::types::boundary_id   id,
+    const Ddhdg::BoundaryConditionType bc_type,
+    const Ddhdg::Component             c,
+    const PythonFunction<dim> &        f)
+  {
+    this->bc_handler->add_boundary_condition(id,
+                                             bc_type,
+                                             c,
+                                             f.get_dealii_function());
+  }
+
+
+
+  template <int dim>
+  void
+  BoundaryConditionHandler<dim>::add_boundary_condition_from_string(
+    const dealii::types::boundary_id   id,
+    const Ddhdg::BoundaryConditionType bc_type,
+    const Ddhdg::Component             c,
+    const std::string &                f)
+  {
+    this->add_boundary_condition_from_function(id,
+                                               bc_type,
+                                               c,
+                                               PythonFunction<dim>(f));
+  }
+
+
+
+  template <int dim>
+  bool
+  BoundaryConditionHandler<dim>::has_dirichlet_boundary_conditions() const
+  {
+    return this->bc_handler->has_dirichlet_boundary_conditions();
+  }
+
+
+
+  template <int dim>
+  bool
+  BoundaryConditionHandler<dim>::has_neumann_boundary_conditions() const
+  {
+    return this->bc_handler->has_neumann_boundary_conditions();
+  }
+
+
+
+  template <int dim>
+  Problem<dim>::Problem(Permittivity<dim> &            permittivity,
+                        ElectronMobility<dim> &        electron_mobility,
+                        RecombinationTerm<dim> &       recombination_term,
+                        Temperature<dim> &             temperature,
+                        Doping<dim> &                  doping,
+                        BoundaryConditionHandler<dim> &bc_handler)
+    : ddhdg_problem(std::make_shared<Ddhdg::Problem<dim>>(
+        generate_triangulation(),
+        permittivity.generate_ddhdg_permittivity(),
+        electron_mobility.generate_ddhdg_electron_mobility(),
+        recombination_term.generate_ddhdg_recombination_term(),
+        temperature.get_dealii_function(),
+        doping.get_dealii_function(),
+        bc_handler.get_ddhdg_boundary_condition_handler()))
+  {}
+
+
+
   template <int dim>
   std::shared_ptr<dealii::Triangulation<dim>>
   Problem<dim>::generate_triangulation()
@@ -101,94 +213,35 @@ namespace pyddhdg
     return triangulation;
   }
 
+  template class HomogeneousPermittivity<1>;
+  template class HomogeneousPermittivity<2>;
+  template class HomogeneousPermittivity<3>;
 
+  template class HomogeneousElectronMobility<1>;
+  template class HomogeneousElectronMobility<2>;
+  template class HomogeneousElectronMobility<3>;
 
-  PYBIND11_MODULE(pyddhdg, m)
-  {
-    m.doc() = "A python interface for ddhdg in 2D";
+  template class PythonFunction<1>;
+  template class PythonFunction<2>;
+  template class PythonFunction<3>;
 
-    py::enum_<Ddhdg::Component>(m, "Component")
-      .value("v", Ddhdg::Component::V)
-      .value("n", Ddhdg::Component::n)
-      .export_values();
+  template class Temperature<1>;
+  template class Temperature<2>;
+  template class Temperature<3>;
 
-    py::class_<Permittivity<2>>(m, "Permittivity");
+  template class Doping<1>;
+  template class Doping<2>;
+  template class Doping<3>;
 
-    py::class_<HomogeneousPermittivity<2>, Permittivity<2>>(
-      m, "HomogeneousPermittivity")
-      .def(py::init<const double &>());
+  template class LinearRecombinationTerm<1>;
+  template class LinearRecombinationTerm<2>;
+  template class LinearRecombinationTerm<3>;
 
-    py::class_<ElectronMobility<2>>(m, "ElectronMobility");
+  template class BoundaryConditionHandler<1>;
+  template class BoundaryConditionHandler<2>;
+  template class BoundaryConditionHandler<3>;
 
-    py::class_<HomogeneousElectronMobility<2>, ElectronMobility<2>>(
-      m, "HomogeneousElectronMobility")
-      .def(py::init<const double &>());
-
-    py::class_<PythonFunction<2>>(m, "AnalyticFunction")
-      .def(py::init<const std::string &>())
-      .def("get_expression", &PythonFunction<2>::get_expression);
-
-    py::class_<RecombinationTerm<2>>(m, "RecombinationTerm");
-
-    py::class_<LinearRecombinationTerm<2>, RecombinationTerm<2>>(
-      m, "LinearRecombinationTerm")
-      .def(py::init<const PythonFunction<2> &, const PythonFunction<2> &>())
-      .def("get_constant_term", &LinearRecombinationTerm<2>::get_constant_term)
-      .def("get_linear_coefficient",
-           &LinearRecombinationTerm<2>::get_linear_coefficient);
-
-    py::class_<Temperature<2>>(m, "Temperature")
-      .def(py::init<const std::string &>())
-      .def("get_expression", &Temperature<2>::get_expression);
-
-    py::class_<Doping<2>>(m, "Doping")
-      .def(py::init<const std::string &>())
-      .def("get_expression", &Doping<2>::get_expression);
-
-    py::enum_<Ddhdg::BoundaryConditionType>(m, "BoundaryConditionType")
-      .value("DIRICHLET", Ddhdg::BoundaryConditionType::dirichlet)
-      .value("NEUMANN", Ddhdg::BoundaryConditionType::neumann)
-      .value("ROBIN", Ddhdg::BoundaryConditionType::robin)
-      .export_values();
-
-    py::class_<BoundaryConditionHandler<2>>(m, "BoundaryConditionHandler")
-      .def(py::init<>())
-      .def("add_boundary_condition_from_function",
-           &BoundaryConditionHandler<2>::add_boundary_condition_from_function)
-      .def("add_boundary_condition_from_string",
-           &BoundaryConditionHandler<2>::add_boundary_condition_from_string)
-      .def("has_dirichlet_boundary_conditions",
-           &BoundaryConditionHandler<2>::has_dirichlet_boundary_conditions)
-      .def("has_neumann_boundary_conditions",
-           &BoundaryConditionHandler<2>::has_neumann_boundary_conditions);
-
-    py::class_<Problem<2>>(m, "Problem")
-      .def(py::init<Permittivity<2> &,
-                    ElectronMobility<2> &,
-                    RecombinationTerm<2> &,
-                    Temperature<2> &,
-                    Doping<2> &,
-                    BoundaryConditionHandler<2> &>());
-
-    py::class_<Ddhdg::SolverParameters>(m, "SolverParameters")
-      .def(py::init<const unsigned int,
-                    const unsigned int,
-                    const double,
-                    const double,
-                    const int,
-                    const double,
-                    const double,
-                    const bool,
-                    const bool>(),
-           py::arg("v_degree")                 = 1,
-           py::arg("n_degree")                 = 1,
-           py::arg("abs_tolerance")            = 1e-9,
-           py::arg("rel_tolerance")            = 1e-9,
-           py::arg("max_number_of_iterations") = 100,
-           py::arg("v tau")                    = 1.,
-           py::arg("n tau")                    = 1.,
-           py::arg("iterative linear solver")  = false,
-           py::arg("multithreading")           = true);
-  }
-
+  template class Problem<1>;
+  template class Problem<2>;
+  template class Problem<3>;
 } // namespace pyddhdg

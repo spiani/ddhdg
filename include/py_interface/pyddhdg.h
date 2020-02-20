@@ -21,9 +21,7 @@ namespace pyddhdg
   class HomogeneousPermittivity : public Permittivity<dim>
   {
   public:
-    explicit HomogeneousPermittivity(const double epsilon)
-      : epsilon(epsilon)
-    {}
+    explicit HomogeneousPermittivity(double epsilon);
 
     virtual std::shared_ptr<Ddhdg::Permittivity<dim>>
     generate_ddhdg_permittivity();
@@ -45,9 +43,7 @@ namespace pyddhdg
   class HomogeneousElectronMobility : public ElectronMobility<dim>
   {
   public:
-    explicit HomogeneousElectronMobility(const double mu)
-      : mu(mu)
-    {}
+    explicit HomogeneousElectronMobility(double mu);
 
     virtual std::shared_ptr<Ddhdg::ElectronMobility<dim>>
     generate_ddhdg_electron_mobility();
@@ -59,7 +55,7 @@ namespace pyddhdg
   class PythonFunction
   {
   public:
-    explicit PythonFunction(const std::string &f_exp);
+    explicit PythonFunction(std::string f_exp);
 
     std::shared_ptr<dealii::Function<dim>>
     get_dealii_function() const;
@@ -76,18 +72,14 @@ namespace pyddhdg
   class Temperature : public PythonFunction<dim>
   {
   public:
-    explicit Temperature(const std::string &f_expr)
-      : PythonFunction<dim>(f_expr)
-    {}
+    explicit Temperature(const std::string &f_expr);
   };
 
   template <int dim>
   class Doping : public PythonFunction<dim>
   {
   public:
-    explicit Doping(const std::string &f_expr)
-      : PythonFunction<dim>(f_expr)
-    {}
+    explicit Doping(const std::string &f_expr);
   };
 
   template <int dim>
@@ -125,53 +117,28 @@ namespace pyddhdg
   class BoundaryConditionHandler
   {
   public:
-    explicit BoundaryConditionHandler()
-      : bc_handler(std::make_shared<Ddhdg::BoundaryConditionHandler<dim>>())
-    {}
+    BoundaryConditionHandler();
 
     std::shared_ptr<Ddhdg::BoundaryConditionHandler<dim>>
-    get_ddhdg_boundary_condition_handler()
-    {
-      return this->bc_handler;
-    }
+    get_ddhdg_boundary_condition_handler();
 
     void
-    add_boundary_condition_from_function(
-      const dealii::types::boundary_id   id,
-      const Ddhdg::BoundaryConditionType bc_type,
-      const Ddhdg::Component             c,
-      const PythonFunction<dim>          f)
-    {
-      this->bc_handler->add_boundary_condition(id,
-                                               bc_type,
-                                               c,
-                                               f.get_dealii_function());
-    }
+    add_boundary_condition_from_function(dealii::types::boundary_id   id,
+                                         Ddhdg::BoundaryConditionType bc_type,
+                                         Ddhdg::Component             c,
+                                         const PythonFunction<dim> &  f);
 
     void
-    add_boundary_condition_from_string(
-      const dealii::types::boundary_id   id,
-      const Ddhdg::BoundaryConditionType bc_type,
-      const Ddhdg::Component             c,
-      const std::string                  f)
-    {
-      this->add_boundary_condition_from_function(id,
-                                                 bc_type,
-                                                 c,
-                                                 PythonFunction<dim>(f));
-    }
+    add_boundary_condition_from_string(dealii::types::boundary_id   id,
+                                       Ddhdg::BoundaryConditionType bc_type,
+                                       Ddhdg::Component             c,
+                                       const std::string &          f);
 
     [[nodiscard]] bool
-    has_dirichlet_boundary_conditions() const
-    {
-      return this->bc_handler->has_dirichlet_boundary_conditions();
-    }
+    has_dirichlet_boundary_conditions() const;
 
     [[nodiscard]] bool
-    has_neumann_boundary_conditions() const
-    {
-      return this->bc_handler->has_neumann_boundary_conditions();
-    }
+    has_neumann_boundary_conditions() const;
 
   private:
     const std::shared_ptr<Ddhdg::BoundaryConditionHandler<dim>> bc_handler;
@@ -186,16 +153,7 @@ namespace pyddhdg
             RecombinationTerm<dim> &       recombination_term,
             Temperature<dim> &             temperature,
             Doping<dim> &                  doping,
-            BoundaryConditionHandler<dim> &bc_handler)
-      : ddhdg_problem(std::make_shared<Ddhdg::Problem<dim>>(
-          generate_triangulation(),
-          permittivity.generate_ddhdg_permittivity(),
-          electron_mobility.generate_ddhdg_electron_mobility(),
-          recombination_term.generate_ddhdg_recombination_term(),
-          temperature.get_dealii_function(),
-          doping.get_dealii_function(),
-          bc_handler.get_ddhdg_boundary_condition_handler()))
-    {}
+            BoundaryConditionHandler<dim> &bc_handler);
 
   private:
     static std::shared_ptr<dealii::Triangulation<dim>>
