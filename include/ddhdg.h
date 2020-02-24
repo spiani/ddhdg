@@ -81,12 +81,12 @@ namespace Ddhdg
       , multithreading(multithreading)
     {}
 
-    SolverParameters(const unsigned int degree,
-                     const double       nonlinear_solver_absolute_tolerance,
-                     const double       nonlinear_solver_relative_tolerance,
-                     const int    nonlinear_solver_max_number_of_iterations,
-                     const double V_tau                   = 1.,
-                     const double n_tau                   = 1.,
+    SolverParameters(const unsigned int degree                        = 2,
+                     const double nonlinear_solver_absolute_tolerance = 1e-10,
+                     const double nonlinear_solver_relative_tolerance = 1e-10,
+                     const int nonlinear_solver_max_number_of_iterations = 100,
+                     const double V_tau                                  = 1.,
+                     const double n_tau                                  = 1.,
                      const bool   iterative_linear_solver = false,
                      const bool   multithreading          = true)
       : V_degree(degree)
@@ -132,7 +132,8 @@ namespace Ddhdg
   {
   public:
     Solver(std::shared_ptr<const Problem<dim>>     problem,
-           std::shared_ptr<const SolverParameters> parameters);
+           std::shared_ptr<const SolverParameters> parameters =
+             std::make_shared<SolverParameters>());
 
     void
     refine_grid(unsigned int i = 1)
