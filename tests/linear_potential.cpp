@@ -80,11 +80,11 @@ TEST(LinearPotential, case1)
   const Ddhdg::NonlinearIteratorStatus status = solver.run();
   const unsigned int number_of_iterations = status.iterations;
 
-  ASSERT_LE(number_of_iterations, 3);
+  EXPECT_LE(number_of_iterations, 3);
 
   const double V_l2_error = solver.estimate_l2_error(expected_solution, Ddhdg::Component::V);
   const double n_l2_error = solver.estimate_l2_error(zero_function, Ddhdg::Component::n);
 
-  ASSERT_LT(V_l2_error, 1e-10);
-  ASSERT_LT(n_l2_error, 1e-10);
+  EXPECT_LT(V_l2_error, 1e-10);
+  EXPECT_LT(n_l2_error, 1e-10);
 }
