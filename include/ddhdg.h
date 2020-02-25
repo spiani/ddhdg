@@ -61,13 +61,13 @@ namespace Ddhdg
 
   struct SolverParameters
   {
-    SolverParameters(const unsigned int V_degree,
-                     const unsigned int n_degree,
-                     const double       nonlinear_solver_absolute_tolerance,
-                     const double       nonlinear_solver_relative_tolerance,
-                     const int    nonlinear_solver_max_number_of_iterations,
-                     const double V_tau                   = 1.,
-                     const double n_tau                   = 1.,
+    SolverParameters(const unsigned int V_degree                      = 2,
+                     const unsigned int n_degree                      = 2,
+                     const double nonlinear_solver_absolute_tolerance = 1e-10,
+                     const double nonlinear_solver_relative_tolerance = 1e-10,
+                     const int nonlinear_solver_max_number_of_iterations = 100,
+                     const double V_tau                                  = 1.,
+                     const double n_tau                                  = 1.,
                      const bool   iterative_linear_solver = false,
                      const bool   multithreading          = true)
       : V_degree(V_degree)
@@ -81,7 +81,7 @@ namespace Ddhdg
       , multithreading(multithreading)
     {}
 
-    SolverParameters(const unsigned int degree                        = 2,
+    SolverParameters(const unsigned int degree,
                      const double nonlinear_solver_absolute_tolerance = 1e-10,
                      const double nonlinear_solver_relative_tolerance = 1e-10,
                      const int nonlinear_solver_max_number_of_iterations = 100,
@@ -100,6 +100,20 @@ namespace Ddhdg
       , multithreading(multithreading)
     {}
 
+    SolverParameters(const SolverParameters &solver)
+      : V_degree(solver.V_degree)
+      , n_degree(solver.n_degree)
+      , nonlinear_solver_absolute_tolerance(
+          solver.nonlinear_solver_absolute_tolerance)
+      , nonlinear_solver_relative_tolerance(
+          solver.nonlinear_solver_relative_tolerance)
+      , nonlinear_solver_max_number_of_iterations(
+          solver.nonlinear_solver_max_number_of_iterations)
+      , tau(solver.tau)
+      , iterative_linear_solver(solver.iterative_linear_solver)
+      , multithreading(solver.multithreading)
+    {}
+
     const unsigned int V_degree;
     const unsigned int n_degree;
 
@@ -108,8 +122,8 @@ namespace Ddhdg
     const int    nonlinear_solver_max_number_of_iterations;
 
     const std::map<Component, double> tau;
-    const bool                        iterative_linear_solver = false;
-    const bool                        multithreading          = true;
+    const bool                        iterative_linear_solver;
+    bool                              multithreading;
   };
 
   struct NonlinearIteratorStatus
@@ -153,6 +167,12 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Function<dim>> V_function,
       std::shared_ptr<const dealii::Function<dim>> n_function,
       bool                                         use_projection = false);
+
+    void
+    set_multithreading(bool multithreading = true)
+    {
+      this->parameters->multithreading = multithreading;
+    }
 
     NonlinearIteratorStatus
     run(double absolute_tol,
@@ -337,8 +357,7 @@ namespace Ddhdg
     const std::shared_ptr<const dealii::Function<dim>>  temperature;
     const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
-
-    const std::shared_ptr<const SolverParameters> parameters;
+    const std::unique_ptr<SolverParameters> parameters;
 
     FESystem<dim>   fe_local;
     DoFHandler<dim> dof_handler_local;

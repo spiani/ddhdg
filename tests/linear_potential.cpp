@@ -74,16 +74,20 @@ TEST(LinearPotential, case1)
                                           boundary_handler);
 
   Ddhdg::Solver<dim> solver(problem);
+  solver.set_multithreading(false);
+
   solver.refine_grid(2);
   solver.set_n_component(zero_function);
 
-  const Ddhdg::NonlinearIteratorStatus status = solver.run();
-  const unsigned int number_of_iterations = status.iterations;
+  const Ddhdg::NonlinearIteratorStatus status               = solver.run();
+  const unsigned int                   number_of_iterations = status.iterations;
 
   EXPECT_LE(number_of_iterations, 3);
 
-  const double V_l2_error = solver.estimate_l2_error(expected_solution, Ddhdg::Component::V);
-  const double n_l2_error = solver.estimate_l2_error(zero_function, Ddhdg::Component::n);
+  const double V_l2_error =
+    solver.estimate_l2_error(expected_solution, Ddhdg::Component::V);
+  const double n_l2_error =
+    solver.estimate_l2_error(zero_function, Ddhdg::Component::n);
 
   EXPECT_LT(V_l2_error, 1e-10);
   EXPECT_LT(n_l2_error, 1e-10);

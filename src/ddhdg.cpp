@@ -81,7 +81,7 @@ namespace Ddhdg
     , temperature(problem->temperature)
     , doping(problem->doping)
     , boundary_handler(problem->boundary_handler)
-    , parameters(parameters)
+    , parameters(std::make_unique<SolverParameters>(*parameters))
     , fe_local(FE_DGQ<dim>(parameters->V_degree),
                dim,
                FE_DGQ<dim>(parameters->V_degree),
