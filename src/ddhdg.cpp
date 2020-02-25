@@ -305,8 +305,6 @@ namespace Ddhdg
 
     auto c_function_extended =
       this->extend_function_on_all_components(c_function, c);
-    auto c_function_trace_extended =
-      this->extend_function_on_all_trace_components(c_function, c);
     auto c_grad     = std::make_shared<Gradient<dim>>(c_function);
     auto f_function = std::make_shared<Opposite<dim>>(c_grad);
     auto f_function_extended =
@@ -317,15 +315,84 @@ namespace Ddhdg
                                      this->current_solution_local,
                                      this->get_component_mask(c));
 
-    dealii::VectorTools::interpolate(this->dof_handler,
-                                     *c_function_trace_extended,
-                                     this->current_solution,
-                                     this->get_trace_component_mask(c));
-
     dealii::VectorTools::interpolate(this->dof_handler_local,
                                      *f_function_extended,
                                      this->current_solution_local,
                                      this->get_component_mask(f));
+
+    if (dim == 2 || dim == 3)
+      {
+        auto c_function_trace_extended =
+          this->extend_function_on_all_trace_components(c_function, c);
+        dealii::VectorTools::interpolate(this->dof_handler,
+                                         *c_function_trace_extended,
+                                         this->current_solution,
+                                         this->get_trace_component_mask(c));
+      }
+    else if (dim == 1)
+      {
+        const QGauss<dim - 1> face_quadrature_formula(fe.degree + 1);
+        const UpdateFlags     flags(update_values | update_quadrature_points);
+
+        FEFaceValues<dim>  fe_face_trace_values(this->fe,
+                                               face_quadrature_formula,
+                                               flags);
+        const unsigned int n_face_q_points =
+          fe_face_trace_values.get_quadrature().size();
+        Assert(n_face_q_points == 1, ExcDimensionMismatch(n_face_q_points, 1));
+
+        const unsigned int dofs_per_cell =
+          fe_face_trace_values.get_fe().dofs_per_cell;
+        Assert(dofs_per_cell == 4, ExcDimensionMismatch(dofs_per_cell, 4));
+
+        Vector<double> local_values(dofs_per_cell);
+
+        std::vector<Point<dim>> face_quadrature_points(n_face_q_points);
+        dealii::FEValuesExtractors::Scalar extractor =
+          this->get_trace_component_extractor(c);
+        unsigned int nonzero_shape_functions = 0;
+        double       current_value           = 0.;
+        double       function_value          = 0.;
+
+        for (const auto &cell : this->dof_handler.active_cell_iterators())
+          {
+            cell->get_dof_values(this->current_solution, local_values);
+            for (unsigned int face_number = 0;
+                 face_number < GeometryInfo<dim>::faces_per_cell;
+                 ++face_number)
+              {
+                fe_face_trace_values.reinit(cell, face_number);
+
+                for (unsigned int q = 0; q < n_face_q_points; ++q)
+                  face_quadrature_points[q] =
+                    fe_face_trace_values.quadrature_point(q);
+
+                function_value = c_function->value(face_quadrature_points[0]);
+
+                nonzero_shape_functions = 0;
+                for (unsigned int k = 0; k < dofs_per_cell; ++k)
+                  {
+                    current_value = fe_face_trace_values[extractor].value(k, 0);
+                    if (abs(current_value) > 1e-9)
+                      {
+                        ++nonzero_shape_functions;
+                        local_values[k] = function_value / current_value;
+                      }
+                  }
+                Assert(
+                  nonzero_shape_functions > 0,
+                  ExcMessage(
+                    "No shape function found that is different from zero on "
+                    "the current node"));
+                Assert(
+                  nonzero_shape_functions == 1,
+                  ExcMessage(
+                    "More than one shape function found that is different from "
+                    "zero on the current node"));
+              }
+            cell->set_dof_values(local_values, this->current_solution);
+          }
+      }
   }
 
 
