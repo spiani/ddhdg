@@ -294,74 +294,41 @@ namespace Ddhdg
 
   template <int dim>
   void
-  Solver<dim>::set_V_component(
-    const std::shared_ptr<const dealii::Function<dim>> V_function)
+  Solver<dim>::set_component(
+    const Component                                    c,
+    const std::shared_ptr<const dealii::Function<dim>> c_function)
   {
     if (!this->initialized)
       this->setup_system();
 
-    auto V_function_extended =
-      this->extend_function_on_all_components(V_function, V);
-    auto V_function_trace_extended =
-      this->extend_function_on_all_trace_components(V_function, V);
-    auto V_grad     = std::make_shared<Gradient<dim>>(V_function);
-    auto E_function = std::make_shared<Opposite<dim>>(V_grad);
-    auto E_function_extended =
-      this->extend_function_on_all_components(E_function, E);
+    const Displacement f = component2displacement(c);
+
+    auto c_function_extended =
+      this->extend_function_on_all_components(c_function, c);
+    auto c_function_trace_extended =
+      this->extend_function_on_all_trace_components(c_function, c);
+    auto c_grad     = std::make_shared<Gradient<dim>>(c_function);
+    auto f_function = std::make_shared<Opposite<dim>>(c_grad);
+    auto f_function_extended =
+      this->extend_function_on_all_components(f_function, f);
 
     dealii::VectorTools::interpolate(this->dof_handler_local,
-                                     *V_function_extended,
+                                     *c_function_extended,
                                      this->current_solution_local,
-                                     this->get_component_mask(V));
+                                     this->get_component_mask(c));
 
     dealii::VectorTools::interpolate(this->dof_handler,
-                                     *V_function_trace_extended,
+                                     *c_function_trace_extended,
                                      this->current_solution,
-                                     this->get_trace_component_mask(V));
+                                     this->get_trace_component_mask(c));
 
     dealii::VectorTools::interpolate(this->dof_handler_local,
-                                     *E_function_extended,
+                                     *f_function_extended,
                                      this->current_solution_local,
-                                     this->get_component_mask(E));
+                                     this->get_component_mask(f));
   }
 
 
-
-  template <int dim>
-  void
-  Solver<dim>::set_n_component(
-    const std::shared_ptr<const dealii::Function<dim>> n_function)
-  {
-    if (!this->initialized)
-      this->setup_system();
-
-    auto n_function_extended =
-      this->extend_function_on_all_components(n_function, n);
-    auto n_function_trace_extended =
-      this->extend_function_on_all_trace_components(n_function, n);
-    auto n_grad     = std::make_shared<Gradient<dim>>(n_function);
-    auto W_function = std::make_shared<Opposite<dim>>(n_grad);
-    auto W_function_extended =
-      this->extend_function_on_all_components(W_function, W);
-
-    // Set n on the cells
-    dealii::VectorTools::interpolate(this->dof_handler_local,
-                                     *n_function_extended,
-                                     this->current_solution_local,
-                                     this->get_component_mask(n));
-
-    // Set n on the trace
-    dealii::VectorTools::interpolate(this->dof_handler,
-                                     *n_function_trace_extended,
-                                     this->current_solution,
-                                     this->get_trace_component_mask(n));
-
-    // Set W on the cells
-    dealii::VectorTools::interpolate(this->dof_handler_local,
-                                     *W_function_extended,
-                                     this->current_solution_local,
-                                     this->get_component_mask(W));
-  }
 
   template <int dim>
   void
@@ -375,8 +342,8 @@ namespace Ddhdg
 
     if (!use_projection)
       {
-        this->set_V_component(V_function);
-        this->set_n_component(n_function);
+        this->set_component(Component::V, V_function);
+        this->set_component(Component::n, n_function);
         return;
       }
 

@@ -157,10 +157,8 @@ namespace Ddhdg
     }
 
     void
-    set_V_component(std::shared_ptr<const dealii::Function<dim>> V_function);
-
-    void
-    set_n_component(std::shared_ptr<const dealii::Function<dim>> n_function);
+    set_component(Component                                    c,
+                  std::shared_ptr<const dealii::Function<dim>> c_function);
 
     void
     set_current_solution(
@@ -357,7 +355,7 @@ namespace Ddhdg
     const std::shared_ptr<const dealii::Function<dim>>  temperature;
     const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
-    const std::unique_ptr<SolverParameters> parameters;
+    const std::unique_ptr<SolverParameters>                    parameters;
 
     FESystem<dim>   fe_local;
     DoFHandler<dim> dof_handler_local;

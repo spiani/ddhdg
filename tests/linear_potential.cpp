@@ -77,7 +77,7 @@ TEST(LinearPotential, case1)
   solver.set_multithreading(false);
 
   solver.refine_grid(2);
-  solver.set_n_component(zero_function);
+  solver.set_component(Ddhdg::Component::n, zero_function);
 
   const Ddhdg::NonlinearIteratorStatus status               = solver.run();
   const unsigned int                   number_of_iterations = status.iterations;
