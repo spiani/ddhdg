@@ -155,11 +155,42 @@ namespace pyddhdg
             Doping<dim> &                  doping,
             BoundaryConditionHandler<dim> &bc_handler);
 
+    Problem(const Problem<dim> &problem);
+
+    std::shared_ptr<const Ddhdg::Problem<dim>>
+    get_ddhdg_problem() const;
+
   private:
     static std::shared_ptr<dealii::Triangulation<dim>>
     generate_triangulation();
 
     const std::shared_ptr<const Ddhdg::Problem<dim>> ddhdg_problem;
+  };
+
+  template <int dim>
+  class Solver
+  {
+  public:
+    Solver(const Problem<dim> &           problem,
+           const Ddhdg::SolverParameters &parameters);
+
+    void
+    refine_grid(unsigned int i = 1);
+
+    void
+    set_component(Ddhdg::Component c, const std::string &f);
+
+    void
+    set_current_solution(const std::string &v_f,
+                         const std::string &n_f,
+                         bool               use_projection = false);
+
+    void set_multithreading(bool multithreading = true);
+
+    Ddhdg::NonlinearIteratorStatus run();
+
+  private:
+    const std::shared_ptr<Ddhdg::Solver<dim>> ddhdg_solver;
   };
 
 } // namespace pyddhdg

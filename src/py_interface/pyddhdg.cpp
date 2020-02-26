@@ -202,6 +202,22 @@ namespace pyddhdg
 
 
   template <int dim>
+  Problem<dim>::Problem(const Problem<dim> &problem)
+    : ddhdg_problem(problem.ddhdg_problem)
+  {}
+
+
+
+  template <int dim>
+  std::shared_ptr<const Ddhdg::Problem<dim>>
+  Problem<dim>::get_ddhdg_problem() const
+  {
+    return this->ddhdg_problem;
+  }
+
+
+
+  template <int dim>
   std::shared_ptr<dealii::Triangulation<dim>>
   Problem<dim>::generate_triangulation()
   {
@@ -212,6 +228,85 @@ namespace pyddhdg
 
     return triangulation;
   }
+
+
+
+  template <int dim>
+  Solver<dim>::Solver(const Problem<dim> &           problem,
+                      const Ddhdg::SolverParameters &parameters)
+    : ddhdg_solver(std::make_shared<Ddhdg::Solver<dim>>(
+        problem.get_ddhdg_problem(),
+        std::make_shared<const Ddhdg::SolverParameters>(parameters)))
+  {}
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::refine_grid(const unsigned int i)
+  {
+    this->ddhdg_solver->refine_grid(i);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::set_component(const Ddhdg::Component c, const std::string &f)
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> c_function =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    c_function->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      f,
+      Ddhdg::Constants::constants);
+    this->ddhdg_solver->set_component(c, c_function);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::set_current_solution(const std::string &v_f,
+                                    const std::string &n_f,
+                                    const bool         use_projection)
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> v_function =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    std::shared_ptr<dealii::FunctionParser<dim>> n_function =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    v_function->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      v_f,
+      Ddhdg::Constants::constants);
+    n_function->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      n_f,
+      Ddhdg::Constants::constants);
+    this->ddhdg_solver->set_current_solution(v_function,
+                                             n_function,
+                                             use_projection);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::set_multithreading(const bool multithreading)
+  {
+    this->ddhdg_solver->set_multithreading(multithreading);
+  }
+
+
+
+  template <int dim>
+  Ddhdg::NonlinearIteratorStatus
+  Solver<dim>::run()
+  {
+    return this->ddhdg_solver->run();
+  }
+
+
 
   template class HomogeneousPermittivity<1>;
   template class HomogeneousPermittivity<2>;
@@ -244,4 +339,8 @@ namespace pyddhdg
   template class Problem<1>;
   template class Problem<2>;
   template class Problem<3>;
+
+  template class Solver<1>;
+  template class Solver<2>;
+  template class Solver<3>;
 } // namespace pyddhdg
