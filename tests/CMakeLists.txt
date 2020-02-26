@@ -1,8 +1,9 @@
 set(_target tests)
 
 set(_test_files
-	linear_potential.cpp
-)
+		linear_potential.cpp
+		log_potential.cpp
+		)
 
 add_executable(${_target} main.cpp ${_test_files})
 DEAL_II_SETUP_TARGET(${_target})

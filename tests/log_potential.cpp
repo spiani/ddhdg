@@ -4,11 +4,10 @@
 #include <gtest/gtest.h>
 
 template <typename D>
-class LinearPotentialTest : public Ddhdg::Solver<D::value>,
-                            public ::testing::Test
+class LogPotentialTest : public Ddhdg::Solver<D::value>, public ::testing::Test
 {
 public:
-  LinearPotentialTest()
+  LogPotentialTest()
     : Ddhdg::Solver<D::value>(get_problem()){};
 
 protected:
@@ -27,16 +26,22 @@ protected:
   }
 
   static std::shared_ptr<dealii::FunctionParser<D::value>>
-  get_expected_solution()
+  get_expected_solution(const Ddhdg::Component c)
   {
     const unsigned int dim = D::value;
 
     std::shared_ptr<dealii::FunctionParser<dim>> expected_solution =
       std::make_shared<dealii::FunctionParser<dim>>();
-    expected_solution->initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      "x",
-      Ddhdg::Constants::constants);
+    if (c == Ddhdg::Component::V)
+      expected_solution->initialize(
+        dealii::FunctionParser<dim>::default_variable_names(),
+        "-2 * log(x)",
+        Ddhdg::Constants::constants);
+    if (c == Ddhdg::Component::n)
+      expected_solution->initialize(
+        dealii::FunctionParser<dim>::default_variable_names(),
+        "-2 / x^2",
+        Ddhdg::Constants::constants);
     return expected_solution;
   }
 
@@ -48,7 +53,7 @@ protected:
     std::shared_ptr<dealii::Triangulation<dim>> triangulation =
       std::make_shared<dealii::Triangulation<dim>>();
 
-    dealii::GridGenerator::hyper_cube(*triangulation, -1, 1, false);
+    dealii::GridGenerator::hyper_cube(*triangulation, 1, 2, false);
     return triangulation;
   }
 
@@ -91,12 +96,14 @@ protected:
       {
         boundary_handler->add_boundary_condition(i,
                                                  Ddhdg::dirichlet,
-                                                 Ddhdg::V,
-                                                 get_expected_solution());
+                                                 Ddhdg::Component::V,
+                                                 get_expected_solution(
+                                                   Ddhdg::Component::V));
         boundary_handler->add_boundary_condition(i,
                                                  Ddhdg::dirichlet,
-                                                 Ddhdg::n,
-                                                 get_zero_function());
+                                                 Ddhdg::Component::n,
+                                                 get_expected_solution(
+                                                   Ddhdg::Component::n));
       }
 
     return boundary_handler;
@@ -127,32 +134,36 @@ using dimensions = ::testing::Types<std::integral_constant<unsigned int, 1>,
 
 
 
-TYPED_TEST_CASE(LinearPotentialTest, dimensions);
+TYPED_TEST_CASE(LogPotentialTest, dimensions);
 
 
 
-TYPED_TEST(LinearPotentialTest, LinearPotentialTest) // NOLINT
+TYPED_TEST(LogPotentialTest, LogPotentialTest) // NOLINT
 {
   const unsigned int dim = TypeParam::value;
 
-  const auto zero_function     = this->get_zero_function();
-  const auto expected_solution = this->get_expected_solution();
+  const auto zero_function       = this->get_zero_function();
+  const auto V_expected_solution = this->get_expected_solution(Ddhdg::V);
+  const auto n_expected_solution = this->get_expected_solution(Ddhdg::n);
 
   this->set_multithreading(false);
   this->refine_grid(3 - dim);
-  this->set_component(Ddhdg::Component::n, zero_function);
+  this->set_current_solution(zero_function, zero_function);
 
   const Ddhdg::NonlinearIteratorStatus status = this->run();
 
   const unsigned int number_of_iterations = status.iterations;
 
-  EXPECT_LE(number_of_iterations, 3);
+  EXPECT_LE(number_of_iterations, 25);
 
   const double V_l2_error =
-    this->estimate_l2_error(expected_solution, Ddhdg::Component::V);
+    this->estimate_l2_error(V_expected_solution, Ddhdg::Component::V);
   const double n_l2_error =
-    this->estimate_l2_error(zero_function, Ddhdg::Component::n);
+    this->estimate_l2_error(n_expected_solution, Ddhdg::Component::n);
 
-  EXPECT_LT(V_l2_error, 1e-10);
-  EXPECT_LT(n_l2_error, 1e-10);
+  EXPECT_LT(V_l2_error, 1e-2);
+  if (dim == 1 || dim == 2)
+    EXPECT_LT(n_l2_error, 1e-2);
+  else
+    EXPECT_LT(n_l2_error, 2e-2);
 }
