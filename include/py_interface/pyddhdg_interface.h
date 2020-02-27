@@ -113,9 +113,51 @@ py::class_<Ddhdg::NonlinearIteratorStatus>(m, "NonlinearIteratorStatus")
 
 py::class_<Solver<DIM>>(m, "Solver")
   .def(py::init<const Problem<DIM> &, Ddhdg::SolverParameters &>())
-  .def("refine_grid", &Solver<DIM>::refine_grid)
+  .def("refine_grid", &Solver<DIM>::refine_grid, py::arg("n") = 1)
   .def("set_component", &Solver<DIM>::set_component)
   .def("set_current_solution", &Solver<DIM>::set_current_solution)
   .def("set_multithreading", &Solver<DIM>::set_multithreading)
-  .def("run", &Solver<DIM>::run);
+  .def("run", &Solver<DIM>::run)
+  .def("estimate_l2_error", &Solver<DIM>::estimate_l2_error)
+  .def("estimate_h1_error", &Solver<DIM>::estimate_h1_error)
+  .def("estimate_linfty_error", &Solver<DIM>::estimate_linfty_error)
+  .def("output_results",
+       py::overload_cast<const std::string &, const bool>(
+         &Solver<DIM>::output_results,
+         py::const_),
+       py::arg("solution_filename"),
+       py::arg("save_update") = false)
+#  if DIM != 1
+  .def("output_results",
+       py::overload_cast<const std::string &, const std::string &, const bool>(
+         &Solver<DIM>::output_results,
+         py::const_),
+       py::arg("solution_filename"),
+       py::arg("trace_filename"),
+       py::arg("save_update") = false)
+#  endif
+  .def("print_convergence_table",
+       py::overload_cast<const std::string &,
+                         const std::string &,
+                         const unsigned int,
+                         const unsigned int>(
+         &Solver<DIM>::print_convergence_table),
+       py::arg("expected_v_solution"),
+       py::arg("expected_n_solution"),
+       py::arg("n_cycles"),
+       py::arg("initial_refinements") = 0)
+  .def("print_convergence_table",
+       py::overload_cast<const std::string &,
+                         const std::string &,
+                         const std::string &,
+                         const std::string &,
+                         const unsigned int,
+                         const unsigned int>(
+         &Solver<DIM>::print_convergence_table),
+       py::arg("expected_v_solution"),
+       py::arg("expected_n_solution"),
+       py::arg("initial_v_function"),
+       py::arg("initial_n_function"),
+       py::arg("n_cycles"),
+       py::arg("initial_refinements") = 0);
 #endif

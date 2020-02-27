@@ -2039,10 +2039,11 @@ namespace Ddhdg
 
   template <int dim>
   double
-  Solver<dim>::estimate_l2_error(
+  Solver<dim>::estimate_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
-                           expected_solution,
-    const Ddhdg::Component c) const
+                                        expected_solution,
+    const Ddhdg::Component              c,
+    const dealii::VectorTools::NormType norm) const
   {
     Vector<double> difference_per_cell(triangulation->n_active_cells());
 
@@ -2074,15 +2075,59 @@ namespace Ddhdg
                                       expected_solution_multidim,
                                       difference_per_cell,
                                       QGauss<dim>(fe.degree + 1),
-                                      VectorTools::L2_norm,
+                                      norm,
                                       &component_selection);
 
-    const double L2_error =
+    const double global_error =
       VectorTools::compute_global_error(*triangulation,
                                         difference_per_cell,
-                                        VectorTools::L2_norm);
-    return L2_error;
+                                        norm);
+    return global_error;
   }
+
+
+
+  template <int dim>
+  double
+  Solver<dim>::estimate_l2_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                           expected_solution,
+    const Ddhdg::Component c) const
+  {
+    return this->estimate_error(expected_solution,
+                                c,
+                                dealii::VectorTools::L2_norm);
+  }
+
+
+
+  template <int dim>
+  double
+  Solver<dim>::estimate_h1_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                           expected_solution,
+    const Ddhdg::Component c) const
+  {
+    return this->estimate_error(expected_solution,
+                                c,
+                                dealii::VectorTools::H1_norm);
+  }
+
+
+
+  template <int dim>
+  double
+  Solver<dim>::estimate_linfty_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                           expected_solution,
+    const Ddhdg::Component c) const
+  {
+    return this->estimate_error(expected_solution,
+                                c,
+                                dealii::VectorTools::Linfty_norm);
+  }
+
+
 
   template <int dim>
   void
@@ -2221,7 +2266,7 @@ namespace Ddhdg
       components;
     components.insert({dim, expected_V_solution});
     components.insert({2 * dim + 1, expected_n_solution});
-    FunctionByComponents expected_solution(6, components);
+    FunctionByComponents expected_solution(2 * (dim + 1), components);
 
     bool         converged;
     unsigned int iterations;

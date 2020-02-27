@@ -185,9 +185,46 @@ namespace pyddhdg
                          const std::string &n_f,
                          bool               use_projection = false);
 
-    void set_multithreading(bool multithreading = true);
+    void
+    set_multithreading(bool multithreading = true);
 
-    Ddhdg::NonlinearIteratorStatus run();
+    Ddhdg::NonlinearIteratorStatus
+    run();
+
+    [[nodiscard]] double
+    estimate_l2_error(const std::string &expected_solution,
+                      Ddhdg::Component   c) const;
+
+    [[nodiscard]] double
+    estimate_h1_error(const std::string &expected_solution,
+                      Ddhdg::Component   c) const;
+
+    [[nodiscard]] double
+    estimate_linfty_error(const std::string &expected_solution,
+                          Ddhdg::Component   c) const;
+
+    void
+    output_results(const std::string &solution_filename,
+                   bool               save_update = false) const;
+
+    void
+    output_results(const std::string &solution_filename,
+                   const std::string &trace_filename,
+                   bool               save_update = false) const;
+
+    void
+    print_convergence_table(const std::string &expected_V_solution,
+                            const std::string &expected_n_solution,
+                            unsigned int       n_cycles,
+                            unsigned int       initial_refinements = 0);
+
+    void
+    print_convergence_table(const std::string &expected_V_solution,
+                            const std::string &expected_n_solution,
+                            const std::string &initial_V_function,
+                            const std::string &initial_n_function,
+                            unsigned int       n_cycles,
+                            unsigned int       initial_refinements = 0);
 
   private:
     const std::shared_ptr<Ddhdg::Solver<dim>> ddhdg_solver;

@@ -181,7 +181,23 @@ namespace Ddhdg
     run();
 
     double
+    estimate_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      dealii::VectorTools::NormType                norm) const;
+
+    double
     estimate_l2_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c) const;
+
+    double
+    estimate_h1_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c) const;
+
+    double
+    estimate_linfty_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const;
 

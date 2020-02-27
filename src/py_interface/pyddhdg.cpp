@@ -308,6 +308,151 @@ namespace pyddhdg
 
 
 
+  template <int dim>
+  double
+  Solver<dim>::estimate_l2_error(const std::string &    expected_solution,
+                                 const Ddhdg::Component c) const
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    expected_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_solution,
+      Ddhdg::Constants::constants);
+    return this->ddhdg_solver->estimate_l2_error(expected_solution_f, c);
+  }
+
+
+
+  template <int dim>
+  double
+  Solver<dim>::estimate_h1_error(const std::string &    expected_solution,
+                                 const Ddhdg::Component c) const
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    expected_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_solution,
+      Ddhdg::Constants::constants);
+    return this->ddhdg_solver->estimate_h1_error(expected_solution_f, c);
+  }
+
+
+
+  template <int dim>
+  double
+  Solver<dim>::estimate_linfty_error(const std::string &    expected_solution,
+                                     const Ddhdg::Component c) const
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    expected_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_solution,
+      Ddhdg::Constants::constants);
+    return this->ddhdg_solver->estimate_linfty_error(expected_solution_f, c);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::output_results(const std::string &solution_filename,
+                              const bool         save_update) const
+  {
+    this->ddhdg_solver->output_results(solution_filename, save_update);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::output_results(const std::string &solution_filename,
+                              const std::string &trace_filename,
+                              const bool         save_update) const
+  {
+    this->ddhdg_solver->output_results(solution_filename,
+                                       trace_filename,
+                                       save_update);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::print_convergence_table(const std::string &expected_V_solution,
+                                       const std::string &expected_n_solution,
+                                       const unsigned int n_cycles,
+                                       const unsigned int initial_refinements)
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_V_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_n_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    expected_V_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_V_solution,
+      Ddhdg::Constants::constants);
+    expected_n_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_n_solution,
+      Ddhdg::Constants::constants);
+    this->ddhdg_solver->print_convergence_table(
+      std::make_shared<Ddhdg::ConvergenceTable>(dim),
+      expected_V_solution_f,
+      expected_n_solution_f,
+      n_cycles,
+      initial_refinements);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::print_convergence_table(const std::string &expected_V_solution,
+                                       const std::string &expected_n_solution,
+                                       const std::string &initial_V_function,
+                                       const std::string &initial_n_function,
+                                       const unsigned int n_cycles,
+                                       const unsigned int initial_refinements)
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_V_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_n_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    std::shared_ptr<dealii::FunctionParser<dim>> initial_V_function_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    std::shared_ptr<dealii::FunctionParser<dim>> initial_n_function_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    expected_V_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_V_solution,
+      Ddhdg::Constants::constants);
+    expected_n_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_n_solution,
+      Ddhdg::Constants::constants);
+    initial_V_function_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      initial_V_function,
+      Ddhdg::Constants::constants);
+    initial_n_function_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      initial_n_function,
+      Ddhdg::Constants::constants);
+    this->ddhdg_solver->print_convergence_table(
+      std::make_shared<Ddhdg::ConvergenceTable>(dim),
+      expected_V_solution_f,
+      expected_n_solution_f,
+      initial_V_function_f,
+      initial_n_function_f,
+      n_cycles,
+      initial_refinements);
+  }
+
+
+
   template class HomogeneousPermittivity<1>;
   template class HomogeneousPermittivity<2>;
   template class HomogeneousPermittivity<3>;
