@@ -3,6 +3,7 @@ set(_target tests)
 set(_test_files
 		linear_potential.cpp
 		log_potential.cpp
+		neumann_boundary_conditions.cpp
 		)
 
 add_executable(${_target} main.cpp ${_test_files})

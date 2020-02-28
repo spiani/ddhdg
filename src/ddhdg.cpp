@@ -1488,13 +1488,13 @@ namespace Ddhdg
   template <Ddhdg::Component c>
   inline void
   Solver<dim>::apply_dbc_on_face(
-    Ddhdg::Solver<dim>::ScratchData &            scratch,
-    Ddhdg::Solver<dim>::PerTaskData &            task_data,
-    const Ddhdg::DirichletBoundaryCondition<dim> dbc,
-    unsigned int                                 face)
+    Ddhdg::Solver<dim>::ScratchData &             scratch,
+    Ddhdg::Solver<dim>::PerTaskData &             task_data,
+    const Ddhdg::DirichletBoundaryCondition<dim> &dbc,
+    unsigned int                                  face)
   {
     if (c != V and c != n)
-      AssertThrow(false, UnknownComponent());
+      Assert(false, UnknownComponent());
 
     auto &tr_c  = scratch.tr_c[c];
     auto &tr_c0 = scratch.previous_tr_c_face[c];
@@ -1504,7 +1504,6 @@ namespace Ddhdg
 
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
-        copy_fe_values_on_scratch(scratch, face, q);
         copy_fe_values_for_trace(scratch, face, q);
 
         const double JxW = scratch.fe_face_values.JxW(q);
@@ -1530,33 +1529,39 @@ namespace Ddhdg
       }
   }
 
+
+
   template <int dim>
   template <Ddhdg::Component c>
   void
-  Solver<dim>::apply_nbc_on_face(Ddhdg::Solver<dim>::ScratchData &scratch,
-                                 Ddhdg::Solver<dim>::PerTaskData &task_data,
-                                 unsigned int                     face,
-                                 dealii::types::boundary_id       face_id)
+  Solver<dim>::apply_nbc_on_face(
+    Ddhdg::Solver<dim>::ScratchData &           scratch,
+    Ddhdg::Solver<dim>::PerTaskData &           task_data,
+    const Ddhdg::NeumannBoundaryCondition<dim> &nbc,
+    unsigned int                                face)
   {
+    if (c != V and c != n)
+      Assert(false, UnknownComponent());
+
     const unsigned int n_face_q_points =
       scratch.fe_face_values_local.get_quadrature().size();
-
-    auto boundary_condition =
-      boundary_handler->get_neumann_conditions_for_id(face_id, c);
 
     auto &tr_c = scratch.tr_c[c];
 
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
+        copy_fe_values_for_trace(scratch, face, q);
+
         const double     JxW = scratch.fe_face_values.JxW(q);
         const Point<dim> quadrature_point =
           scratch.fe_face_values.quadrature_point(q);
-        const double nbc_value = boundary_condition.evaluate(quadrature_point);
+        const double nbc_value = nbc.evaluate(quadrature_point);
+
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)
           {
             const unsigned int ii = scratch.fe_support_on_face[face][i];
-            task_data.cell_vector(ii) += tr_c[i] * nbc_value * JxW;
+            task_data.cell_vector(ii) -= tr_c[i] * nbc_value * JxW;
           }
       }
   }
@@ -1848,34 +1853,48 @@ namespace Ddhdg
           {
             assemble_lf_matrix(scratch, face);
 
-            if (!has_dirichlet_conditions[V])
-              {
-                assemble_fl_matrix<V>(scratch, face);
-                add_fl_matrix_terms_to_f_rhs<V>(scratch, task_data, face);
-                assemble_cell_matrix<V>(scratch, task_data, face);
-                add_cell_matrix_terms_to_f_rhs<V>(scratch, task_data, face);
-              }
-            else
+            if (has_dirichlet_conditions[V])
               {
                 const auto dbc =
                   boundary_handler->get_dirichlet_conditions_for_id(
                     face_boundary_id, V);
                 apply_dbc_on_face<V>(scratch, task_data, dbc, face);
               }
-
-            if (!has_dirichlet_conditions[n])
-              {
-                assemble_fl_matrix<n>(scratch, face);
-                add_fl_matrix_terms_to_f_rhs<n>(scratch, task_data, face);
-                assemble_cell_matrix<n>(scratch, task_data, face);
-                add_cell_matrix_terms_to_f_rhs<n>(scratch, task_data, face);
-              }
             else
+              {
+                assemble_fl_matrix<V>(scratch, face);
+                add_fl_matrix_terms_to_f_rhs<V>(scratch, task_data, face);
+                assemble_cell_matrix<V>(scratch, task_data, face);
+                add_cell_matrix_terms_to_f_rhs<V>(scratch, task_data, face);
+                if (has_neumann_conditions[V])
+                  {
+                    const auto nbc =
+                      boundary_handler->get_neumann_conditions_for_id(
+                        face_boundary_id, V);
+                    this->apply_nbc_on_face<V>(scratch, task_data, nbc, face);
+                  }
+              }
+
+            if (has_dirichlet_conditions[n])
               {
                 const auto dbc =
                   boundary_handler->get_dirichlet_conditions_for_id(
                     face_boundary_id, n);
                 apply_dbc_on_face<n>(scratch, task_data, dbc, face);
+              }
+            else
+              {
+                assemble_fl_matrix<n>(scratch, face);
+                add_fl_matrix_terms_to_f_rhs<n>(scratch, task_data, face);
+                assemble_cell_matrix<n>(scratch, task_data, face);
+                add_cell_matrix_terms_to_f_rhs<n>(scratch, task_data, face);
+                if (has_neumann_conditions[n])
+                  {
+                    const auto nbc =
+                      boundary_handler->get_neumann_conditions_for_id(
+                        face_boundary_id, n);
+                    this->apply_nbc_on_face<n>(scratch, task_data, nbc, face);
+                  }
               }
           }
 

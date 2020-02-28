@@ -340,17 +340,17 @@ namespace Ddhdg
 
     template <Component c>
     inline void
-    apply_dbc_on_face(ScratchData &                         scratch,
-                      PerTaskData &                         task_data,
-                      const DirichletBoundaryCondition<dim> dbc,
-                      unsigned int                          face);
+    apply_dbc_on_face(ScratchData &                          scratch,
+                      PerTaskData &                          task_data,
+                      const DirichletBoundaryCondition<dim> &dbc,
+                      unsigned int                           face);
 
     template <Component c>
     inline void
-    apply_nbc_on_face(ScratchData &              scratch,
-                      PerTaskData &              task_data,
-                      unsigned int               face,
-                      dealii::types::boundary_id face_id);
+    apply_nbc_on_face(ScratchData &                        scratch,
+                      PerTaskData &                        task_data,
+                      const NeumannBoundaryCondition<dim> &nbc,
+                      unsigned int                         face);
 
     inline void
     add_border_products_to_ll_matrix(ScratchData &scratch, unsigned int face);
