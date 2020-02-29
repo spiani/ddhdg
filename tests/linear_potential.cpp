@@ -135,8 +135,8 @@ TYPED_TEST(LinearPotentialTest, LinearPotentialTest) // NOLINT
 {
   const unsigned int dim = TypeParam::value;
 
-  const auto zero_function     = this->get_zero_function();
-  const auto expected_solution = this->get_expected_solution();
+  const auto zero_function     = TestFixture::get_zero_function();
+  const auto expected_solution = TestFixture::get_expected_solution();
 
   this->set_multithreading(false);
   this->refine_grid(3 - dim);

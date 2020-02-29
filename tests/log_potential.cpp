@@ -142,9 +142,9 @@ TYPED_TEST(LogPotentialTest, LogPotentialTest) // NOLINT
 {
   const unsigned int dim = TypeParam::value;
 
-  const auto zero_function       = this->get_zero_function();
-  const auto V_expected_solution = this->get_expected_solution(Ddhdg::V);
-  const auto n_expected_solution = this->get_expected_solution(Ddhdg::n);
+  const auto zero_function       = TestFixture::get_zero_function();
+  const auto V_expected_solution = TestFixture::get_expected_solution(Ddhdg::V);
+  const auto n_expected_solution = TestFixture::get_expected_solution(Ddhdg::n);
 
   this->set_multithreading(false);
   this->refine_grid(3 - dim);

@@ -1561,7 +1561,7 @@ namespace Ddhdg
              ++i)
           {
             const unsigned int ii = scratch.fe_support_on_face[face][i];
-            task_data.cell_vector(ii) -= tr_c[i] * nbc_value * JxW;
+            task_data.cell_vector(ii) += tr_c[i] * nbc_value * JxW;
           }
       }
   }
