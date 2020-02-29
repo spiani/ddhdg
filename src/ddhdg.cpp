@@ -1555,7 +1555,9 @@ namespace Ddhdg
         const double     JxW = scratch.fe_face_values.JxW(q);
         const Point<dim> quadrature_point =
           scratch.fe_face_values.quadrature_point(q);
-        const double nbc_value = nbc.evaluate(quadrature_point);
+        const double nbc_value =
+          (c == V ? nbc.evaluate(quadrature_point) :
+                    nbc.evaluate(quadrature_point) / Constants::Q);
 
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)

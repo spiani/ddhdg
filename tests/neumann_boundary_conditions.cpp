@@ -306,9 +306,9 @@ protected:
                                              get_function("pi*sin(pi*x)"));
 
     boundary_handler->add_boundary_condition(
-      0, Ddhdg::neumann, Ddhdg::n, get_function("pi*cos(pi*y)*sin(pi*y)"));
+      0, Ddhdg::neumann, Ddhdg::n, get_function("pi*cos(pi*y)*sin(pi*y)*q"));
     boundary_handler->add_boundary_condition(
-      1, Ddhdg::neumann, Ddhdg::n, get_function("-pi*cos(pi*y)*sin(pi*y)"));
+      1, Ddhdg::neumann, Ddhdg::n, get_function("-pi*cos(pi*y)*sin(pi*y)*q"));
     boundary_handler->add_boundary_condition(2,
                                              Ddhdg::dirichlet,
                                              Ddhdg::n,
