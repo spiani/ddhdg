@@ -81,25 +81,6 @@ namespace Ddhdg
       , multithreading(multithreading)
     {}
 
-    SolverParameters(const unsigned int degree,
-                     const double nonlinear_solver_absolute_tolerance = 1e-10,
-                     const double nonlinear_solver_relative_tolerance = 1e-10,
-                     const int nonlinear_solver_max_number_of_iterations = 100,
-                     const double V_tau                                  = 1.,
-                     const double n_tau                                  = 1.,
-                     const bool   iterative_linear_solver = false,
-                     const bool   multithreading          = true)
-      : V_degree(degree)
-      , n_degree(degree)
-      , nonlinear_solver_absolute_tolerance(nonlinear_solver_absolute_tolerance)
-      , nonlinear_solver_relative_tolerance(nonlinear_solver_relative_tolerance)
-      , nonlinear_solver_max_number_of_iterations(
-          nonlinear_solver_max_number_of_iterations)
-      , tau{{Component::V, V_tau}, {Component::n, n_tau}}
-      , iterative_linear_solver(iterative_linear_solver)
-      , multithreading(multithreading)
-    {}
-
     SolverParameters(const SolverParameters &solver)
       : V_degree(solver.V_degree)
       , n_degree(solver.n_degree)

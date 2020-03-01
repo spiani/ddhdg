@@ -933,8 +933,8 @@ namespace Ddhdg
             {
               scratch.ll_matrix(i, j) +=
                 (-V[j] * q1_div[i] + E[j] * q1[i] -
-                 (scratch.epsilon_cell[q] * E[j]) * z1_grad[i] - n[j] * z1[i] -
-                 n[j] * q2_div[i] + W[j] * q2[i] -
+                 (scratch.epsilon_cell[q] * E[j]) * z1_grad[i] +
+                 Constants::Q * n[j] * z1[i] - n[j] * q2_div[i] + W[j] * q2[i] -
                  n[j] * (mu_times_previous_E * z2_grad[i]) +
                  n0[q] * ((scratch.mu_cell[q] * E[j]) * z2_grad[i]) +
                  (einstein_diffusion_coefficient * W[j]) * z2_grad[i] -
@@ -1001,9 +1001,11 @@ namespace Ddhdg
 
             scratch.l_rhs[i] +=
               (V0[q] * q1_div - E0[q] * q1 +
-               (scratch.epsilon_cell[q] * E0[q]) * z1_grad + n0[q] * z1 +
-               +scratch.doping_cell[q] * z1 + n0[q] * q2_div - W0[q] * q2 +
-               scratch.r_cell[q] / Constants::Q * z2 + J * z2_grad) *
+               (scratch.epsilon_cell[q] * E0[q]) * z1_grad -
+               Constants::Q * n0[q] * z1 +
+               Constants::Q * scratch.doping_cell[q] * z1 + n0[q] * q2_div -
+               W0[q] * q2 + scratch.r_cell[q] / Constants::Q * z2 +
+               J * z2_grad) *
               JxW;
           }
       }

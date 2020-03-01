@@ -8,7 +8,9 @@ class LogPotentialTest : public Ddhdg::Solver<D::value>, public ::testing::Test
 {
 public:
   LogPotentialTest()
-    : Ddhdg::Solver<D::value>(get_problem()){};
+    : Ddhdg::Solver<D::value>(
+        get_problem(),
+        std::make_shared<Ddhdg::SolverParameters>(1, 2)){};
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<D::value>>
@@ -35,12 +37,12 @@ protected:
     if (c == Ddhdg::Component::V)
       expected_solution->initialize(
         dealii::FunctionParser<dim>::default_variable_names(),
-        "-2 * log(x)",
+        "-2 * log(x) * q",
         Ddhdg::Constants::constants);
     if (c == Ddhdg::Component::n)
       expected_solution->initialize(
         dealii::FunctionParser<dim>::default_variable_names(),
-        "-2 / x^2",
+        "2 / x^2",
         Ddhdg::Constants::constants);
     return expected_solution;
   }
@@ -118,7 +120,8 @@ protected:
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
-        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0"),
+        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(
+          "-12*(q - 1)*q/x^4", "0"),
         get_temperature(),
         get_doping(),
         get_boundary_conditions());
@@ -147,8 +150,8 @@ TYPED_TEST(LogPotentialTest, LogPotentialTest) // NOLINT
   const auto n_expected_solution = TestFixture::get_expected_solution(Ddhdg::n);
 
   this->set_multithreading(false);
-  this->refine_grid(3 - dim);
-  this->set_current_solution(zero_function, zero_function);
+  this->refine_grid(4 - dim);
+  this->set_current_solution(zero_function, zero_function, true);
 
   const Ddhdg::NonlinearIteratorStatus status = this->run();
 
@@ -162,8 +165,5 @@ TYPED_TEST(LogPotentialTest, LogPotentialTest) // NOLINT
     this->estimate_l2_error(n_expected_solution, Ddhdg::Component::n);
 
   EXPECT_LT(V_l2_error, 1e-2);
-  if (dim == 1 || dim == 2)
-    EXPECT_LT(n_l2_error, 1e-2);
-  else
-    EXPECT_LT(n_l2_error, 2e-2);
+  EXPECT_LT(n_l2_error, 1e-2);
 }

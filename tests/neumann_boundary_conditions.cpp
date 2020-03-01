@@ -263,7 +263,7 @@ protected:
     std::shared_ptr<dealii::FunctionParser<dim>> doping =
       std::make_shared<dealii::FunctionParser<dim>>();
     doping->initialize(dealii::FunctionParser<dim>::default_variable_names(),
-                       "2*pi^2*sin(pi*x)*sin(pi*y) - cos(pi*x)*cos(pi*y)",
+                       "(2*pi^2*sin(pi*x)*sin(pi*y) + q*cos(pi*x)*cos(pi*y))/q",
                        Ddhdg::Constants::constants);
     return doping;
   }
@@ -275,7 +275,7 @@ protected:
 
     std::shared_ptr<Ddhdg::LinearRecombinationTerm<dim>> recombination_term =
       std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(
-        "2*(2*pi^2*cos(pi*x)*cos(pi*y)*sin(pi*x)*sin(pi*y) - pi^2*cos(pi*x)*cos(pi*y))*q",
+        "(4*pi^2*cos(pi*x)*cos(pi*y)*sin(pi*x)*sin(pi*y) - 2*pi^2*cos(pi*x)*cos(pi*y))*q",
         "0");
     return recombination_term;
   }
