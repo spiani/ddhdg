@@ -102,6 +102,10 @@ protected:
                                                  Ddhdg::dirichlet,
                                                  Ddhdg::n,
                                                  get_zero_function());
+        boundary_handler->add_boundary_condition(i,
+                                                 Ddhdg::dirichlet,
+                                                 Ddhdg::p,
+                                                 get_zero_function());
       }
 
     // Boundary conditions for V
@@ -134,7 +138,9 @@ protected:
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
-        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0"),
+        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
+        std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
+        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         get_temperature(),
         get_doping(),
         get_boundary_conditions());
@@ -161,6 +167,7 @@ TYPED_TEST(NeumannBCLinearTest, NeumannBCLinearTest) // NOLINT
   this->set_multithreading(false);
   this->refine_grid(3 - dim);
   this->set_component(Ddhdg::Component::n, zero_function);
+  this->set_component(Ddhdg::Component::p, zero_function);
 
   const Ddhdg::NonlinearIteratorStatus status = this->run();
 
@@ -172,9 +179,12 @@ TYPED_TEST(NeumannBCLinearTest, NeumannBCLinearTest) // NOLINT
     this->estimate_l2_error(expected_solution, Ddhdg::Component::V);
   const double n_l2_error =
     this->estimate_l2_error(zero_function, Ddhdg::Component::n);
+  const double p_l2_error =
+    this->estimate_l2_error(zero_function, Ddhdg::Component::p);
 
   EXPECT_LT(V_l2_error, 1e-10);
   EXPECT_LT(n_l2_error, 1e-10);
+  EXPECT_LT(p_l2_error, 1e-10);
 }
 
 
@@ -192,13 +202,13 @@ protected:
   {
     const unsigned int dim = 2;
 
-    std::shared_ptr<dealii::FunctionParser<dim>> zero_function =
+    std::shared_ptr<dealii::FunctionParser<dim>> custom_function =
       std::make_shared<dealii::FunctionParser<dim>>();
-    zero_function->initialize(
+    custom_function->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
       s,
       Ddhdg::Constants::constants);
-    return zero_function;
+    return custom_function;
   }
 
   static std::shared_ptr<dealii::FunctionParser<2>>
@@ -276,6 +286,7 @@ protected:
     std::shared_ptr<Ddhdg::LinearRecombinationTerm<dim>> recombination_term =
       std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(
         "(4*pi^2*cos(pi*x)*cos(pi*y)*sin(pi*x)*sin(pi*y) - 2*pi^2*cos(pi*x)*cos(pi*y))*q",
+        "0",
         "0");
     return recombination_term;
   }
@@ -318,6 +329,14 @@ protected:
                                              Ddhdg::n,
                                              get_function("-cos(pi * x)"));
 
+    for (unsigned int i = 0; i < 4; i++)
+      {
+        boundary_handler->add_boundary_condition(i,
+                                                 Ddhdg::dirichlet,
+                                                 Ddhdg::p,
+                                                 get_function("0"));
+      }
+
     return boundary_handler;
   }
 
@@ -332,6 +351,8 @@ protected:
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
         get_recombination_term(),
+        std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
+        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         get_temperature(),
         get_doping(),
         get_boundary_conditions());

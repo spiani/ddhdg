@@ -97,6 +97,10 @@ protected:
                                                  Ddhdg::dirichlet,
                                                  Ddhdg::n,
                                                  get_zero_function());
+        boundary_handler->add_boundary_condition(i,
+                                                 Ddhdg::dirichlet,
+                                                 Ddhdg::p,
+                                                 get_zero_function());
       }
 
     return boundary_handler;
@@ -111,7 +115,9 @@ protected:
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
-        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0"),
+        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
+        std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
+        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         get_temperature(),
         get_doping(),
         get_boundary_conditions());
@@ -141,6 +147,7 @@ TYPED_TEST(LinearPotentialTest, LinearPotentialTest) // NOLINT
   this->set_multithreading(false);
   this->refine_grid(3 - dim);
   this->set_component(Ddhdg::Component::n, zero_function);
+  this->set_component(Ddhdg::Component::p, zero_function);
 
   const Ddhdg::NonlinearIteratorStatus status = this->run();
 

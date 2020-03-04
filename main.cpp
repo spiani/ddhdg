@@ -57,6 +57,10 @@ public:
       n_degree,
       "The degree of the polynomials used to approximate the electron density");
     add_parameter(
+      "p degree",
+      p_degree,
+      "The degree of the polynomials used to approximate the hole density");
+    add_parameter(
       "V tau",
       V_tau,
       "The value of the stabilization constant for the electric potential");
@@ -64,6 +68,10 @@ public:
       "n tau",
       n_tau,
       "The value of the stabilization constant for the electron density");
+    add_parameter(
+      "p tau",
+      p_tau,
+      "The value of the stabilization constant for the hole density");
     add_parameter("use iterative linear solver",
                   iterative_linear_solver,
                   "Shall the code use an iterative linear solver (GMRES)?");
@@ -82,12 +90,17 @@ public:
       "recombination term zero order term",
       recombination_term_constant_term,
       "A function of the space that represent the value of the recombination"
-      "term when n = 0");
+      "term when n = 0 and p = 0");
     add_parameter(
-      "recombination term first order term",
-      recombination_term_constant_term,
-      "A function of the space that represent the linear coefficient that "
-      "approximates the dependency of the recombination term from n");
+      "recombination term n coefficient",
+      recombination_term_n_coefficient,
+      "Let the recombination term be R = a + b * n + c * p where "
+      "a, b, c are space functions; then this field is the value of b");
+    add_parameter(
+      "recombination term p coefficient",
+      recombination_term_p_coefficient,
+      "Let the recombination term be R = a + b * n + c * p where "
+      "a, b, c are space functions; this this field is the value of c");
     leave_subsection();
 
     enter_subsection("boundary conditions");
@@ -102,6 +115,11 @@ public:
         n_boundary_function_str,
         "The function that will be used to specify the Dirichlet boundary "
         "conditions for n");
+      add_parameter(
+        "p boundary function",
+        p_boundary_function_str,
+        "The function that will be used to specify the Dirichlet boundary "
+        "conditions for p");
     }
     leave_subsection();
     enter_subsection("domain geometry");
@@ -114,6 +132,7 @@ public:
     {
       add_parameter("V starting point", V_starting_point_str);
       add_parameter("n starting point", n_starting_point_str);
+      add_parameter("p starting point", p_starting_point_str);
     }
     leave_subsection();
     enter_subsection("expected solutions");
@@ -123,6 +142,9 @@ public:
     add_parameter("expected n solution",
                   expected_n_solution_str,
                   "The expected solution for the electron density");
+    add_parameter("expected p solution",
+                  expected_p_solution_str,
+                  "The expected solution for the hole density");
     leave_subsection();
     enter_subsection("nonlinear solver");
     add_parameter(
@@ -151,9 +173,11 @@ public:
 
   unsigned int V_degree = 1;
   unsigned int n_degree = 1;
+  unsigned int p_degree = 1;
 
   double V_tau = 1.;
   double n_tau = 1.;
+  double p_tau = 1.;
 
   bool iterative_linear_solver = true;
   bool multithreading          = true;
@@ -164,21 +188,27 @@ public:
 
   std::string expected_V_solution_str = "0.";
   std::string expected_n_solution_str = "0.";
+  std::string expected_p_solution_str = "0.";
 
   std::shared_ptr<dealii::FunctionParser<dim>> expected_V_solution;
   std::shared_ptr<dealii::FunctionParser<dim>> expected_n_solution;
+  std::shared_ptr<dealii::FunctionParser<dim>> expected_p_solution;
 
   std::string V_boundary_function_str = "0.";
   std::string n_boundary_function_str = "0.";
+  std::string p_boundary_function_str = "0.";
 
   std::shared_ptr<dealii::FunctionParser<dim>> V_boundary_function;
   std::shared_ptr<dealii::FunctionParser<dim>> n_boundary_function;
+  std::shared_ptr<dealii::FunctionParser<dim>> p_boundary_function;
 
   std::string V_starting_point_str = "0.";
   std::string n_starting_point_str = "0.";
+  std::string p_starting_point_str = "0.";
 
   std::shared_ptr<dealii::FunctionParser<dim>> V_starting_point;
   std::shared_ptr<dealii::FunctionParser<dim>> n_starting_point;
+  std::shared_ptr<dealii::FunctionParser<dim>> p_starting_point;
 
   std::string                                  temperature_str = "25.";
   std::shared_ptr<dealii::FunctionParser<dim>> temperature;
@@ -187,7 +217,8 @@ public:
   std::shared_ptr<dealii::FunctionParser<dim>> doping;
 
   std::string recombination_term_constant_term = "0.";
-  std::string recombination_term_linear_factor = "0.";
+  std::string recombination_term_n_coefficient = "0.";
+  std::string recombination_term_p_coefficient = "0.";
 
   std::shared_ptr<Ddhdg::ConvergenceTable> error_table;
 
@@ -235,12 +266,15 @@ private:
   {
     expected_V_solution = std::make_shared<dealii::FunctionParser<dim>>(1);
     expected_n_solution = std::make_shared<dealii::FunctionParser<dim>>(1);
+    expected_p_solution = std::make_shared<dealii::FunctionParser<dim>>(1);
     V_boundary_function = std::make_shared<dealii::FunctionParser<dim>>(1);
     n_boundary_function = std::make_shared<dealii::FunctionParser<dim>>(1);
+    p_boundary_function = std::make_shared<dealii::FunctionParser<dim>>(1);
     temperature         = std::make_shared<dealii::FunctionParser<dim>>(1);
     doping              = std::make_shared<dealii::FunctionParser<dim>>(1);
     V_starting_point    = std::make_shared<dealii::FunctionParser<dim>>(1);
     n_starting_point    = std::make_shared<dealii::FunctionParser<dim>>(1);
+    p_starting_point    = std::make_shared<dealii::FunctionParser<dim>>(1);
 
     expected_V_solution->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
@@ -250,6 +284,10 @@ private:
       dealii::FunctionParser<dim>::default_variable_names(),
       expected_n_solution_str,
       Ddhdg::Constants::constants);
+    expected_p_solution->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_p_solution_str,
+      Ddhdg::Constants::constants);
     V_boundary_function->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
       V_boundary_function_str,
@@ -257,6 +295,10 @@ private:
     n_boundary_function->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
       n_boundary_function_str,
+      Ddhdg::Constants::constants);
+    p_boundary_function->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      p_boundary_function_str,
       Ddhdg::Constants::constants);
     temperature->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
@@ -272,6 +314,10 @@ private:
     n_starting_point->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
       n_starting_point_str,
+      Ddhdg::Constants::constants);
+    p_starting_point->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      p_starting_point_str,
       Ddhdg::Constants::constants);
   }
 
@@ -320,6 +366,10 @@ main(int argc, char **argv)
                                                Ddhdg::dirichlet,
                                                Ddhdg::n,
                                                prm.n_boundary_function);
+      boundary_handler->add_boundary_condition(i,
+                                               Ddhdg::dirichlet,
+                                               Ddhdg::p,
+                                               prm.p_boundary_function);
     }
   // For the time being, we will fix the permittivity (epsilon0) to one
   const std::shared_ptr<const Ddhdg::Permittivity<dim>> permittivity =
@@ -334,12 +384,15 @@ main(int argc, char **argv)
     recombination_term =
       std::make_shared<const Ddhdg::LinearRecombinationTerm<dim>>(
         prm.recombination_term_constant_term,
-        prm.recombination_term_linear_factor);
+        prm.recombination_term_n_coefficient,
+        prm.recombination_term_p_coefficient);
 
   // Create an object that represent the problem we are going to solve
   std::shared_ptr<const Ddhdg::Problem<dim>> problem =
     std::make_shared<const Ddhdg::Problem<dim>>(triangulation,
                                                 permittivity,
+                                                electron_mobility,
+                                                recombination_term,
                                                 electron_mobility,
                                                 recombination_term,
                                                 prm.temperature,
@@ -351,11 +404,13 @@ main(int argc, char **argv)
     std::make_shared<const Ddhdg::SolverParameters>(
       prm.V_degree,
       prm.n_degree,
+      prm.p_degree,
       prm.nonlinear_solver_absolute_tolerance,
       prm.nonlinear_solver_relative_tolerance,
       prm.nonlinear_solver_max_number_of_iterations,
       prm.V_tau,
       prm.n_tau,
+      prm.p_tau,
       prm.iterative_linear_solver,
       prm.multithreading);
 
@@ -373,8 +428,10 @@ main(int argc, char **argv)
   solver.print_convergence_table(prm.error_table,
                                  prm.expected_V_solution,
                                  prm.expected_n_solution,
+                                 prm.expected_p_solution,
                                  prm.V_starting_point,
                                  prm.n_starting_point,
+                                 prm.p_starting_point,
                                  prm.n_cycles,
                                  prm.initial_refinements);
 

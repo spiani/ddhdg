@@ -8,16 +8,18 @@ namespace Ddhdg
   enum Component
   {
     V,
-    n
+    n,
+    p
   };
 
   // This is useful for iterating over the previous enumerator
-  static const Component AllComponents[] = {V, n};
+  static const Component AllComponents[] = {V, n, p};
 
   enum Displacement
   {
     E,
-    W
+    Wn,
+    Wp
   };
 
   inline Displacement
@@ -28,7 +30,9 @@ namespace Ddhdg
         case V:
           return E;
         case n:
-          return W;
+          return Wn;
+        case p:
+          return Wp;
         default:
           Assert(false, UnknownComponent());
           break;
@@ -43,8 +47,10 @@ namespace Ddhdg
       {
         case E:
           return V;
-        case W:
+        case Wn:
           return n;
+        case Wp:
+          return p;
         default:
           Assert(false, UnknownDisplacement());
           break;

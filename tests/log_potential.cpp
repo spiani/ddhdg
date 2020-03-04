@@ -8,9 +8,10 @@ class LogPotentialTest : public Ddhdg::Solver<D::value>, public ::testing::Test
 {
 public:
   LogPotentialTest()
-    : Ddhdg::Solver<D::value>(
-        get_problem(),
-        std::make_shared<Ddhdg::SolverParameters>(1, 2)){};
+    : Ddhdg::Solver<D::value>(get_problem(),
+                              std::make_shared<Ddhdg::SolverParameters>(1,
+                                                                        2,
+                                                                        1)){};
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<D::value>>
@@ -106,6 +107,10 @@ protected:
                                                  Ddhdg::Component::n,
                                                  get_expected_solution(
                                                    Ddhdg::Component::n));
+        boundary_handler->add_boundary_condition(i,
+                                                 Ddhdg::dirichlet,
+                                                 Ddhdg::Component::p,
+                                                 get_zero_function());
       }
 
     return boundary_handler;
@@ -114,14 +119,17 @@ protected:
   static std::shared_ptr<Ddhdg::Problem<D::value>>
   get_problem()
   {
-    const unsigned int                   dim = D::value;
+    const unsigned int dim = D::value;
+
     std::shared_ptr<Ddhdg::Problem<dim>> problem =
       std::make_shared<Ddhdg::Problem<dim>>(
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(
-          "-12*(q - 1)*q/x^4", "0"),
+          "-12*(q - 1)*q/x^4", "0", "0"),
+        std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
+        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         get_temperature(),
         get_doping(),
         get_boundary_conditions());
@@ -151,7 +159,7 @@ TYPED_TEST(LogPotentialTest, LogPotentialTest) // NOLINT
 
   this->set_multithreading(false);
   this->refine_grid(4 - dim);
-  this->set_current_solution(zero_function, zero_function, true);
+  this->set_current_solution(zero_function, zero_function, zero_function);
 
   const Ddhdg::NonlinearIteratorStatus status = this->run();
 

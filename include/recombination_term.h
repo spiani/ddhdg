@@ -4,6 +4,7 @@
 #include <deal.II/base/point.h>
 #include <deal.II/base/tensor.h>
 
+#include "components.h"
 #include "constants.h"
 
 namespace Ddhdg
@@ -13,27 +14,32 @@ namespace Ddhdg
   {
   public:
     virtual double
-    compute_recombination_term(double n, const dealii::Point<dim> &q) const = 0;
+    compute_recombination_term(double                    n,
+                               double                    p,
+                               const dealii::Point<dim> &q) const = 0;
 
     virtual double
-    compute_derivative_of_recombination_term(
-      double                    n,
-      const dealii::Point<dim> &q) const = 0;
+    compute_derivative_of_recombination_term(double                    n,
+                                             double                    p,
+                                             const dealii::Point<dim> &q,
+                                             Component c) const = 0;
 
     virtual void
     compute_multiple_recombination_terms(
       const std::vector<double> &            n,
+      const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
       std::vector<double> &                  r) const;
 
     virtual void
     compute_multiple_derivatives_of_recombination_terms(
       const std::vector<double> &            n,
+      const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      Component                              c,
       std::vector<double> &                  r) const;
 
-    virtual ~RecombinationTerm()
-    {}
+    virtual ~RecombinationTerm() = default;
   };
 
   template <int dim>
@@ -41,10 +47,11 @@ namespace Ddhdg
   {
   public:
     explicit LinearRecombinationTerm(const std::string &constant_term,
-                                     const std::string &linear_coefficient);
+                                     const std::string &n_linear_coefficient,
+                                     const std::string &p_linear_coefficient);
 
-    explicit LinearRecombinationTerm(
-      const LinearRecombinationTerm<dim> &analytic_recombination_term);
+    LinearRecombinationTerm(
+      const LinearRecombinationTerm<dim> &linear_recombination_term);
 
     [[nodiscard]] inline std::string
     get_constant_term() const
@@ -53,38 +60,52 @@ namespace Ddhdg
     }
 
     [[nodiscard]] inline std::string
-    get_linear_coefficient() const
+    get_n_linear_coefficient() const
     {
-      return linear_coefficient;
+      return n_linear_coefficient;
     }
 
-    virtual double
-    compute_recombination_term(double n, const dealii::Point<dim> &q) const;
+    [[nodiscard]] inline std::string
+    get_p_linear_coefficient() const
+    {
+      return p_linear_coefficient;
+    }
 
-    virtual double
+    double
+    compute_recombination_term(double                    n,
+                               double                    p,
+                               const dealii::Point<dim> &q) const override;
+
+    double
     compute_derivative_of_recombination_term(double                    n,
-                                             const dealii::Point<dim> &q) const;
+                                             double                    p,
+                                             const dealii::Point<dim> &q,
+                                             Component c) const override;
 
-    virtual void
+    void
     compute_multiple_recombination_terms(
       const std::vector<double> &            n,
+      const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
-      std::vector<double> &                  r) const;
+      std::vector<double> &                  r) const override;
 
-    virtual void
+    void
     compute_multiple_derivatives_of_recombination_terms(
       const std::vector<double> &            n,
+      const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
-      std::vector<double> &                  r) const;
+      Component                              c,
+      std::vector<double> &                  r) const override;
 
-    virtual ~LinearRecombinationTerm()
-    {}
+    virtual ~LinearRecombinationTerm() = default;
 
   private:
     const std::string constant_term;
-    const std::string linear_coefficient;
+    const std::string n_linear_coefficient;
+    const std::string p_linear_coefficient;
 
     dealii::FunctionParser<dim> parsed_constant_term;
-    dealii::FunctionParser<dim> parsed_linear_coefficient;
+    dealii::FunctionParser<dim> parsed_n_linear_coefficient;
+    dealii::FunctionParser<dim> parsed_p_linear_coefficient;
   };
 } // namespace Ddhdg

@@ -34,8 +34,10 @@ namespace Ddhdg
   {
     const std::shared_ptr<const Triangulation<dim>>     triangulation;
     const std::shared_ptr<const Permittivity<dim>>      permittivity;
-    const std::shared_ptr<const ElectronMobility<dim>>  electron_mobility;
-    const std::shared_ptr<const RecombinationTerm<dim>> recombination_term;
+    const std::shared_ptr<const ElectronMobility<dim>>  n_electron_mobility;
+    const std::shared_ptr<const RecombinationTerm<dim>> n_recombination_term;
+    const std::shared_ptr<const ElectronMobility<dim>>  p_electron_mobility;
+    const std::shared_ptr<const RecombinationTerm<dim>> p_recombination_term;
     const std::shared_ptr<const dealii::Function<dim>>  temperature;
     const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
@@ -43,16 +45,20 @@ namespace Ddhdg
     explicit Problem(
       const std::shared_ptr<const Triangulation<dim>>     triangulation,
       const std::shared_ptr<const Permittivity<dim>>      permittivity,
-      const std::shared_ptr<const ElectronMobility<dim>>  electron_mobility,
-      const std::shared_ptr<const RecombinationTerm<dim>> recombination_term,
+      const std::shared_ptr<const ElectronMobility<dim>>  n_electron_mobility,
+      const std::shared_ptr<const RecombinationTerm<dim>> n_recombination_term,
+      const std::shared_ptr<const ElectronMobility<dim>>  p_electron_mobility,
+      const std::shared_ptr<const RecombinationTerm<dim>> p_recombination_term,
       const std::shared_ptr<const dealii::Function<dim>>  temperature,
       const std::shared_ptr<const dealii::Function<dim>>  doping,
       const std::shared_ptr<const BoundaryConditionHandler<dim>>
         boundary_handler)
       : triangulation(triangulation)
       , permittivity(permittivity)
-      , electron_mobility(electron_mobility)
-      , recombination_term(recombination_term)
+      , n_electron_mobility(n_electron_mobility)
+      , n_recombination_term(n_recombination_term)
+      , p_electron_mobility(p_electron_mobility)
+      , p_recombination_term(p_recombination_term)
       , temperature(temperature)
       , doping(doping)
       , boundary_handler(boundary_handler)
@@ -61,42 +67,33 @@ namespace Ddhdg
 
   struct SolverParameters
   {
-    SolverParameters(const unsigned int V_degree                      = 2,
-                     const unsigned int n_degree                      = 2,
-                     const double nonlinear_solver_absolute_tolerance = 1e-10,
-                     const double nonlinear_solver_relative_tolerance = 1e-10,
-                     const int nonlinear_solver_max_number_of_iterations = 100,
-                     const double V_tau                                  = 1.,
-                     const double n_tau                                  = 1.,
-                     const bool   iterative_linear_solver = false,
-                     const bool   multithreading          = true)
-      : V_degree(V_degree)
-      , n_degree(n_degree)
+    explicit SolverParameters(
+      const unsigned int V_degree                                  = 2,
+      const unsigned int n_degree                                  = 2,
+      const unsigned int p_degree                                  = 2,
+      const double       nonlinear_solver_absolute_tolerance       = 1e-10,
+      const double       nonlinear_solver_relative_tolerance       = 1e-10,
+      const int          nonlinear_solver_max_number_of_iterations = 100,
+      const double       V_tau                                     = 1.,
+      const double       n_tau                                     = 1.,
+      const double       p_tau                                     = 1.,
+      const bool         iterative_linear_solver                   = false,
+      const bool         multithreading                            = true)
+      : degree{{Component::V, V_degree},
+               {Component::n, n_degree},
+               {Component::p, p_degree}}
       , nonlinear_solver_absolute_tolerance(nonlinear_solver_absolute_tolerance)
       , nonlinear_solver_relative_tolerance(nonlinear_solver_relative_tolerance)
       , nonlinear_solver_max_number_of_iterations(
           nonlinear_solver_max_number_of_iterations)
-      , tau{{Component::V, V_tau}, {Component::n, n_tau}}
+      , tau{{Component::V, V_tau}, {Component::n, n_tau}, {Component::p, p_tau}}
       , iterative_linear_solver(iterative_linear_solver)
       , multithreading(multithreading)
     {}
 
-    SolverParameters(const SolverParameters &solver)
-      : V_degree(solver.V_degree)
-      , n_degree(solver.n_degree)
-      , nonlinear_solver_absolute_tolerance(
-          solver.nonlinear_solver_absolute_tolerance)
-      , nonlinear_solver_relative_tolerance(
-          solver.nonlinear_solver_relative_tolerance)
-      , nonlinear_solver_max_number_of_iterations(
-          solver.nonlinear_solver_max_number_of_iterations)
-      , tau(solver.tau)
-      , iterative_linear_solver(solver.iterative_linear_solver)
-      , multithreading(solver.multithreading)
-    {}
+    SolverParameters(const SolverParameters &solver) = default;
 
-    const unsigned int V_degree;
-    const unsigned int n_degree;
+    const std::map<Component, unsigned int> degree;
 
     const double nonlinear_solver_absolute_tolerance;
     const double nonlinear_solver_relative_tolerance;
@@ -126,9 +123,9 @@ namespace Ddhdg
   class Solver
   {
   public:
-    Solver(std::shared_ptr<const Problem<dim>>     problem,
-           std::shared_ptr<const SolverParameters> parameters =
-             std::make_shared<SolverParameters>());
+    explicit Solver(std::shared_ptr<const Problem<dim>>     problem,
+                    std::shared_ptr<const SolverParameters> parameters =
+                      std::make_shared<SolverParameters>());
 
     void
     refine_grid(unsigned int i = 1)
@@ -145,6 +142,7 @@ namespace Ddhdg
     set_current_solution(
       std::shared_ptr<const dealii::Function<dim>> V_function,
       std::shared_ptr<const dealii::Function<dim>> n_function,
+      std::shared_ptr<const dealii::Function<dim>> p_function,
       bool                                         use_projection = false);
 
     void
@@ -196,6 +194,7 @@ namespace Ddhdg
       std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
       std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
       std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
+      std::shared_ptr<const dealii::Function<dim>> expected_p_solution,
       unsigned int                                 n_cycles,
       unsigned int                                 initial_refinements = 0);
 
@@ -204,8 +203,10 @@ namespace Ddhdg
       std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
       std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
       std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
+      std::shared_ptr<const dealii::Function<dim>> expected_p_solution,
       std::shared_ptr<const dealii::Function<dim>> initial_V_function,
       std::shared_ptr<const dealii::Function<dim>> initial_n_function,
+      std::shared_ptr<const dealii::Function<dim>> initial_p_function,
       unsigned int                                 n_cycles,
       unsigned int                                 initial_refinements = 0);
 
@@ -213,6 +214,10 @@ namespace Ddhdg
     static std::unique_ptr<dealii::Triangulation<dim>>
     copy_triangulation(
       std::shared_ptr<const dealii::Triangulation<dim>> triangulation);
+
+    static dealii::FESystem<dim>
+    generate_fe_system(const std::map<Component, unsigned int> &degree,
+                       bool                                     local = true);
 
     dealii::ComponentMask
     get_component_mask(Component component);
@@ -347,8 +352,10 @@ namespace Ddhdg
 
     const std::unique_ptr<Triangulation<dim>>           triangulation;
     const std::shared_ptr<const Permittivity<dim>>      permittivity;
-    const std::shared_ptr<const ElectronMobility<dim>>  electron_mobility;
-    const std::shared_ptr<const RecombinationTerm<dim>> recombination_term;
+    const std::shared_ptr<const ElectronMobility<dim>>  n_electron_mobility;
+    const std::shared_ptr<const RecombinationTerm<dim>> n_recombination_term;
+    const std::shared_ptr<const ElectronMobility<dim>>  p_electron_mobility;
+    const std::shared_ptr<const RecombinationTerm<dim>> p_recombination_term;
     const std::shared_ptr<const dealii::Function<dim>>  temperature;
     const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
@@ -403,13 +410,17 @@ namespace Ddhdg
     std::vector<Point<dim>>                          face_quadrature_points;
     std::vector<Tensor<2, dim>>                      epsilon_cell;
     std::vector<Tensor<2, dim>>                      epsilon_face;
-    std::vector<Tensor<2, dim>>                      mu_cell;
-    std::vector<Tensor<2, dim>>                      mu_face;
+    std::vector<Tensor<2, dim>>                      mu_n_cell;
+    std::vector<Tensor<2, dim>>                      mu_p_cell;
+    std::vector<Tensor<2, dim>>                      mu_n_face;
+    std::vector<Tensor<2, dim>>                      mu_p_face;
     std::vector<double>                              T_cell;
     std::vector<double>                              T_face;
     std::vector<double>                              doping_cell;
-    std::vector<double>                              r_cell;
-    std::vector<double>                              dr_cell;
+    std::vector<double>                              r_n_cell;
+    std::vector<double>                              r_p_cell;
+    std::map<Component, std::vector<double>>         dr_n_cell;
+    std::map<Component, std::vector<double>>         dr_p_cell;
     std::map<Component, std::vector<double>>         previous_c_cell;
     std::map<Component, std::vector<double>>         previous_c_face;
     std::map<Component, std::vector<Tensor<1, dim>>> previous_f_cell;
@@ -429,6 +440,9 @@ namespace Ddhdg
 
     static std::map<Component, std::vector<Tensor<1, dim>>>
     initialize_tensor_map_on_components(unsigned int n);
+
+    static std::map<Component, std::vector<double>>
+    initialize_double_map_on_n_and_p(unsigned int k);
 
     ScratchData(const FiniteElement<dim> &fe,
                 const FiniteElement<dim> &fe_local,
@@ -452,13 +466,17 @@ namespace Ddhdg
       , face_quadrature_points(face_quadrature_formula.size())
       , epsilon_cell(quadrature_formula.size())
       , epsilon_face(face_quadrature_formula.size())
-      , mu_cell(quadrature_formula.size())
-      , mu_face(face_quadrature_formula.size())
+      , mu_n_cell(quadrature_formula.size())
+      , mu_p_cell(quadrature_formula.size())
+      , mu_n_face(face_quadrature_formula.size())
+      , mu_p_face(face_quadrature_formula.size())
       , T_cell(quadrature_formula.size())
       , T_face(face_quadrature_formula.size())
       , doping_cell(quadrature_formula.size())
-      , r_cell(quadrature_formula.size())
-      , dr_cell(quadrature_formula.size())
+      , r_n_cell(quadrature_formula.size())
+      , r_p_cell(quadrature_formula.size())
+      , dr_n_cell(initialize_double_map_on_n_and_p(quadrature_formula.size()))
+      , dr_p_cell(initialize_double_map_on_n_and_p(quadrature_formula.size()))
       , previous_c_cell(
           initialize_double_map_on_components(quadrature_formula.size()))
       , previous_c_face(
@@ -515,13 +533,17 @@ namespace Ddhdg
       , face_quadrature_points(sd.face_quadrature_points)
       , epsilon_cell(sd.epsilon_cell)
       , epsilon_face(sd.epsilon_face)
-      , mu_cell(sd.mu_cell)
-      , mu_face(sd.mu_face)
+      , mu_n_cell(sd.mu_n_cell)
+      , mu_p_cell(sd.mu_p_cell)
+      , mu_n_face(sd.mu_n_face)
+      , mu_p_face(sd.mu_p_face)
       , T_cell(sd.T_cell)
       , T_face(sd.T_face)
       , doping_cell(sd.doping_cell)
-      , r_cell(sd.r_cell)
-      , dr_cell(sd.dr_cell)
+      , r_n_cell(sd.r_n_cell)
+      , r_p_cell(sd.r_p_cell)
+      , dr_n_cell(sd.dr_n_cell)
+      , dr_p_cell(sd.dr_p_cell)
       , previous_c_cell(sd.previous_c_cell)
       , previous_c_face(sd.previous_c_face)
       , previous_f_cell(sd.previous_f_cell)
@@ -539,12 +561,28 @@ namespace Ddhdg
 
     inline dealii::Tensor<2, dim>
     compute_einstein_diffusion_coefficient(const unsigned int q,
+                                           const Component    cmp,
                                            const bool on_face = true) const
     {
-      if (on_face)
-        return Constants::KB / Constants::Q * this->T_face[q] *
-               this->mu_face[q];
-      return Constants::KB / Constants::Q * this->T_cell[q] * this->mu_cell[q];
+      switch (cmp)
+        {
+          case n:
+            if (on_face)
+              return Constants::KB / Constants::Q * this->T_face[q] *
+                     this->mu_n_face[q];
+            return Constants::KB / Constants::Q * this->T_cell[q] *
+                   this->mu_n_cell[q];
+          case p:
+            if (on_face)
+              return Constants::KB / Constants::Q * this->T_face[q] *
+                     this->mu_p_face[q];
+            return Constants::KB / Constants::Q * this->T_cell[q] *
+                   this->mu_p_cell[q];
+          default:
+            Assert(false, UnknownComponent());
+            break;
+        }
+      return this->mu_n_cell[q];
     }
   };
 
