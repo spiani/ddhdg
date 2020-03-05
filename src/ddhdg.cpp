@@ -2493,18 +2493,24 @@ namespace Ddhdg
     for (int i = 0; i < dim; i++)
       names.emplace_back("electron_displacement");
     names.emplace_back("electron_density");
+    for (int i = 0; i < dim; i++)
+      names.emplace_back("hole_displacement");
+    names.emplace_back("hole_density");
 
     std::vector<std::string> update_names;
+    update_names.reserve(3 * (dim + 1));
     for (const auto &n : names)
-      update_names.emplace_back(n + "_updates");
+      update_names.push_back(n + "_updates");
 
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       component_interpretation(
-        2 * (dim + 1),
+        3 * (dim + 1),
         DataComponentInterpretation::component_is_part_of_vector);
     component_interpretation[dim] =
       DataComponentInterpretation::component_is_scalar;
     component_interpretation[2 * dim + 1] =
+      DataComponentInterpretation::component_is_scalar;
+    component_interpretation[3 * dim + 2] =
       DataComponentInterpretation::component_is_scalar;
 
     data_out.add_data_vector(this->dof_handler_local,
@@ -2524,6 +2530,8 @@ namespace Ddhdg
     data_out.write_vtk(output);
   }
 
+
+
   template <>
   void
   Solver<1>::output_results(const std::string &solution_filename,
@@ -2536,6 +2544,8 @@ namespace Ddhdg
     AssertThrow(false, NoTraceIn1D());
   }
 
+
+
   template <int dim>
   void
   Solver<dim>::output_results(const std::string &solution_filename,
@@ -2546,15 +2556,18 @@ namespace Ddhdg
 
     std::ofstream            face_output(trace_filename);
     DataOutFaces<dim>        data_out_face(false);
-    std::vector<std::string> face_names(2, "electric_potential");
+    std::vector<std::string> face_names(3);
+    face_names[0] = "electric_potential";
     face_names[1] = "electron_density";
+    face_names[2] = "hole_density";
 
     std::vector<std::string> update_face_names;
+    update_face_names.reserve(3);
     for (const auto &n : face_names)
-      update_face_names.emplace_back(n + "_updates");
+      update_face_names.push_back(n + "_updates");
 
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
-      face_component_type(2, DataComponentInterpretation::component_is_scalar);
+      face_component_type(3, DataComponentInterpretation::component_is_scalar);
     data_out_face.add_data_vector(this->dof_handler,
                                   this->current_solution,
                                   face_names,
@@ -2657,7 +2670,9 @@ namespace Ddhdg
 
         // this->output_results("solution_" + std::to_string(cycle) + ".vtk",
         //                      "trace_" + std::to_string(cycle) + ".vtk");
-        this->refine_grid(1);
+
+        if (cycle != n_cycles - 1)
+          this->refine_grid(1);
       }
     error_table->output_table(std::cout);
   }
