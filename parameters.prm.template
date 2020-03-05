@@ -2,43 +2,47 @@ set initial refinements             = 2
 set number of refinement cycles     = 6
 set V degree                        = 3
 set n degree                        = 3
+set p degree                        = 3
 set use iterative linear solver     = false
 set multithreading                  = true
 set V tau                           = 1.
 set n tau                           = 1.
+set p tau                           = 1.
 
 subsection physical quantities
-  set recombination term first order term = 0
-  set recombination term zero order term  = -1./5000*x^2 - 1./2500*y^2 - 3./2500*y - 1./2500
+  set recombination term zero order term  = q / (1 + x^2)
+  set recombination term n coefficient    = 0
+  set recombination term p coefficient    = 0
   set temperature                         = q / kb
   set doping                              = 0.
 end
 
 subsection nonlinear solver
-  set max number of iterations = 100
-  set absolute tolerance       = 1e-12
-  set relative tolerance       = 1e-12
+  set max number of iterations      = 100
+  set absolute tolerance            = 1e-12
+  set relative tolerance            = 1e-12
 end
 
 subsection boundary conditions
     set V boundary function         = x - y
     set n boundary function         = 0
+    set p boundary function         = 0
 end
 
 subsection starting points
     set V starting point            = 0.
     set n starting point            = 0.
+    set p starting point            = 0.
 end
 
 subsection expected solutions
-    set expected V solution             = x - y
-    set expected n solution             = 0
+    set expected V solution         = x - y
+    set expected n solution         = 0
+    set expected p solution         = 0
 end
 
 subsection domain geometry
     set left border                 = -1
     set right border                = 1
 end
-
-
 

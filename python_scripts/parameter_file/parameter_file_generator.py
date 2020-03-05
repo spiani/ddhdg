@@ -30,10 +30,11 @@ class ParameterSubsection:
 class PhysicalQuantitiesParameters(ParameterSubsection):
     subsection_name = "physical quantities"
 
-    def __init__(self, recombination=0., recombination_der=0.,
-                 temperature="q / kb", doping="0."):
+    def __init__(self, recombination="0.", recombination_n_der="0.",
+                 recombination_p_der="0.", temperature="q / kb", doping="0."):
         self._recombination_zero_term = recombination
-        self._recombination_first_term = recombination_der
+        self._recombination_n_coefficient = recombination_n_der
+        self._recombination_p_coefficient = recombination_p_der
         self._temperature = temperature
         self._doping = doping
 
@@ -50,8 +51,12 @@ class PhysicalQuantitiesParameters(ParameterSubsection):
         return self._recombination_zero_term
 
     @property
-    def recombination_term_first_order_term(self):
-        return self._recombination_first_term
+    def recombination_term_n_coefficient(self):
+        return self._recombination_n_coefficient
+
+    @property
+    def recombination_term_p_coefficient(self):
+        return self._recombination_p_coefficient
 
 
 class NonlinearSolverParameters(ParameterSubsection):
@@ -95,9 +100,11 @@ class DomainParameters(ParameterSubsection):
 class BoundaryConditionsParameters(ParameterSubsection):
     subsection_name = "boundary conditions"
 
-    def __init__(self, V_boundary_function="0.", n_boundary_function="0."):
+    def __init__(self, V_boundary_function="0.", n_boundary_function="0.",
+                 p_boundary_function="0."):
         self._V = V_boundary_function
         self._n = n_boundary_function
+        self._p = p_boundary_function
 
     @property
     def V_boundary_function(self):
@@ -107,13 +114,18 @@ class BoundaryConditionsParameters(ParameterSubsection):
     def n_boundary_function(self):
         return self._n
 
+    @property
+    def p_boundary_function(self):
+        return self._p
+
 
 class StartingPointParameters(ParameterSubsection):
     subsection_name = "starting points"
 
-    def __init__(self, starting_V="0.", starting_n="0."):
+    def __init__(self, starting_V="0.", starting_n="0.", starting_p="0."):
         self._V = starting_V
         self._n = starting_n
+        self._p = starting_p
 
     @property
     def V_starting_point(self):
@@ -123,13 +135,19 @@ class StartingPointParameters(ParameterSubsection):
     def n_starting_point(self):
         return self._n
 
+    @property
+    def p_starting_point(self):
+        return self._p
+
 
 class ExpectedSolutionsParameters(ParameterSubsection):
     subsection_name = "expected solutions"
 
-    def __init__(self, expected_V_solution="0.", expected_n_solution="0."):
+    def __init__(self, expected_V_solution="0.", expected_n_solution="0.",
+                 expected_p_solution="0."):
         self._V = expected_V_solution
         self._n = expected_n_solution
+        self._p = expected_p_solution
 
     @property
     def expected_V_solution(self):
@@ -139,11 +157,16 @@ class ExpectedSolutionsParameters(ParameterSubsection):
     def expected_n_solution(self):
         return self._n
 
+    @property
+    def expected_p_solution(self):
+        return self._p
+
 
 class ExecutionParameters:
-    def __init__(self, V_degree=1, n_degree=1, initial_refinements=0,
-                 refinements=2, iterative_linear_solver=False,
-                 multithreading=True, V_tau=1., n_tau=1.,
+    def __init__(self, V_degree=1, n_degree=1, p_degree=1,
+                 initial_refinements=0, refinements=2,
+                 iterative_linear_solver=False, multithreading=True,
+                 V_tau=1., n_tau=1., p_tau=1.,
                  nonlinear_solver_parameters=NonlinearSolverParameters(),
                  physical_quantities_parameters=PhysicalQuantitiesParameters(),
                  domain_parameters=DomainParameters(),
@@ -153,6 +176,7 @@ class ExecutionParameters:
                  ):
         self._V_degree = int(V_degree)
         self._n_degree = int(n_degree)
+        self._p_degree = int(p_degree)
         self._initial_refinements = int(initial_refinements)
         self._refinements = int(refinements)
 
@@ -176,6 +200,7 @@ class ExecutionParameters:
 
         self._V_tau = float(V_tau)
         self._n_tau = float(n_tau)
+        self._p_tau = float(p_tau)
 
         self._subsections = []
 
@@ -206,6 +231,10 @@ class ExecutionParameters:
         return self._n_degree
 
     @property
+    def p_degree(self):
+        return self._p_degree
+
+    @property
     def initial_refinements(self):
         return self._initial_refinements
 
@@ -229,6 +258,10 @@ class ExecutionParameters:
     def n_tau(self):
         return self._n_tau
 
+    @property
+    def p_tau(self):
+        return self._p_tau
+
     def to_prm_file(self):
         multithreading_str = 'true' if self._multithreading else 'false'
         ils_str = 'true' if self.iterative_linear_solver else 'false'
@@ -236,12 +269,14 @@ class ExecutionParameters:
         output = ''
         output += 'set V degree                    = {}\n'.format(self._V_degree)
         output += 'set n degree                    = {}\n'.format(self._n_degree)
+        output += 'set p degree                    = {}\n'.format(self._p_degree)
         output += 'set initial refinements         = {}\n'.format(self._initial_refinements)
         output += 'set number of refinement cycles = {}\n'.format(self._refinements)
         output += 'set use iterative linear solver = {}\n'.format(ils_str)
         output += 'set multithreading              = {}\n'.format(multithreading_str)
-        output += 'set V tau                       = {}\n'.format(self.n_tau)
-        output += 'set n tau                       = {}\n'.format(self.V_tau)
+        output += 'set V tau                       = {}\n'.format(self.V_tau)
+        output += 'set n tau                       = {}\n'.format(self.n_tau)
+        output += 'set p tau                       = {}\n'.format(self.p_tau)
         output += '\n'
 
         for subsection in self._subsections:
@@ -252,8 +287,9 @@ class ExecutionParameters:
 
     def to_dict(self):
         attributes = (
-            "V_degree", "n_degree", "initial_refinements", "refinements",
-            "multithreading", "iterative_linear_solver", "tau"
+            "V_degree", "n_degree", "p_degree", "initial_refinements",
+            "refinements", "multithreading", "iterative_linear_solver", "V_tau",
+            "n_tau", "p_tau"
         )
 
         output = {attrib: getattr(self, attrib) for attrib in attributes}
