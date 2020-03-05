@@ -27,10 +27,14 @@ py::class_<RecombinationTerm<DIM>>(m, "RecombinationTerm");
 py::class_<LinearRecombinationTerm<DIM>, RecombinationTerm<DIM>>(
   m,
   "LinearRecombinationTerm")
-  .def(py::init<const PythonFunction<DIM> &, const PythonFunction<DIM> &>())
+  .def(py::init<const PythonFunction<DIM> &,
+                const PythonFunction<DIM> &,
+                const PythonFunction<DIM> &>())
   .def("get_constant_term", &LinearRecombinationTerm<DIM>::get_constant_term)
-  .def("get_linear_coefficient",
-       &LinearRecombinationTerm<DIM>::get_linear_coefficient);
+  .def("get_n_linear_coefficient",
+       &LinearRecombinationTerm<DIM>::get_n_linear_coefficient)
+  .def("get_p_linear_coefficient",
+       &LinearRecombinationTerm<DIM>::get_p_linear_coefficient);
 
 py::class_<Temperature<DIM>>(m, "Temperature")
   .def(py::init<const std::string &>())
@@ -61,6 +65,8 @@ py::class_<Problem<DIM>>(m, "Problem")
   .def(py::init<Permittivity<DIM> &,
                 ElectronMobility<DIM> &,
                 RecombinationTerm<DIM> &,
+                ElectronMobility<DIM> &,
+                RecombinationTerm<DIM> &,
                 Temperature<DIM> &,
                 Doping<DIM> &,
                 BoundaryConditionHandler<DIM> &>());
@@ -68,24 +74,38 @@ py::class_<Problem<DIM>>(m, "Problem")
 py::class_<Ddhdg::SolverParameters>(m, "SolverParameters")
   .def(py::init<const unsigned int,
                 const unsigned int,
+                const unsigned int,
                 const double,
                 const double,
                 const int,
+                const double,
                 const double,
                 const double,
                 const bool,
                 const bool>(),
        py::arg("v_degree")                 = 1,
        py::arg("n_degree")                 = 1,
+       py::arg("p_degree")                 = 1,
        py::arg("abs_tolerance")            = 1e-9,
        py::arg("rel_tolerance")            = 1e-9,
        py::arg("max_number_of_iterations") = 100,
        py::arg("v_tau")                    = 1.,
        py::arg("n_tau")                    = 1.,
+       py::arg("p_tau")                    = 1.,
        py::arg("iterative_linear_solver")  = false,
        py::arg("multithreading")           = true)
-  .def_readonly("v_degree", &Ddhdg::SolverParameters::V_degree)
-  .def_readonly("n_degree", &Ddhdg::SolverParameters::n_degree)
+  .def_property_readonly("v_degree",
+                         [](const Ddhdg::SolverParameters &a) {
+                           return a.degree.at(Ddhdg::Component::V);
+                         })
+  .def_property_readonly("n_degree",
+                         [](const Ddhdg::SolverParameters &a) {
+                           return a.degree.at(Ddhdg::Component::n);
+                         })
+  .def_property_readonly("p_degree",
+                         [](const Ddhdg::SolverParameters &a) {
+                           return a.degree.at(Ddhdg::Component::p);
+                         })
   .def_readonly("abs_tolerance",
                 &Ddhdg::SolverParameters::nonlinear_solver_absolute_tolerance)
   .def_readonly("rel_tolerance",
@@ -100,8 +120,12 @@ py::class_<Ddhdg::SolverParameters>(m, "SolverParameters")
                          [](const Ddhdg::SolverParameters &a) {
                            return a.tau.at(Ddhdg::Component::V);
                          })
-  .def_property_readonly("n_tau", [](const Ddhdg::SolverParameters &a) {
-    return a.tau.at(Ddhdg::Component::n);
+  .def_property_readonly("n_tau",
+                         [](const Ddhdg::SolverParameters &a) {
+                           return a.tau.at(Ddhdg::Component::n);
+                         })
+  .def_property_readonly("p_tau", [](const Ddhdg::SolverParameters &a) {
+    return a.tau.at(Ddhdg::Component::p);
   });
 
 py::class_<Ddhdg::NonlinearIteratorStatus>(m, "NonlinearIteratorStatus")
@@ -139,11 +163,13 @@ py::class_<Solver<DIM>>(m, "Solver")
   .def("print_convergence_table",
        py::overload_cast<const std::string &,
                          const std::string &,
+                         const std::string &,
                          const unsigned int,
                          const unsigned int>(
          &Solver<DIM>::print_convergence_table),
        py::arg("expected_v_solution"),
        py::arg("expected_n_solution"),
+       py::arg("expected_p_solution"),
        py::arg("n_cycles"),
        py::arg("initial_refinements") = 0)
   .def("print_convergence_table",
@@ -151,13 +177,17 @@ py::class_<Solver<DIM>>(m, "Solver")
                          const std::string &,
                          const std::string &,
                          const std::string &,
+                         const std::string &,
+                         const std::string &,
                          const unsigned int,
                          const unsigned int>(
          &Solver<DIM>::print_convergence_table),
        py::arg("expected_v_solution"),
        py::arg("expected_n_solution"),
+       py::arg("expected_p_solution"),
        py::arg("initial_v_function"),
        py::arg("initial_n_function"),
+       py::arg("initial_p_function"),
        py::arg("n_cycles"),
        py::arg("initial_refinements") = 0);
 #endif

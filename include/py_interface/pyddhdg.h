@@ -97,20 +97,25 @@ namespace pyddhdg
   {
   public:
     LinearRecombinationTerm(const PythonFunction<dim> &zero_term,
-                            const PythonFunction<dim> &first_term);
+                            const PythonFunction<dim> &n_linear_coefficient,
+                            const PythonFunction<dim> &p_linear_coefficient);
 
-    virtual std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
-    generate_ddhdg_recombination_term();
+    std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+    generate_ddhdg_recombination_term() override;
 
     [[nodiscard]] std::string
     get_constant_term() const;
 
     [[nodiscard]] std::string
-    get_linear_coefficient() const;
+    get_n_linear_coefficient() const;
+
+    [[nodiscard]] std::string
+    get_p_linear_coefficient() const;
 
   private:
     const PythonFunction<dim> zero_term;
-    const PythonFunction<dim> first_term;
+    const PythonFunction<dim> n_linear_coefficient;
+    const PythonFunction<dim> p_linear_coefficient;
   };
 
   template <int dim>
@@ -149,8 +154,10 @@ namespace pyddhdg
   {
   public:
     Problem(Permittivity<dim> &            permittivity,
-            ElectronMobility<dim> &        electron_mobility,
-            RecombinationTerm<dim> &       recombination_term,
+            ElectronMobility<dim> &        n_electron_mobility,
+            RecombinationTerm<dim> &       n_recombination_term,
+            ElectronMobility<dim> &        p_electron_mobility,
+            RecombinationTerm<dim> &       p_recombination_term,
             Temperature<dim> &             temperature,
             Doping<dim> &                  doping,
             BoundaryConditionHandler<dim> &bc_handler);
@@ -183,6 +190,7 @@ namespace pyddhdg
     void
     set_current_solution(const std::string &v_f,
                          const std::string &n_f,
+                         const std::string &p_f,
                          bool               use_projection = false);
 
     void
@@ -215,14 +223,17 @@ namespace pyddhdg
     void
     print_convergence_table(const std::string &expected_V_solution,
                             const std::string &expected_n_solution,
+                            const std::string &expected_p_solution,
                             unsigned int       n_cycles,
                             unsigned int       initial_refinements = 0);
 
     void
     print_convergence_table(const std::string &expected_V_solution,
                             const std::string &expected_n_solution,
+                            const std::string &expected_p_solution,
                             const std::string &initial_V_function,
                             const std::string &initial_n_function,
+                            const std::string &initial_p_function,
                             unsigned int       n_cycles,
                             unsigned int       initial_refinements = 0);
 

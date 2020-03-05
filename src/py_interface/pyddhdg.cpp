@@ -82,9 +82,11 @@ namespace pyddhdg
   template <int dim>
   LinearRecombinationTerm<dim>::LinearRecombinationTerm(
     const PythonFunction<dim> &zero_term,
-    const PythonFunction<dim> &first_term)
+    const PythonFunction<dim> &n_linear_coefficient,
+    const PythonFunction<dim> &p_linear_coefficient)
     : zero_term(zero_term.get_expression())
-    , first_term(first_term.get_expression())
+    , n_linear_coefficient(n_linear_coefficient.get_expression())
+    , p_linear_coefficient(p_linear_coefficient.get_expression())
   {}
 
 
@@ -94,7 +96,9 @@ namespace pyddhdg
   LinearRecombinationTerm<dim>::generate_ddhdg_recombination_term()
   {
     return std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(
-      this->zero_term.get_expression(), this->first_term.get_expression());
+      this->zero_term.get_expression(),
+      this->n_linear_coefficient.get_expression(),
+      this->p_linear_coefficient.get_expression());
   }
 
 
@@ -107,11 +111,21 @@ namespace pyddhdg
   }
 
 
+
   template <int dim>
   std::string
-  LinearRecombinationTerm<dim>::get_linear_coefficient() const
+  LinearRecombinationTerm<dim>::get_n_linear_coefficient() const
   {
-    return this->first_term.get_expression();
+    return this->p_linear_coefficient.get_expression();
+  }
+
+
+
+  template <int dim>
+  std::string
+  LinearRecombinationTerm<dim>::get_p_linear_coefficient() const
+  {
+    return this->n_linear_coefficient.get_expression();
   }
 
 
@@ -184,16 +198,20 @@ namespace pyddhdg
 
   template <int dim>
   Problem<dim>::Problem(Permittivity<dim> &            permittivity,
-                        ElectronMobility<dim> &        electron_mobility,
-                        RecombinationTerm<dim> &       recombination_term,
+                        ElectronMobility<dim> &        n_electron_mobility,
+                        RecombinationTerm<dim> &       n_recombination_term,
+                        ElectronMobility<dim> &        p_electron_mobility,
+                        RecombinationTerm<dim> &       p_recombination_term,
                         Temperature<dim> &             temperature,
                         Doping<dim> &                  doping,
                         BoundaryConditionHandler<dim> &bc_handler)
     : ddhdg_problem(std::make_shared<Ddhdg::Problem<dim>>(
         generate_triangulation(),
         permittivity.generate_ddhdg_permittivity(),
-        electron_mobility.generate_ddhdg_electron_mobility(),
-        recombination_term.generate_ddhdg_recombination_term(),
+        n_electron_mobility.generate_ddhdg_electron_mobility(),
+        n_recombination_term.generate_ddhdg_recombination_term(),
+        p_electron_mobility.generate_ddhdg_electron_mobility(),
+        p_recombination_term.generate_ddhdg_recombination_term(),
         temperature.get_dealii_function(),
         doping.get_dealii_function(),
         bc_handler.get_ddhdg_boundary_condition_handler()))
@@ -269,11 +287,14 @@ namespace pyddhdg
   void
   Solver<dim>::set_current_solution(const std::string &v_f,
                                     const std::string &n_f,
+                                    const std::string &p_f,
                                     const bool         use_projection)
   {
     std::shared_ptr<dealii::FunctionParser<dim>> v_function =
       std::make_shared<dealii::FunctionParser<dim>>();
     std::shared_ptr<dealii::FunctionParser<dim>> n_function =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    std::shared_ptr<dealii::FunctionParser<dim>> p_function =
       std::make_shared<dealii::FunctionParser<dim>>();
     v_function->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
@@ -283,8 +304,13 @@ namespace pyddhdg
       dealii::FunctionParser<dim>::default_variable_names(),
       n_f,
       Ddhdg::Constants::constants);
+    p_function->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      p_f,
+      Ddhdg::Constants::constants);
     this->ddhdg_solver->set_current_solution(v_function,
                                              n_function,
+                                             p_function,
                                              use_projection);
   }
 
@@ -383,12 +409,15 @@ namespace pyddhdg
   void
   Solver<dim>::print_convergence_table(const std::string &expected_V_solution,
                                        const std::string &expected_n_solution,
+                                       const std::string &expected_p_solution,
                                        const unsigned int n_cycles,
                                        const unsigned int initial_refinements)
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_V_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>();
     std::shared_ptr<dealii::FunctionParser<dim>> expected_n_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_p_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>();
     expected_V_solution_f->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
@@ -398,10 +427,15 @@ namespace pyddhdg
       dealii::FunctionParser<dim>::default_variable_names(),
       expected_n_solution,
       Ddhdg::Constants::constants);
+    expected_p_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_p_solution,
+      Ddhdg::Constants::constants);
     this->ddhdg_solver->print_convergence_table(
       std::make_shared<Ddhdg::ConvergenceTable>(dim),
       expected_V_solution_f,
       expected_n_solution_f,
+      expected_p_solution_f,
       n_cycles,
       initial_refinements);
   }
@@ -412,8 +446,10 @@ namespace pyddhdg
   void
   Solver<dim>::print_convergence_table(const std::string &expected_V_solution,
                                        const std::string &expected_n_solution,
+                                       const std::string &expected_p_solution,
                                        const std::string &initial_V_function,
                                        const std::string &initial_n_function,
+                                       const std::string &initial_p_function,
                                        const unsigned int n_cycles,
                                        const unsigned int initial_refinements)
   {
@@ -421,9 +457,13 @@ namespace pyddhdg
       std::make_shared<dealii::FunctionParser<dim>>();
     std::shared_ptr<dealii::FunctionParser<dim>> expected_n_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>();
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_p_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
     std::shared_ptr<dealii::FunctionParser<dim>> initial_V_function_f =
       std::make_shared<dealii::FunctionParser<dim>>();
     std::shared_ptr<dealii::FunctionParser<dim>> initial_n_function_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    std::shared_ptr<dealii::FunctionParser<dim>> initial_p_function_f =
       std::make_shared<dealii::FunctionParser<dim>>();
     expected_V_solution_f->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
@@ -433,6 +473,10 @@ namespace pyddhdg
       dealii::FunctionParser<dim>::default_variable_names(),
       expected_n_solution,
       Ddhdg::Constants::constants);
+    expected_p_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_p_solution,
+      Ddhdg::Constants::constants);
     initial_V_function_f->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
       initial_V_function,
@@ -441,12 +485,18 @@ namespace pyddhdg
       dealii::FunctionParser<dim>::default_variable_names(),
       initial_n_function,
       Ddhdg::Constants::constants);
+    initial_p_function_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      initial_p_function,
+      Ddhdg::Constants::constants);
     this->ddhdg_solver->print_convergence_table(
       std::make_shared<Ddhdg::ConvergenceTable>(dim),
       expected_V_solution_f,
       expected_n_solution_f,
+      expected_p_solution_f,
       initial_V_function_f,
       initial_n_function_f,
+      initial_p_function_f,
       n_cycles,
       initial_refinements);
   }
