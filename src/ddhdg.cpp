@@ -1070,13 +1070,11 @@ namespace Ddhdg
           scratch.mu_p_cell[q] * E0[q];
 
         const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q,
-                                                         Component::n,
-                                                         false);
+          scratch.template compute_einstein_diffusion_coefficient<Component::n,
+                                                                  false>(q);
         const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q,
-                                                         Component::p,
-                                                         false);
+          scratch.template compute_einstein_diffusion_coefficient<Component::p,
+                                                                  false>(q);
 
         const double dr_n_n = scratch.dr_n_cell.at(Component::n)[q];
         const double dr_n_p = scratch.dr_n_cell.at(Component::p)[q];
@@ -1144,13 +1142,11 @@ namespace Ddhdg
         const double JxW = scratch.fe_values_local.JxW(q);
 
         const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q,
-                                                         Component::n,
-                                                         false);
+          scratch.template compute_einstein_diffusion_coefficient<Component::n,
+                                                                  false>(q);
         const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q,
-                                                         Component::p,
-                                                         false);
+          scratch.template compute_einstein_diffusion_coefficient<Component::p,
+                                                                  false>(q);
 
         const auto Jn = n0[q] * (scratch.mu_n_cell[q] * E0[q]) -
                         (n_einstein_diffusion_coefficient * Wn0[q]);
@@ -1329,9 +1325,11 @@ namespace Ddhdg
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
         const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q, Component::n);
+          scratch.template compute_einstein_diffusion_coefficient<Component::n>(
+            q);
         const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q, Component::p);
+          scratch.template compute_einstein_diffusion_coefficient<Component::p>(
+            q);
 
         const double V_tau_stabilized =
           scratch.epsilon_face[q] * normal * normal * V_tau;
@@ -1405,9 +1403,11 @@ namespace Ddhdg
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
         const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q, Component::n);
+          scratch.template compute_einstein_diffusion_coefficient<Component::n>(
+            q);
         const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q, Component::p);
+          scratch.template compute_einstein_diffusion_coefficient<Component::p>(
+            q);
 
         const double V_tau_stabilized =
           scratch.epsilon_face[q] * normal * normal * V_tau;
@@ -1487,19 +1487,23 @@ namespace Ddhdg
           {
             mu_n_times_previous_E = scratch.mu_n_face[q] * E[q];
             n_einstein_diffusion_coefficient =
-              scratch.compute_einstein_diffusion_coefficient(q, Component::n);
+              scratch
+                .template compute_einstein_diffusion_coefficient<Component::n>(
+                  q);
           }
         if (c == Component::p)
           {
             mu_p_times_previous_E = scratch.mu_p_face[q] * E[q];
             p_einstein_diffusion_coefficient =
-              scratch.compute_einstein_diffusion_coefficient(q, Component::p);
+              scratch
+                .template compute_einstein_diffusion_coefficient<Component::p>(
+                  q);
           }
 
         const dealii::Tensor<2, dim> stabilizing_tensor =
           (c == Component::V) ?
             scratch.epsilon_face[q] :
-            scratch.compute_einstein_diffusion_coefficient(q, c);
+            scratch.template compute_einstein_diffusion_coefficient<c>(q);
 
         const double tau_stabilized =
           stabilizing_tensor * normal * normal * tau;
@@ -1604,20 +1608,24 @@ namespace Ddhdg
             mu_n_times_previous_E_times_normal =
               scratch.mu_n_face[q] * E0[q] * normal;
             n_einstein_diffusion_coefficient =
-              scratch.compute_einstein_diffusion_coefficient(q, Component::n);
+              scratch
+                .template compute_einstein_diffusion_coefficient<Component::n>(
+                  q);
           }
         if (c == Component::p)
           {
             mu_p_times_previous_E_times_normal =
               scratch.mu_p_face[q] * E0[q] * normal;
             p_einstein_diffusion_coefficient =
-              scratch.compute_einstein_diffusion_coefficient(q, Component::p);
+              scratch
+                .template compute_einstein_diffusion_coefficient<Component::p>(
+                  q);
           }
 
         const dealii::Tensor<2, dim> stabilizing_tensor =
           (c == Component::V) ?
             scratch.epsilon_face[q] :
-            scratch.compute_einstein_diffusion_coefficient(q, c);
+            scratch.template compute_einstein_diffusion_coefficient<c>(q);
         const double tau_stabilized =
           stabilizing_tensor * normal * normal * tau;
 
@@ -1686,7 +1694,7 @@ namespace Ddhdg
         const dealii::Tensor<2, dim> stabilizing_tensor =
           (c == Component::V) ?
             scratch.epsilon_face[q] :
-            scratch.compute_einstein_diffusion_coefficient(q, c);
+            scratch.template compute_einstein_diffusion_coefficient<c>(q);
         const double tau_stabilized =
           stabilizing_tensor * normal * normal * tau;
 
@@ -1739,7 +1747,7 @@ namespace Ddhdg
         const dealii::Tensor<2, dim> stabilizing_tensor =
           (c == Component::V) ?
             scratch.epsilon_face[q] :
-            scratch.compute_einstein_diffusion_coefficient(q, c);
+            scratch.template compute_einstein_diffusion_coefficient<c>(q);
         const double tau_stabilized =
           stabilizing_tensor * normal * normal * tau;
 
@@ -1883,9 +1891,11 @@ namespace Ddhdg
         const dealii::Tensor<1, dim> mu_p_times_previous_E =
           scratch.mu_p_face[q] * E0[q];
         const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q, Component::n);
+          scratch.template compute_einstein_diffusion_coefficient<Component::n>(
+            q);
         const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q, Component::p);
+          scratch.template compute_einstein_diffusion_coefficient<Component::p>(
+            q);
 
         const double V_tau_stabilized =
           scratch.epsilon_face[q] * normal * normal * V_tau;
@@ -1963,9 +1973,11 @@ namespace Ddhdg
           (scratch.epsilon_face[q] * E0[q]) * normal;
 
         const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q, Component::n);
+          scratch.template compute_einstein_diffusion_coefficient<Component::n>(
+            q);
         const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.compute_einstein_diffusion_coefficient(q, Component::p);
+          scratch.template compute_einstein_diffusion_coefficient<Component::p>(
+            q);
 
         const double Jn_flux = (n0[q] * (scratch.mu_n_face[q] * E0[q]) -
                                 (n_einstein_diffusion_coefficient * Wn0[q])) *
@@ -2033,7 +2045,11 @@ namespace Ddhdg
             const dealii::Tensor<2, dim> stabilizing_tensor =
               (c == Component::V) ?
                 scratch.epsilon_face[q] :
-                scratch.compute_einstein_diffusion_coefficient(q, c);
+                (c == Component::n) ?
+                scratch.template compute_einstein_diffusion_coefficient<
+                  Component::n>(q) :
+                scratch.template compute_einstein_diffusion_coefficient<
+                  Component::p>(q);
             const double tau_stabilized =
               stabilizing_tensor * normal * normal * tau;
 

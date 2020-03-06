@@ -559,10 +559,10 @@ namespace Ddhdg
       , fe_support_on_face(sd.fe_support_on_face)
     {}
 
+
+    template <Component cmp, bool on_face = true>
     inline dealii::Tensor<2, dim>
-    compute_einstein_diffusion_coefficient(const unsigned int q,
-                                           const Component    cmp,
-                                           const bool on_face = true) const
+    compute_einstein_diffusion_coefficient(const unsigned int q) const
     {
       switch (cmp)
         {
