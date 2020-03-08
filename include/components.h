@@ -7,13 +7,33 @@ namespace Ddhdg
 
   enum Component
   {
-    V,
-    n,
-    p
+    V = 0,
+    n = 1,
+    p = 2,
   };
 
   // This is useful for iterating over the previous enumerator
-  static const Component AllComponents[] = {V, n, p};
+  inline std::set<Component> all_components()
+  {
+    std::set<Component> component_set{V, n, p};
+    return component_set;
+  }
+
+  inline std::string get_component_name(const Component c){
+    switch (c)
+      {
+        case V:
+          return "electric_potential";
+        case n:
+          return "electron_density";
+        case p:
+          return "hole_density";
+        default:
+        Assert(false, UnknownComponent());
+        break;
+      }
+      return "UnknownComponent";
+  }
 
   enum Displacement
   {
@@ -21,6 +41,22 @@ namespace Ddhdg
     Wn,
     Wp
   };
+
+  inline std::string get_displacement_name(const Displacement d){
+    switch (d)
+      {
+        case E:
+          return "electric_field";
+        case Wn:
+          return "electron_displacement";
+        case Wp:
+          return "hole_displacement";
+        default:
+        Assert(false, UnknownDisplacement());
+        break;
+      }
+    return "UnknownDisplacement";
+  }
 
   inline Displacement
   component2displacement(Component c)

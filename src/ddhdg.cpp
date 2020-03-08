@@ -47,7 +47,7 @@ namespace Ddhdg
     const unsigned int n)
   {
     std::map<Component, std::vector<double>> m;
-    for (const auto c : Ddhdg::AllComponents)
+    for (const auto c : Ddhdg::all_components())
       {
         m.insert({c, std::vector<double>(n)});
       }
@@ -62,7 +62,7 @@ namespace Ddhdg
     const unsigned int n)
   {
     std::map<Component, std::vector<Tensor<1, dim>>> m;
-    for (const auto c : Ddhdg::AllComponents)
+    for (const auto c : Ddhdg::all_components())
       {
         m.insert({c, std::vector<Tensor<1, dim>>(n)});
       }
@@ -901,7 +901,7 @@ namespace Ddhdg
 
     // Copy the values of the previous solution regarding the previous cell in
     // the scratch
-    for (const auto c : Ddhdg::AllComponents)
+    for (const auto c : Ddhdg::all_components())
       {
         const Displacement               d = component2displacement(c);
         const FEValuesExtractors::Scalar c_extractor =
@@ -1205,7 +1205,7 @@ namespace Ddhdg
       scratch.face_quadrature_points[q] =
         scratch.fe_face_values.quadrature_point(q);
 
-    for (const auto c : Ddhdg::AllComponents)
+    for (const auto c : Ddhdg::all_components())
       {
         const Displacement d = component2displacement(c);
 
@@ -1245,7 +1245,7 @@ namespace Ddhdg
     const unsigned int               face,
     const unsigned int               q)
   {
-    for (const auto c : Ddhdg::AllComponents)
+    for (const auto c : Ddhdg::all_components())
       {
         const Displacement               d = component2displacement(c);
         const FEValuesExtractors::Scalar c_extractor =
@@ -1276,7 +1276,7 @@ namespace Ddhdg
     const unsigned int               face,
     const unsigned int               q)
   {
-    for (const auto c : Ddhdg::AllComponents)
+    for (const auto c : Ddhdg::all_components())
       {
         const FEValuesExtractors::Scalar extractor =
           this->get_trace_component_extractor(c);
@@ -2033,7 +2033,7 @@ namespace Ddhdg
         const double         JxW    = scratch.fe_face_values.JxW(q);
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
-        for (const auto c : Ddhdg::AllComponents)
+        for (const auto c : Ddhdg::all_components())
           {
             auto &f                    = scratch.f.at(c);
             auto &c_                   = scratch.c.at(c);
@@ -2121,7 +2121,7 @@ namespace Ddhdg
         // cell
         if (task_data.trace_reconstruct)
           {
-            for (const auto c : Ddhdg::AllComponents)
+            for (const auto c : Ddhdg::all_components())
               {
                 const FEValuesExtractors::Scalar extractor =
                   this->get_trace_component_extractor(c);
@@ -2137,7 +2137,7 @@ namespace Ddhdg
         std::map<Ddhdg::Component, bool> has_neumann_conditions;
 
         // Now we populate the previous maps
-        for (const auto c : Ddhdg::AllComponents)
+        for (const auto c : Ddhdg::all_components())
           {
             has_dirichlet_conditions.insert(
               {c,
@@ -2504,30 +2504,33 @@ namespace Ddhdg
     // flags.write_higher_order_cells = true;
     // data_out.set_flags(flags);
 
-    std::vector<std::string> names(dim, "electric_field");
-    names.emplace_back("electric_potential");
-    for (int i = 0; i < dim; i++)
-      names.emplace_back("electron_displacement");
-    names.emplace_back("electron_density");
-    for (int i = 0; i < dim; i++)
-      names.emplace_back("hole_displacement");
-    names.emplace_back("hole_density");
+    const std::set<Component> components      = all_components();
+    const unsigned int        n_of_components = components.size();
 
-    std::vector<std::string> update_names;
-    update_names.reserve(3 * (dim + 1));
+    std::vector<std::string> names(n_of_components * (dim + 1));
+    for (const Component c : components)
+      {
+        const Displacement d      = component2displacement(c);
+        const std::string  c_name = get_component_name(c);
+        const std::string  d_name = get_displacement_name(d);
+        for (unsigned int i = 0; i < dim; i++)
+          {
+            names.emplace_back(d_name);
+          }
+        names.emplace_back(c_name);
+      }
+
+    std::vector<std::string> update_names(n_of_components * (dim + 1));
     for (const auto &n : names)
       update_names.push_back(n + "_updates");
 
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       component_interpretation(
-        3 * (dim + 1),
+        n_of_components * (dim + 1),
         DataComponentInterpretation::component_is_part_of_vector);
-    component_interpretation[dim] =
-      DataComponentInterpretation::component_is_scalar;
-    component_interpretation[2 * dim + 1] =
-      DataComponentInterpretation::component_is_scalar;
-    component_interpretation[3 * dim + 2] =
-      DataComponentInterpretation::component_is_scalar;
+    for (unsigned int i = 0; i < n_of_components; i++)
+      component_interpretation[(dim + 1) * i + dim] =
+        DataComponentInterpretation::component_is_scalar;
 
     data_out.add_data_vector(this->dof_handler_local,
                              this->current_solution_local,
@@ -2570,20 +2573,24 @@ namespace Ddhdg
   {
     output_results(solution_filename, save_update);
 
-    std::ofstream            face_output(trace_filename);
-    DataOutFaces<dim>        data_out_face(false);
-    std::vector<std::string> face_names(3);
-    face_names[0] = "electric_potential";
-    face_names[1] = "electron_density";
-    face_names[2] = "hole_density";
+    std::ofstream     face_output(trace_filename);
+    DataOutFaces<dim> data_out_face(false);
+
+    const std::set<Component> components      = all_components();
+    const unsigned int        n_of_components = components.size();
+
+    std::vector<std::string> face_names(n_of_components);
+    for (const Component c : components)
+      face_names.emplace_back(get_component_name(c));
 
     std::vector<std::string> update_face_names;
-    update_face_names.reserve(3);
+    update_face_names.reserve(n_of_components);
     for (const auto &n : face_names)
       update_face_names.push_back(n + "_updates");
 
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
-      face_component_type(3, DataComponentInterpretation::component_is_scalar);
+      face_component_type(n_of_components,
+                          DataComponentInterpretation::component_is_scalar);
     data_out_face.add_data_vector(this->dof_handler,
                                   this->current_solution,
                                   face_names,
