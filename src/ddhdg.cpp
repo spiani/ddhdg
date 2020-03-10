@@ -96,9 +96,9 @@ namespace Ddhdg
     if (local)
       for (std::pair<Component, unsigned int> c_degree : degree)
         {
-          fe_systems.push_back(new FE_DGQ<dim>(c_degree.second));
-          fe_systems.push_back(new FE_DGQ<dim>(c_degree.second));
-          multiplicities.push_back(dim);
+          const unsigned int deg = c_degree.second;
+          fe_systems.push_back(
+            new FESystem<dim>(FE_DGQ<dim>(deg), dim, FE_DGQ<dim>(deg), 1));
           multiplicities.push_back(1);
         }
     else
