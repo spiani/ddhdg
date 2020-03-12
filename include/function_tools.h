@@ -9,17 +9,20 @@ namespace Ddhdg
 {
   DeclExceptionMsg(FunctionMustBeScalar,
                    "The submitted function must be scalar");
+  DeclExceptionMsg(
+    FunctionMustHaveDimComponents,
+    "The number of components of the submitted function must be equal to the "
+    "dimension of the domain");
 
   template <int dim>
   using component_map =
-  std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>;
+    std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>;
 
   template <int dim>
   class FunctionByComponents : public dealii::Function<dim>
   {
   public:
-    FunctionByComponents(
-      int n_of_components, component_map<dim> components);
+    FunctionByComponents(int n_of_components, component_map<dim> components);
 
     double
     value(const dealii::Point<dim> &p,
@@ -48,7 +51,7 @@ namespace Ddhdg
                   unsigned int component = 0) const override;
 
   private:
-      component_map<dim> components;
+    component_map<dim> components;
   };
 
 

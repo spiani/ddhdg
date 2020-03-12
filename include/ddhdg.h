@@ -136,7 +136,8 @@ namespace Ddhdg
 
     void
     set_component(Component                                    c,
-                  std::shared_ptr<const dealii::Function<dim>> c_function);
+                  std::shared_ptr<const dealii::Function<dim>> c_function,
+                  bool use_projection = false);
 
     void
     set_current_solution(
@@ -166,7 +167,29 @@ namespace Ddhdg
       dealii::VectorTools::NormType                norm) const;
 
     double
+    estimate_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d,
+      dealii::VectorTools::NormType                norm) const;
+
+    double
+    estimate_error_on_trace(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      dealii::VectorTools::NormType                norm) const;
+
+    double
     estimate_l2_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c) const;
+
+    double
+    estimate_l2_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d) const;
+
+    double
+    estimate_l2_error_on_trace(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const;
 
@@ -176,7 +199,22 @@ namespace Ddhdg
       Component                                    c) const;
 
     double
+    estimate_h1_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d) const;
+
+    double
     estimate_linfty_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c) const;
+
+    double
+    estimate_linfty_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d) const;
+
+    double
+    estimate_linfty_error_on_trace(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const;
 
@@ -220,37 +258,37 @@ namespace Ddhdg
                        bool                                     local = true);
 
     dealii::ComponentMask
-    get_component_mask(Component component);
+    get_component_mask(Component component) const;
 
     dealii::ComponentMask
-    get_component_mask(Displacement displacement);
+    get_component_mask(Displacement displacement) const;
 
     dealii::ComponentMask
-    get_trace_component_mask(Component component);
+    get_trace_component_mask(Component component) const;
 
     dealii::FEValuesExtractors::Scalar
-    get_component_extractor(Component component);
+    get_component_extractor(Component component) const;
 
     dealii::FEValuesExtractors::Vector
-    get_displacement_extractor(Displacement displacement);
+    get_displacement_extractor(Displacement displacement) const;
 
     dealii::FEValuesExtractors::Scalar
-    get_trace_component_extractor(Component component);
+    get_trace_component_extractor(Component component) const;
 
     std::shared_ptr<dealii::Function<dim>>
     extend_function_on_all_components(
       std::shared_ptr<const dealii::Function<dim>> f,
-      Component                                    c);
+      Component                                    c) const;
 
     std::shared_ptr<dealii::Function<dim>>
     extend_function_on_all_components(
       std::shared_ptr<const dealii::Function<dim>> f,
-      Displacement                                 d);
+      Displacement                                 d) const;
 
     std::shared_ptr<dealii::Function<dim>>
     extend_function_on_all_trace_components(
       std::shared_ptr<const dealii::Function<dim>> f,
-      Component                                    c);
+      Component                                    c) const;
 
     void
     setup_system();
