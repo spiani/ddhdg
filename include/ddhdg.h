@@ -376,6 +376,25 @@ namespace Ddhdg
                       const NeumannBoundaryCondition<dim> &nbc,
                       unsigned int                         face);
 
+    template <Component c>
+    inline void
+    assemble_flux_conditions(ScratchData &            scratch,
+                             PerTaskData &            task_data,
+                             bool                     has_dirichlet_conditions,
+                             bool                     has_neumann_conditions,
+                             const types::boundary_id face_boundary_id,
+                             unsigned int             face);
+
+    inline void
+    assemble_flux_conditions_wrapper(
+      Component                               c,
+      ScratchData &                           scratch,
+      PerTaskData &                           task_data,
+      const std::map<Ddhdg::Component, bool> &has_dirichlet_conditions,
+      const std::map<Ddhdg::Component, bool> &has_neumann_conditions,
+      const types::boundary_id                face_boundary_id,
+      unsigned int                            face);
+
     inline void
     add_border_products_to_ll_matrix(ScratchData &scratch, unsigned int face);
 

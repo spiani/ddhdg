@@ -2068,6 +2068,90 @@ namespace Ddhdg
 
 
   template <int dim>
+  template <Component c>
+  void
+  Solver<dim>::assemble_flux_conditions(
+    ScratchData &            scratch,
+    PerTaskData &            task_data,
+    const bool               has_dirichlet_conditions,
+    const bool               has_neumann_conditions,
+    const types::boundary_id face_boundary_id,
+    const unsigned int       face)
+  {
+    if (has_dirichlet_conditions)
+      {
+        const auto dbc =
+          this->boundary_handler->get_dirichlet_conditions_for_id(
+            face_boundary_id, c);
+        this->apply_dbc_on_face<c>(scratch, task_data, dbc, face);
+      }
+    else
+      {
+        this->assemble_fl_matrix<c>(scratch, face);
+        this->add_fl_matrix_terms_to_f_rhs<c>(scratch, task_data, face);
+        this->assemble_cell_matrix<c>(scratch, task_data, face);
+        this->add_cell_matrix_terms_to_f_rhs<c>(scratch, task_data, face);
+        if (has_neumann_conditions)
+          {
+            const auto nbc =
+              this->boundary_handler->get_neumann_conditions_for_id(
+                face_boundary_id, c);
+            this->apply_nbc_on_face<c>(scratch, task_data, nbc, face);
+          }
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::assemble_flux_conditions_wrapper(
+    const Component                         c,
+    ScratchData &                           scratch,
+    PerTaskData &                           task_data,
+    const std::map<Ddhdg::Component, bool> &has_dirichlet_conditions,
+    const std::map<Ddhdg::Component, bool> &has_neumann_conditions,
+    const types::boundary_id                face_boundary_id,
+    const unsigned int                      face)
+  {
+    switch (c)
+      {
+        case Component::V:
+          assemble_flux_conditions<Component::V>(
+            scratch,
+            task_data,
+            has_dirichlet_conditions.at(Component::V),
+            has_neumann_conditions.at(Component::V),
+            face_boundary_id,
+            face);
+          break;
+        case Component::n:
+          assemble_flux_conditions<Component::n>(
+            scratch,
+            task_data,
+            has_dirichlet_conditions.at(Component::n),
+            has_neumann_conditions.at(Component::n),
+            face_boundary_id,
+            face);
+          break;
+        case Component::p:
+          assemble_flux_conditions<Component::p>(
+            scratch,
+            task_data,
+            has_dirichlet_conditions.at(Component::p),
+            has_neumann_conditions.at(Component::p),
+            face_boundary_id,
+            face);
+          break;
+        default:
+          Assert(false, UnknownComponent());
+          break;
+      }
+  }
+
+
+
+  template <int dim>
   void
   Solver<dim>::assemble_system_one_cell(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
@@ -2130,7 +2214,8 @@ namespace Ddhdg
 
         // Now I create some maps to store, for each component, if there is a
         // boundary condition for it
-        const auto face_boundary_id = cell->face(face)->boundary_id();
+        const types::boundary_id face_boundary_id =
+          cell->face(face)->boundary_id();
         std::map<Ddhdg::Component, bool> has_dirichlet_conditions;
         std::map<Ddhdg::Component, bool> has_neumann_conditions;
 
@@ -2171,70 +2256,16 @@ namespace Ddhdg
         // calling the add_cell_products_to_ll_matrix method)
         if (!task_data.trace_reconstruct)
           {
-            assemble_lf_matrix(scratch, face);
-
-            if (has_dirichlet_conditions[V])
+            this->assemble_lf_matrix(scratch, face);
+            for (const Component c : all_components())
               {
-                const auto dbc =
-                  boundary_handler->get_dirichlet_conditions_for_id(
-                    face_boundary_id, V);
-                apply_dbc_on_face<V>(scratch, task_data, dbc, face);
-              }
-            else
-              {
-                assemble_fl_matrix<V>(scratch, face);
-                add_fl_matrix_terms_to_f_rhs<V>(scratch, task_data, face);
-                assemble_cell_matrix<V>(scratch, task_data, face);
-                add_cell_matrix_terms_to_f_rhs<V>(scratch, task_data, face);
-                if (has_neumann_conditions[V])
-                  {
-                    const auto nbc =
-                      boundary_handler->get_neumann_conditions_for_id(
-                        face_boundary_id, V);
-                    this->apply_nbc_on_face<V>(scratch, task_data, nbc, face);
-                  }
-              }
-            if (has_dirichlet_conditions[n])
-              {
-                const auto dbc =
-                  boundary_handler->get_dirichlet_conditions_for_id(
-                    face_boundary_id, n);
-                apply_dbc_on_face<n>(scratch, task_data, dbc, face);
-              }
-            else
-              {
-                assemble_fl_matrix<n>(scratch, face);
-                add_fl_matrix_terms_to_f_rhs<n>(scratch, task_data, face);
-                assemble_cell_matrix<n>(scratch, task_data, face);
-                add_cell_matrix_terms_to_f_rhs<n>(scratch, task_data, face);
-                if (has_neumann_conditions[n])
-                  {
-                    const auto nbc =
-                      boundary_handler->get_neumann_conditions_for_id(
-                        face_boundary_id, n);
-                    this->apply_nbc_on_face<n>(scratch, task_data, nbc, face);
-                  }
-              }
-            if (has_dirichlet_conditions[p])
-              {
-                const auto dbc =
-                  boundary_handler->get_dirichlet_conditions_for_id(
-                    face_boundary_id, p);
-                apply_dbc_on_face<p>(scratch, task_data, dbc, face);
-              }
-            else
-              {
-                assemble_fl_matrix<p>(scratch, face);
-                add_fl_matrix_terms_to_f_rhs<p>(scratch, task_data, face);
-                assemble_cell_matrix<p>(scratch, task_data, face);
-                add_cell_matrix_terms_to_f_rhs<p>(scratch, task_data, face);
-                if (has_neumann_conditions[p])
-                  {
-                    const auto nbc =
-                      boundary_handler->get_neumann_conditions_for_id(
-                        face_boundary_id, p);
-                    this->apply_nbc_on_face<p>(scratch, task_data, nbc, face);
-                  }
+                this->assemble_flux_conditions_wrapper(c,
+                                                       scratch,
+                                                       task_data,
+                                                       has_dirichlet_conditions,
+                                                       has_neumann_conditions,
+                                                       face_boundary_id,
+                                                       face);
               }
           }
 
