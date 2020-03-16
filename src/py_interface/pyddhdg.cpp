@@ -204,7 +204,8 @@ namespace pyddhdg
                         RecombinationTerm<dim> &       p_recombination_term,
                         Temperature<dim> &             temperature,
                         Doping<dim> &                  doping,
-                        BoundaryConditionHandler<dim> &bc_handler)
+                        BoundaryConditionHandler<dim> &bc_handler,
+                        Ddhdg::EinsteinDiffusionModel  einstein_diffusion_model)
     : ddhdg_problem(std::make_shared<Ddhdg::Problem<dim>>(
         generate_triangulation(),
         permittivity.generate_ddhdg_permittivity(),
@@ -214,7 +215,8 @@ namespace pyddhdg
         p_recombination_term.generate_ddhdg_recombination_term(),
         temperature.get_dealii_function(),
         doping.get_dealii_function(),
-        bc_handler.get_ddhdg_boundary_condition_handler()))
+        bc_handler.get_ddhdg_boundary_condition_handler(),
+        einstein_diffusion_model))
   {}
 
 
@@ -270,7 +272,9 @@ namespace pyddhdg
 
   template <int dim>
   void
-  Solver<dim>::set_component(const Ddhdg::Component c, const std::string &f)
+  Solver<dim>::set_component(const Ddhdg::Component c,
+                             const std::string &    f,
+                             const bool             use_projection)
   {
     std::shared_ptr<dealii::FunctionParser<dim>> c_function =
       std::make_shared<dealii::FunctionParser<dim>>();
@@ -278,7 +282,7 @@ namespace pyddhdg
       dealii::FunctionParser<dim>::default_variable_names(),
       f,
       Ddhdg::Constants::constants);
-    this->ddhdg_solver->set_component(c, c_function);
+    this->ddhdg_solver->set_component(c, c_function, use_projection);
   }
 
 
@@ -352,6 +356,22 @@ namespace pyddhdg
 
   template <int dim>
   double
+  Solver<dim>::estimate_l2_error(const std::string &       expected_solution,
+                                 const Ddhdg::Displacement d) const
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>(dim);
+    expected_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_solution,
+      Ddhdg::Constants::constants);
+    return this->ddhdg_solver->estimate_l2_error(expected_solution_f, d);
+  }
+
+
+
+  template <int dim>
+  double
   Solver<dim>::estimate_h1_error(const std::string &    expected_solution,
                                  const Ddhdg::Component c) const
   {
@@ -362,6 +382,22 @@ namespace pyddhdg
       expected_solution,
       Ddhdg::Constants::constants);
     return this->ddhdg_solver->estimate_h1_error(expected_solution_f, c);
+  }
+
+
+
+  template <int dim>
+  double
+  Solver<dim>::estimate_h1_error(const std::string &       expected_solution,
+                                 const Ddhdg::Displacement d) const
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>(dim);
+    expected_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_solution,
+      Ddhdg::Constants::constants);
+    return this->ddhdg_solver->estimate_h1_error(expected_solution_f, d);
   }
 
 
@@ -380,6 +416,56 @@ namespace pyddhdg
     return this->ddhdg_solver->estimate_linfty_error(expected_solution_f, c);
   }
 
+
+
+  template <int dim>
+  double
+  Solver<dim>::estimate_linfty_error(const std::string &expected_solution,
+                                     const Ddhdg::Displacement d) const
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>(dim);
+    expected_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_solution,
+      Ddhdg::Constants::constants);
+    return this->ddhdg_solver->estimate_linfty_error(expected_solution_f, d);
+  }
+
+
+
+  template <int dim>
+  double
+  Solver<dim>::estimate_l2_error_on_trace(const std::string &expected_solution,
+                                          const Ddhdg::Component c) const
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    expected_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_solution,
+      Ddhdg::Constants::constants);
+    return this->ddhdg_solver->estimate_l2_error_on_trace(expected_solution_f,
+                                                          c);
+  }
+
+
+
+  template <int dim>
+  double
+  Solver<dim>::estimate_linfty_error_on_trace(
+    const std::string &    expected_solution,
+    const Ddhdg::Component c) const
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    expected_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_solution,
+      Ddhdg::Constants::constants);
+    return this->ddhdg_solver->estimate_linfty_error_on_trace(
+      expected_solution_f, c);
+  }
 
 
   template <int dim>

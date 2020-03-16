@@ -19,6 +19,7 @@
 
 #include "boundary_conditions.h"
 #include "convergence_table.h"
+#include "einstein_diffusion_model.h"
 #include "electron_mobility.h"
 #include "permittivity.h"
 #include "recombination_term.h"
@@ -42,6 +43,8 @@ namespace Ddhdg
     const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
 
+    const EinsteinDiffusionModel einstein_diffusion_model;
+
     explicit Problem(
       const std::shared_ptr<const Triangulation<dim>>     triangulation,
       const std::shared_ptr<const Permittivity<dim>>      permittivity,
@@ -52,7 +55,8 @@ namespace Ddhdg
       const std::shared_ptr<const dealii::Function<dim>>  temperature,
       const std::shared_ptr<const dealii::Function<dim>>  doping,
       const std::shared_ptr<const BoundaryConditionHandler<dim>>
-        boundary_handler)
+                                   boundary_handler,
+      const EinsteinDiffusionModel einstein_diffusion_model)
       : triangulation(triangulation)
       , permittivity(permittivity)
       , n_electron_mobility(n_electron_mobility)
@@ -62,6 +66,7 @@ namespace Ddhdg
       , temperature(temperature)
       , doping(doping)
       , boundary_handler(boundary_handler)
+      , einstein_diffusion_model(einstein_diffusion_model)
     {}
   };
 
@@ -306,6 +311,15 @@ namespace Ddhdg
     struct ScratchData;
     dealii::Threads::Mutex inversion_mutex;
 
+    typedef void (Solver<dim>::*assemble_system_one_cell_pointer)(
+      const typename DoFHandler<dim>::active_cell_iterator &cell,
+      ScratchData &                                         scratch,
+      PerTaskData &                                         task_data);
+
+    assemble_system_one_cell_pointer
+    get_assemble_system_one_cell_function();
+
+    template <typename prm>
     void
     assemble_system_one_cell(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
@@ -315,9 +329,11 @@ namespace Ddhdg
     void
     prepare_data_on_cell_quadrature_points(ScratchData &scratch);
 
+    template <typename prm>
     void
     add_cell_products_to_ll_matrix(ScratchData &scratch);
 
+    template <typename prm>
     void
     add_cell_products_to_l_rhs(ScratchData &scratch);
 
@@ -334,29 +350,31 @@ namespace Ddhdg
                              unsigned int face,
                              unsigned int q);
 
+    template <typename prm>
     inline void
     assemble_lf_matrix(ScratchData &scratch, unsigned int face);
 
+    template <typename prm>
     inline void
     add_lf_matrix_terms_to_l_rhs(ScratchData &scratch, unsigned int face);
 
-    template <Component c>
+    template <typename prm, Component c>
     inline void
     assemble_fl_matrix(ScratchData &scratch, unsigned int face);
 
-    template <Component C>
+    template <typename prm, Component c>
     inline void
     add_fl_matrix_terms_to_f_rhs(ScratchData &                    scratch,
                                  Ddhdg::Solver<dim>::PerTaskData &task_data,
                                  unsigned int                     face);
 
-    template <Component c>
+    template <typename prm, Component c>
     inline void
     assemble_cell_matrix(ScratchData &scratch,
                          PerTaskData &task_data,
                          unsigned int face);
 
-    template <Component C>
+    template <typename prm, Component c>
     inline void
     add_cell_matrix_terms_to_f_rhs(ScratchData &                    scratch,
                                    Ddhdg::Solver<dim>::PerTaskData &task_data,
@@ -376,7 +394,7 @@ namespace Ddhdg
                       const NeumannBoundaryCondition<dim> &nbc,
                       unsigned int                         face);
 
-    template <Component c>
+    template <typename prm, Component c>
     inline void
     assemble_flux_conditions(ScratchData &            scratch,
                              PerTaskData &            task_data,
@@ -385,6 +403,7 @@ namespace Ddhdg
                              const types::boundary_id face_boundary_id,
                              unsigned int             face);
 
+    template <typename prm>
     inline void
     assemble_flux_conditions_wrapper(
       Component                               c,
@@ -395,12 +414,15 @@ namespace Ddhdg
       const types::boundary_id                face_boundary_id,
       unsigned int                            face);
 
+    template <typename prm>
     inline void
     add_border_products_to_ll_matrix(ScratchData &scratch, unsigned int face);
 
+    template <typename prm>
     inline void
     add_border_products_to_l_rhs(ScratchData &scratch, unsigned int face);
 
+    template <typename prm>
     inline void
     add_trace_terms_to_l_rhs(ScratchData &scratch, unsigned int face);
 
@@ -416,7 +438,10 @@ namespace Ddhdg
     const std::shared_ptr<const dealii::Function<dim>>  temperature;
     const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
-    const std::unique_ptr<SolverParameters>                    parameters;
+
+    EinsteinDiffusionModel einstein_diffusion_model;
+
+    const std::unique_ptr<SolverParameters> parameters;
 
     FESystem<dim>   fe_local;
     DoFHandler<dim> dof_handler_local;
@@ -617,30 +642,74 @@ namespace Ddhdg
     {}
 
 
-    template <Component cmp, bool on_face = true>
+    template <EinsteinDiffusionModel m, Component cmp, bool on_face = true>
     inline dealii::Tensor<2, dim>
     compute_einstein_diffusion_coefficient(const unsigned int q) const
     {
-      switch (cmp)
+      switch (m)
         {
-          case n:
-            if (on_face)
-              return Constants::KB / Constants::Q * this->T_face[q] *
-                     this->mu_n_face[q];
-            return Constants::KB / Constants::Q * this->T_cell[q] *
-                   this->mu_n_cell[q];
-          case p:
-            if (on_face)
-              return Constants::KB / Constants::Q * this->T_face[q] *
-                     this->mu_p_face[q];
-            return Constants::KB / Constants::Q * this->T_cell[q] *
-                   this->mu_p_cell[q];
+          case EinsteinDiffusionModel::M0:
+            return Tensor<2, dim>();
+          case EinsteinDiffusionModel::M1:
+            switch (cmp)
+              {
+                case n:
+                  if (on_face)
+                    return Constants::KB / Constants::Q * this->T_face[q] *
+                           this->mu_n_face[q];
+                  return Constants::KB / Constants::Q * this->T_cell[q] *
+                         this->mu_n_cell[q];
+                case p:
+                  if (on_face)
+                    return Constants::KB / Constants::Q * this->T_face[q] *
+                           this->mu_p_face[q];
+                  return Constants::KB / Constants::Q * this->T_cell[q] *
+                         this->mu_p_cell[q];
+                default:
+                  Assert(false, UnknownComponent());
+                  break;
+              }
+            break;
           default:
-            Assert(false, UnknownComponent());
+            Assert(false, UnknownEinsteinDiffusionModel());
             break;
         }
-      return this->mu_n_cell[q];
+      return Tensor<2, dim>();
+    }
+
+    template <EinsteinDiffusionModel m, Component cmp>
+    inline double
+    compute_stabilized_tau(const double          c_tau,
+                           const Tensor<1, dim> &normal,
+                           const unsigned int    q) const
+    {
+      switch (m)
+        {
+          case EinsteinDiffusionModel::M0:
+            return c_tau;
+          case EinsteinDiffusionModel::M1:
+            switch (cmp)
+              {
+                case Component::V:
+                  return this->epsilon_face[q] * normal * normal * c_tau;
+                case Component::n:
+                  return this->template compute_einstein_diffusion_coefficient<
+                           EinsteinDiffusionModel::M1,
+                           Component::n>(q) *
+                         normal * normal * c_tau;
+                case Component::p:
+                  return this->template compute_einstein_diffusion_coefficient<
+                           EinsteinDiffusionModel::M1,
+                           Component::p>(q) *
+                         normal * normal * c_tau;
+                default:
+                  Assert(false, UnknownComponent());
+              }
+          default:
+            AssertThrow(false, UnknownEinsteinDiffusionModel());
+            break;
+        }
+      return 1.;
     }
   };
-
 } // end of namespace Ddhdg

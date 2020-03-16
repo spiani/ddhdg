@@ -160,7 +160,8 @@ namespace pyddhdg
             RecombinationTerm<dim> &       p_recombination_term,
             Temperature<dim> &             temperature,
             Doping<dim> &                  doping,
-            BoundaryConditionHandler<dim> &bc_handler);
+            BoundaryConditionHandler<dim> &bc_handler,
+            Ddhdg::EinsteinDiffusionModel  einstein_diffusion_model);
 
     Problem(const Problem<dim> &problem);
 
@@ -185,7 +186,9 @@ namespace pyddhdg
     refine_grid(unsigned int i = 1);
 
     void
-    set_component(Ddhdg::Component c, const std::string &f);
+    set_component(Ddhdg::Component   c,
+                  const std::string &f,
+                  bool               use_projection);
 
     void
     set_current_solution(const std::string &v_f,
@@ -204,12 +207,32 @@ namespace pyddhdg
                       Ddhdg::Component   c) const;
 
     [[nodiscard]] double
+    estimate_l2_error(const std::string & expected_solution,
+                      Ddhdg::Displacement d) const;
+
+    [[nodiscard]] double
     estimate_h1_error(const std::string &expected_solution,
                       Ddhdg::Component   c) const;
 
     [[nodiscard]] double
+    estimate_h1_error(const std::string & expected_solution,
+                      Ddhdg::Displacement d) const;
+
+    [[nodiscard]] double
     estimate_linfty_error(const std::string &expected_solution,
                           Ddhdg::Component   c) const;
+
+    [[nodiscard]] double
+    estimate_linfty_error(const std::string & expected_solution,
+                          Ddhdg::Displacement d) const;
+
+    [[nodiscard]] double
+    estimate_l2_error_on_trace(const std::string &expected_solution,
+                               Ddhdg::Component   c) const;
+
+    [[nodiscard]] double
+    estimate_linfty_error_on_trace(const std::string &expected_solution,
+                                   Ddhdg::Component   c) const;
 
     void
     output_results(const std::string &solution_filename,

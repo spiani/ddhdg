@@ -109,7 +109,8 @@ protected:
   static std::shared_ptr<Ddhdg::Problem<D::value>>
   get_problem()
   {
-    const unsigned int                   dim = D::value;
+    const unsigned int dim = D::value;
+
     std::shared_ptr<Ddhdg::Problem<dim>> problem =
       std::make_shared<Ddhdg::Problem<dim>>(
         get_triangulation(),
@@ -120,7 +121,8 @@ protected:
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         get_temperature(),
         get_doping(),
-        get_boundary_conditions());
+        get_boundary_conditions(),
+        Ddhdg::EinsteinDiffusionModel::M1);
     return problem;
   }
 };

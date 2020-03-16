@@ -2,6 +2,18 @@
 py::enum_<Ddhdg::Component>(m, "Component")
   .value("v", Ddhdg::Component::V)
   .value("n", Ddhdg::Component::n)
+  .value("p", Ddhdg::Component::p)
+  .export_values();
+
+py::enum_<Ddhdg::Displacement>(m, "Displacement")
+  .value("e", Ddhdg::Displacement::E)
+  .value("wn", Ddhdg::Displacement::Wn)
+  .value("wp", Ddhdg::Displacement::Wp)
+  .export_values();
+
+py::enum_<Ddhdg::EinsteinDiffusionModel>(m, "EinsteinDiffusionModel")
+  .value("m0", Ddhdg::EinsteinDiffusionModel::M0)
+  .value("m1", Ddhdg::EinsteinDiffusionModel::M1)
   .export_values();
 
 py::class_<Permittivity<DIM>>(m, "Permittivity");
@@ -69,7 +81,17 @@ py::class_<Problem<DIM>>(m, "Problem")
                 RecombinationTerm<DIM> &,
                 Temperature<DIM> &,
                 Doping<DIM> &,
-                BoundaryConditionHandler<DIM> &>());
+                BoundaryConditionHandler<DIM> &,
+                Ddhdg::EinsteinDiffusionModel>(),
+       py::arg("permittivity"),
+       py::arg("n_electron_mobility"),
+       py::arg("n_recombination_term"),
+       py::arg("p_electron_mobility"),
+       py::arg("p_recombination_term"),
+       py::arg("temperature"),
+       py::arg("doping"),
+       py::arg("boundary_condition_handler"),
+       py::arg("einstein_diffusion_model") = Ddhdg::EinsteinDiffusionModel::M1);
 
 py::class_<Ddhdg::SolverParameters>(m, "SolverParameters")
   .def(py::init<const unsigned int,
@@ -138,13 +160,63 @@ py::class_<Ddhdg::NonlinearIteratorStatus>(m, "NonlinearIteratorStatus")
 py::class_<Solver<DIM>>(m, "Solver")
   .def(py::init<const Problem<DIM> &, Ddhdg::SolverParameters &>())
   .def("refine_grid", &Solver<DIM>::refine_grid, py::arg("n") = 1)
-  .def("set_component", &Solver<DIM>::set_component)
-  .def("set_current_solution", &Solver<DIM>::set_current_solution)
+  .def("set_component",
+       &Solver<DIM>::set_component,
+       py::arg("component"),
+       py::arg("analytic_function"),
+       py::arg("use_projection") = false)
+  .def("set_current_solution",
+       &Solver<DIM>::set_current_solution,
+       py::arg("V_function"),
+       py::arg("n_function"),
+       py::arg("p_function"),
+       py::arg("use_projection") = false)
   .def("set_multithreading", &Solver<DIM>::set_multithreading)
   .def("run", &Solver<DIM>::run)
-  .def("estimate_l2_error", &Solver<DIM>::estimate_l2_error)
-  .def("estimate_h1_error", &Solver<DIM>::estimate_h1_error)
-  .def("estimate_linfty_error", &Solver<DIM>::estimate_linfty_error)
+  .def("estimate_l2_error",
+       py::overload_cast<const std::string &, const Ddhdg::Component>(
+         &Solver<DIM>::estimate_l2_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"))
+  .def("estimate_l2_error",
+       py::overload_cast<const std::string &, const Ddhdg::Displacement>(
+         &Solver<DIM>::estimate_l2_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("displacement"))
+  .def("estimate_h1_error",
+       py::overload_cast<const std::string &, const Ddhdg::Component>(
+         &Solver<DIM>::estimate_h1_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"))
+  .def("estimate_h1_error",
+       py::overload_cast<const std::string &, const Ddhdg::Displacement>(
+         &Solver<DIM>::estimate_h1_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("displacement"))
+  .def("estimate_linfty_error",
+       py::overload_cast<const std::string &, const Ddhdg::Component>(
+         &Solver<DIM>::estimate_linfty_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"))
+  .def("estimate_linfty_error",
+       py::overload_cast<const std::string &, const Ddhdg::Displacement>(
+         &Solver<DIM>::estimate_linfty_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("displacement"))
+  .def("estimate_l2_error_on_trace",
+       &Solver<DIM>::estimate_l2_error_on_trace,
+       py::arg("expected_solution"),
+       py::arg("component"))
+  .def("estimate_linfty_error_on_trace",
+       &Solver<DIM>::estimate_linfty_error_on_trace,
+       py::arg("expected_solution"),
+       py::arg("component"))
   .def("output_results",
        py::overload_cast<const std::string &, const bool>(
          &Solver<DIM>::output_results,

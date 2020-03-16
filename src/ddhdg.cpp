@@ -25,6 +25,7 @@
 
 #include "constants.h"
 #include "function_tools.h"
+#include "templatized_parameters.h"
 
 namespace Ddhdg
 {
@@ -130,6 +131,7 @@ namespace Ddhdg
     , temperature(problem->temperature)
     , doping(problem->doping)
     , boundary_handler(problem->boundary_handler)
+    , einstein_diffusion_model(problem->einstein_diffusion_model)
     , parameters(std::make_unique<SolverParameters>(*parameters))
     , fe_local(generate_fe_system(parameters->degree, true))
     , dof_handler_local(*triangulation)
@@ -848,13 +850,14 @@ namespace Ddhdg
                         local_flags,
                         local_face_flags,
                         flags);
-    WorkStream::run(dof_handler.begin_active(),
-                    dof_handler.end(),
-                    *this,
-                    &Solver<dim>::assemble_system_one_cell,
-                    &Solver<dim>::copy_local_to_global,
-                    scratch,
-                    task_data);
+    WorkStream::run(
+      dof_handler.begin_active(),
+      dof_handler.end(),
+      *this,
+      &Solver<dim>::assemble_system_one_cell<TemplatizedParameters<M1>>,
+      &Solver<dim>::copy_local_to_global,
+      scratch,
+      task_data);
   }
 
   template <int dim>
@@ -882,11 +885,32 @@ namespace Ddhdg
 
     for (const auto &cell : dof_handler.active_cell_iterators())
       {
-        assemble_system_one_cell(cell, scratch, task_data);
+        (this->*get_assemble_system_one_cell_function())(cell,
+                                                         scratch,
+                                                         task_data);
         copy_local_to_global(task_data);
       }
   }
 
+
+
+  template <int dim>
+  typename Solver<dim>::assemble_system_one_cell_pointer
+  Solver<dim>::get_assemble_system_one_cell_function()
+  {
+    switch (this->einstein_diffusion_model)
+      {
+        case EinsteinDiffusionModel::M0:
+          return &Solver<dim>::assemble_system_one_cell<
+            TemplatizedParameters<M0>>;
+        case EinsteinDiffusionModel::M1:
+          return &Solver<dim>::assemble_system_one_cell<
+            TemplatizedParameters<M1>>;
+        default:
+          AssertThrow(false, UnknownEinsteinDiffusionModel());
+          break;
+      }
+  }
 
 
   template <int dim>
@@ -982,6 +1006,7 @@ namespace Ddhdg
 
 
   template <int dim>
+  template <typename prm>
   void
   Solver<dim>::add_cell_products_to_ll_matrix(
     Ddhdg::Solver<dim>::ScratchData &scratch)
@@ -1068,11 +1093,15 @@ namespace Ddhdg
           scratch.mu_p_cell[q] * E0[q];
 
         const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::n,
-                                                                  false>(q);
+          scratch.template compute_einstein_diffusion_coefficient<
+            prm::einstein_diffusion_model,
+            Component::n,
+            false>(q);
         const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::p,
-                                                                  false>(q);
+          scratch.template compute_einstein_diffusion_coefficient<
+            prm::einstein_diffusion_model,
+            Component::p,
+            false>(q);
 
         const double dr_n_n = scratch.dr_n_cell.at(Component::n)[q];
         const double dr_n_p = scratch.dr_n_cell.at(Component::p)[q];
@@ -1104,6 +1133,7 @@ namespace Ddhdg
 
 
   template <int dim>
+  template <typename prm>
   void
   Solver<dim>::add_cell_products_to_l_rhs(
     Ddhdg::Solver<dim>::ScratchData &scratch)
@@ -1140,11 +1170,15 @@ namespace Ddhdg
         const double JxW = scratch.fe_values_local.JxW(q);
 
         const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::n,
-                                                                  false>(q);
+          scratch.template compute_einstein_diffusion_coefficient<
+            prm::einstein_diffusion_model,
+            Component::n,
+            false>(q);
         const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::p,
-                                                                  false>(q);
+          scratch.template compute_einstein_diffusion_coefficient<
+            prm::einstein_diffusion_model,
+            Component::p,
+            false>(q);
 
         const auto Jn = n0[q] * (scratch.mu_n_cell[q] * E0[q]) -
                         (n_einstein_diffusion_coefficient * Wn0[q]);
@@ -1291,6 +1325,7 @@ namespace Ddhdg
 
 
   template <int dim>
+  template <typename prm>
   inline void
   Solver<dim>::assemble_lf_matrix(Ddhdg::Solver<dim>::ScratchData &scratch,
                                   const unsigned int               face)
@@ -1322,19 +1357,21 @@ namespace Ddhdg
         const double         JxW    = scratch.fe_face_values.JxW(q);
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
-        const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::n>(
-            q);
-        const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::p>(
-            q);
-
         const double V_tau_stabilized =
-          scratch.epsilon_face[q] * normal * normal * V_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::V>(V_tau,
+                                                                normal,
+                                                                q);
         const double n_tau_stabilized =
-          n_einstein_diffusion_coefficient * normal * normal * n_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::n>(n_tau,
+                                                                normal,
+                                                                q);
         const double p_tau_stabilized =
-          p_einstein_diffusion_coefficient * normal * normal * p_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::p>(p_tau,
+                                                                normal,
+                                                                q);
 
         for (unsigned int i = 0;
              i < scratch.fe_local_support_on_face[face].size();
@@ -1366,6 +1403,7 @@ namespace Ddhdg
 
 
   template <int dim>
+  template <typename prm>
   inline void
   Solver<dim>::add_lf_matrix_terms_to_l_rhs(
     Ddhdg::Solver<dim>::ScratchData &scratch,
@@ -1400,19 +1438,21 @@ namespace Ddhdg
         const double         JxW    = scratch.fe_face_values.JxW(q);
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
-        const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::n>(
-            q);
-        const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::p>(
-            q);
-
         const double V_tau_stabilized =
-          scratch.epsilon_face[q] * normal * normal * V_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::V>(V_tau,
+                                                                normal,
+                                                                q);
         const double n_tau_stabilized =
-          n_einstein_diffusion_coefficient * normal * normal * n_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::n>(n_tau,
+                                                                normal,
+                                                                q);
         const double p_tau_stabilized =
-          p_einstein_diffusion_coefficient * normal * normal * p_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::p>(p_tau,
+                                                                normal,
+                                                                q);
 
         for (unsigned int i = 0;
              i < scratch.fe_local_support_on_face[face].size();
@@ -1445,7 +1485,7 @@ namespace Ddhdg
 
 
   template <int dim>
-  template <Component c>
+  template <typename prm, Component c>
   inline void
   Solver<dim>::assemble_fl_matrix(Ddhdg::Solver<dim>::ScratchData &scratch,
                                   const unsigned int               face)
@@ -1485,26 +1525,22 @@ namespace Ddhdg
           {
             mu_n_times_previous_E = scratch.mu_n_face[q] * E[q];
             n_einstein_diffusion_coefficient =
-              scratch
-                .template compute_einstein_diffusion_coefficient<Component::n>(
-                  q);
+              scratch.template compute_einstein_diffusion_coefficient<
+                prm::einstein_diffusion_model,
+                Component::n>(q);
           }
         if (c == Component::p)
           {
             mu_p_times_previous_E = scratch.mu_p_face[q] * E[q];
             p_einstein_diffusion_coefficient =
-              scratch
-                .template compute_einstein_diffusion_coefficient<Component::p>(
-                  q);
+              scratch.template compute_einstein_diffusion_coefficient<
+                prm::einstein_diffusion_model,
+                Component::p>(q);
           }
 
-        const dealii::Tensor<2, dim> stabilizing_tensor =
-          (c == Component::V) ?
-            scratch.epsilon_face[q] :
-            scratch.template compute_einstein_diffusion_coefficient<c>(q);
-
         const double tau_stabilized =
-          stabilizing_tensor * normal * normal * tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  c>(tau, normal, q);
 
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)
@@ -1561,7 +1597,7 @@ namespace Ddhdg
 
 
   template <int dim>
-  template <Component c>
+  template <typename prm, Component c>
   inline void
   Solver<dim>::add_fl_matrix_terms_to_f_rhs(
     Ddhdg::Solver<dim>::ScratchData &scratch,
@@ -1606,26 +1642,23 @@ namespace Ddhdg
             mu_n_times_previous_E_times_normal =
               scratch.mu_n_face[q] * E0[q] * normal;
             n_einstein_diffusion_coefficient =
-              scratch
-                .template compute_einstein_diffusion_coefficient<Component::n>(
-                  q);
+              scratch.template compute_einstein_diffusion_coefficient<
+                prm::einstein_diffusion_model,
+                Component::n>(q);
           }
         if (c == Component::p)
           {
             mu_p_times_previous_E_times_normal =
               scratch.mu_p_face[q] * E0[q] * normal;
             p_einstein_diffusion_coefficient =
-              scratch
-                .template compute_einstein_diffusion_coefficient<Component::p>(
-                  q);
+              scratch.template compute_einstein_diffusion_coefficient<
+                prm::einstein_diffusion_model,
+                Component::p>(q);
           }
 
-        const dealii::Tensor<2, dim> stabilizing_tensor =
-          (c == Component::V) ?
-            scratch.epsilon_face[q] :
-            scratch.template compute_einstein_diffusion_coefficient<c>(q);
         const double tau_stabilized =
-          stabilizing_tensor * normal * normal * tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  c>(tau, normal, q);
 
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)
@@ -1663,7 +1696,7 @@ namespace Ddhdg
 
 
   template <int dim>
-  template <Component c>
+  template <typename prm, Component c>
   inline void
   Solver<dim>::assemble_cell_matrix(Ddhdg::Solver<dim>::ScratchData &scratch,
                                     Ddhdg::Solver<dim>::PerTaskData &task_data,
@@ -1689,12 +1722,9 @@ namespace Ddhdg
         const double         JxW    = scratch.fe_face_values.JxW(q);
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
-        const dealii::Tensor<2, dim> stabilizing_tensor =
-          (c == Component::V) ?
-            scratch.epsilon_face[q] :
-            scratch.template compute_einstein_diffusion_coefficient<c>(q);
         const double tau_stabilized =
-          stabilizing_tensor * normal * normal * tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  c>(tau, normal, q);
 
         // Integrals of trace functions (both test and trial)
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
@@ -1716,7 +1746,7 @@ namespace Ddhdg
 
 
   template <int dim>
-  template <Component c>
+  template <typename prm, Component c>
   inline void
   Solver<dim>::add_cell_matrix_terms_to_f_rhs(
     Ddhdg::Solver<dim>::ScratchData &scratch,
@@ -1742,12 +1772,9 @@ namespace Ddhdg
         const double         JxW    = scratch.fe_face_values.JxW(q);
         const Tensor<1, dim> normal = scratch.fe_face_values.normal_vector(q);
 
-        const dealii::Tensor<2, dim> stabilizing_tensor =
-          (c == Component::V) ?
-            scratch.epsilon_face[q] :
-            scratch.template compute_einstein_diffusion_coefficient<c>(q);
         const double tau_stabilized =
-          stabilizing_tensor * normal * normal * tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  c>(tau, normal, q);
 
         for (unsigned int i = 0; i < scratch.fe_support_on_face[face].size();
              ++i)
@@ -1849,6 +1876,7 @@ namespace Ddhdg
 
 
   template <int dim>
+  template <typename prm>
   inline void
   Solver<dim>::add_border_products_to_ll_matrix(
     Ddhdg::Solver<dim>::ScratchData &scratch,
@@ -1889,18 +1917,29 @@ namespace Ddhdg
         const dealii::Tensor<1, dim> mu_p_times_previous_E =
           scratch.mu_p_face[q] * E0[q];
         const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::n>(
-            q);
+          scratch.template compute_einstein_diffusion_coefficient<
+            prm::einstein_diffusion_model,
+            Component::n>(q);
         const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::p>(
-            q);
+          scratch.template compute_einstein_diffusion_coefficient<
+            prm::einstein_diffusion_model,
+            Component::p>(q);
 
         const double V_tau_stabilized =
-          scratch.epsilon_face[q] * normal * normal * V_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::V>(V_tau,
+                                                                normal,
+                                                                q);
         const double n_tau_stabilized =
-          n_einstein_diffusion_coefficient * normal * normal * n_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::n>(n_tau,
+                                                                normal,
+                                                                q);
         const double p_tau_stabilized =
-          p_einstein_diffusion_coefficient * normal * normal * p_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::p>(p_tau,
+                                                                normal,
+                                                                q);
 
         for (unsigned int i = 0;
              i < scratch.fe_local_support_on_face[face].size();
@@ -1936,6 +1975,7 @@ namespace Ddhdg
 
 
   template <int dim>
+  template <typename prm>
   inline void
   Solver<dim>::add_border_products_to_l_rhs(
     Ddhdg::Solver<dim>::ScratchData &scratch,
@@ -1971,11 +2011,13 @@ namespace Ddhdg
           (scratch.epsilon_face[q] * E0[q]) * normal;
 
         const dealii::Tensor<2, dim> n_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::n>(
-            q);
+          scratch.template compute_einstein_diffusion_coefficient<
+            prm::einstein_diffusion_model,
+            Component::n>(q);
         const dealii::Tensor<2, dim> p_einstein_diffusion_coefficient =
-          scratch.template compute_einstein_diffusion_coefficient<Component::p>(
-            q);
+          scratch.template compute_einstein_diffusion_coefficient<
+            prm::einstein_diffusion_model,
+            Component::p>(q);
 
         const double Jn_flux = (n0[q] * (scratch.mu_n_face[q] * E0[q]) -
                                 (n_einstein_diffusion_coefficient * Wn0[q])) *
@@ -1985,11 +2027,20 @@ namespace Ddhdg
                                normal;
 
         const double V_tau_stabilized =
-          scratch.epsilon_face[q] * normal * normal * V_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::V>(V_tau,
+                                                                normal,
+                                                                q);
         const double n_tau_stabilized =
-          n_einstein_diffusion_coefficient * normal * normal * n_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::n>(n_tau,
+                                                                normal,
+                                                                q);
         const double p_tau_stabilized =
-          p_einstein_diffusion_coefficient * normal * normal * p_tau;
+          scratch.template compute_stabilized_tau<prm::einstein_diffusion_model,
+                                                  Component::p>(p_tau,
+                                                                normal,
+                                                                q);
 
         for (unsigned int i = 0;
              i < scratch.fe_local_support_on_face[face].size();
@@ -2016,6 +2067,7 @@ namespace Ddhdg
 
 
   template <int dim>
+  template <typename prm>
   inline void
   Solver<dim>::add_trace_terms_to_l_rhs(
     Ddhdg::Solver<dim>::ScratchData &scratch,
@@ -2023,6 +2075,8 @@ namespace Ddhdg
   {
     const unsigned int n_face_q_points =
       scratch.fe_face_values_local.get_quadrature().size();
+
+    double tau_stabilized;
 
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
@@ -2040,16 +2094,27 @@ namespace Ddhdg
             const double tau  = this->parameters->tau.at(c);
             const double sign = (c == Component::V) ? 1 : -1;
 
-            const dealii::Tensor<2, dim> stabilizing_tensor =
-              (c == Component::V) ?
-                scratch.epsilon_face[q] :
-                (c == Component::n) ?
-                scratch.template compute_einstein_diffusion_coefficient<
-                  Component::n>(q) :
-                scratch.template compute_einstein_diffusion_coefficient<
-                  Component::p>(q);
-            const double tau_stabilized =
-              stabilizing_tensor * normal * normal * tau;
+            switch (c)
+              {
+                case Component::V:
+                  tau_stabilized = scratch.template compute_stabilized_tau<
+                    prm::einstein_diffusion_model,
+                    Component::V>(tau, normal, q);
+                  break;
+                case Component::n:
+                  tau_stabilized = scratch.template compute_stabilized_tau<
+                    prm::einstein_diffusion_model,
+                    Component::n>(tau, normal, q);
+                  break;
+                case Component::p:
+                  tau_stabilized = scratch.template compute_stabilized_tau<
+                    prm::einstein_diffusion_model,
+                    Component::p>(tau, normal, q);
+                  break;
+                default:
+                  Assert(false, UnknownComponent());
+                  tau_stabilized = 1.;
+              }
 
             for (unsigned int i = 0;
                  i < scratch.fe_local_support_on_face[face].size();
@@ -2068,7 +2133,7 @@ namespace Ddhdg
 
 
   template <int dim>
-  template <Component c>
+  template <typename prm, Component c>
   void
   Solver<dim>::assemble_flux_conditions(
     ScratchData &            scratch,
@@ -2087,10 +2152,10 @@ namespace Ddhdg
       }
     else
       {
-        this->assemble_fl_matrix<c>(scratch, face);
-        this->add_fl_matrix_terms_to_f_rhs<c>(scratch, task_data, face);
-        this->assemble_cell_matrix<c>(scratch, task_data, face);
-        this->add_cell_matrix_terms_to_f_rhs<c>(scratch, task_data, face);
+        this->assemble_fl_matrix<prm, c>(scratch, face);
+        this->add_fl_matrix_terms_to_f_rhs<prm, c>(scratch, task_data, face);
+        this->assemble_cell_matrix<prm, c>(scratch, task_data, face);
+        this->add_cell_matrix_terms_to_f_rhs<prm, c>(scratch, task_data, face);
         if (has_neumann_conditions)
           {
             const auto nbc =
@@ -2104,6 +2169,7 @@ namespace Ddhdg
 
 
   template <int dim>
+  template <typename prm>
   void
   Solver<dim>::assemble_flux_conditions_wrapper(
     const Component                         c,
@@ -2117,7 +2183,7 @@ namespace Ddhdg
     switch (c)
       {
         case Component::V:
-          assemble_flux_conditions<Component::V>(
+          assemble_flux_conditions<prm, Component::V>(
             scratch,
             task_data,
             has_dirichlet_conditions.at(Component::V),
@@ -2126,7 +2192,7 @@ namespace Ddhdg
             face);
           break;
         case Component::n:
-          assemble_flux_conditions<Component::n>(
+          assemble_flux_conditions<prm, Component::n>(
             scratch,
             task_data,
             has_dirichlet_conditions.at(Component::n),
@@ -2135,7 +2201,7 @@ namespace Ddhdg
             face);
           break;
         case Component::p:
-          assemble_flux_conditions<Component::p>(
+          assemble_flux_conditions<prm, Component::p>(
             scratch,
             task_data,
             has_dirichlet_conditions.at(Component::p),
@@ -2152,6 +2218,7 @@ namespace Ddhdg
 
 
   template <int dim>
+  template <typename prm>
   void
   Solver<dim>::assemble_system_one_cell(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
@@ -2184,11 +2251,11 @@ namespace Ddhdg
     // Integrals on the overall cell
     // This function computes every L2 product that we need to compute in order
     // to assemble the matrix for the current cell.
-    this->add_cell_products_to_ll_matrix(scratch);
+    this->add_cell_products_to_ll_matrix<prm>(scratch);
 
     // This function, instead, computes the l2 products that are needed for
     // the right hand term
-    this->add_cell_products_to_l_rhs(scratch);
+    this->add_cell_products_to_l_rhs<prm>(scratch);
 
     // Now we must perform the L2 product on the boundary, i.e. for each face of
     // the cell
@@ -2224,11 +2291,11 @@ namespace Ddhdg
           {
             has_dirichlet_conditions.insert(
               {c,
-               boundary_handler->has_dirichlet_boundary_conditions(
+               this->boundary_handler->has_dirichlet_boundary_conditions(
                  face_boundary_id, c)});
             has_neumann_conditions.insert(
               {c,
-               boundary_handler->has_neumann_boundary_conditions(
+               this->boundary_handler->has_neumann_boundary_conditions(
                  face_boundary_id, c)});
           }
 
@@ -2237,7 +2304,7 @@ namespace Ddhdg
         // Moreover, we want to populate the scratch object with the values of
         // the solution at the previous step. All this jobs are accomplished by
         // the next function
-        prepare_data_on_face_quadrature_points(scratch);
+        this->prepare_data_on_face_quadrature_points(scratch);
 
         // The following function adds some terms to l_rhs. Usually, all the
         // functions are coupled (like assemble_matrix_XXX and
@@ -2250,32 +2317,33 @@ namespace Ddhdg
         // it generates are always needed while the terms that its
         // corresponding function generates are useful only if we are not
         // reconstructing the solution from the trace
-        add_lf_matrix_terms_to_l_rhs(scratch, face);
+        this->add_lf_matrix_terms_to_l_rhs<prm>(scratch, face);
 
         // Assembly the other matrices (the ll_matrix has been assembled
         // calling the add_cell_products_to_ll_matrix method)
         if (!task_data.trace_reconstruct)
           {
-            this->assemble_lf_matrix(scratch, face);
+            this->assemble_lf_matrix<prm>(scratch, face);
             for (const Component c : all_components())
               {
-                this->assemble_flux_conditions_wrapper(c,
-                                                       scratch,
-                                                       task_data,
-                                                       has_dirichlet_conditions,
-                                                       has_neumann_conditions,
-                                                       face_boundary_id,
-                                                       face);
+                this->assemble_flux_conditions_wrapper<prm>(
+                  c,
+                  scratch,
+                  task_data,
+                  has_dirichlet_conditions,
+                  has_neumann_conditions,
+                  face_boundary_id,
+                  face);
               }
           }
 
         // These are the last terms of the ll matrix, the ones that are
         // generated by L2 products only on the boundary of the cell
-        add_border_products_to_ll_matrix(scratch, face);
-        add_border_products_to_l_rhs(scratch, face);
+        this->add_border_products_to_ll_matrix<prm>(scratch, face);
+        this->add_border_products_to_l_rhs<prm>(scratch, face);
 
         if (task_data.trace_reconstruct)
-          add_trace_terms_to_l_rhs(scratch, face);
+          this->add_trace_terms_to_l_rhs<prm>(scratch, face);
       }
 
     inversion_mutex.lock();
