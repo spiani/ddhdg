@@ -260,7 +260,7 @@ namespace Ddhdg
 
     static dealii::FESystem<dim>
     generate_fe_system(const std::map<Component, unsigned int> &degree,
-                       bool                                     local = true);
+                       bool on_trace = false);
 
     dealii::ComponentMask
     get_component_mask(Component component) const;
@@ -331,11 +331,11 @@ namespace Ddhdg
 
     template <typename prm>
     void
-    add_cell_products_to_ll_matrix(ScratchData &scratch);
+    add_cell_products_to_cc_matrix(ScratchData &scratch);
 
     template <typename prm>
     void
-    add_cell_products_to_l_rhs(ScratchData &scratch);
+    add_cell_products_to_cc_rhs(ScratchData &scratch);
 
     void
     prepare_data_on_face_quadrature_points(ScratchData &scratch);
@@ -352,31 +352,31 @@ namespace Ddhdg
 
     template <typename prm>
     inline void
-    assemble_lf_matrix(ScratchData &scratch, unsigned int face);
+    assemble_ct_matrix(ScratchData &scratch, unsigned int face);
 
     template <typename prm>
     inline void
-    add_lf_matrix_terms_to_l_rhs(ScratchData &scratch, unsigned int face);
+    add_ct_matrix_terms_to_cc_rhs(ScratchData &scratch, unsigned int face);
 
     template <typename prm, Component c>
     inline void
-    assemble_fl_matrix(ScratchData &scratch, unsigned int face);
+    assemble_tc_matrix(ScratchData &scratch, unsigned int face);
 
     template <typename prm, Component c>
     inline void
-    add_fl_matrix_terms_to_f_rhs(ScratchData &                    scratch,
+    add_tc_matrix_terms_to_tt_rhs(ScratchData &                    scratch,
                                  Ddhdg::Solver<dim>::PerTaskData &task_data,
                                  unsigned int                     face);
 
     template <typename prm, Component c>
     inline void
-    assemble_cell_matrix(ScratchData &scratch,
+    assemble_tt_matrix(ScratchData &scratch,
                          PerTaskData &task_data,
                          unsigned int face);
 
     template <typename prm, Component c>
     inline void
-    add_cell_matrix_terms_to_f_rhs(ScratchData &                    scratch,
+    add_tt_matrix_terms_to_tt_rhs(ScratchData &                    scratch,
                                    Ddhdg::Solver<dim>::PerTaskData &task_data,
                                    unsigned int                     face);
 
@@ -416,15 +416,15 @@ namespace Ddhdg
 
     template <typename prm>
     inline void
-    add_border_products_to_ll_matrix(ScratchData &scratch, unsigned int face);
+    add_border_products_to_cc_matrix(ScratchData &scratch, unsigned int face);
 
     template <typename prm>
     inline void
-    add_border_products_to_l_rhs(ScratchData &scratch, unsigned int face);
+    add_border_products_to_cc_rhs(ScratchData &scratch, unsigned int face);
 
     template <typename prm>
     inline void
-    add_trace_terms_to_l_rhs(ScratchData &scratch, unsigned int face);
+    add_trace_terms_to_cc_rhs(ScratchData &scratch, unsigned int face);
 
     void
     copy_local_to_global(const PerTaskData &data);
@@ -443,14 +443,14 @@ namespace Ddhdg
 
     const std::unique_ptr<SolverParameters> parameters;
 
-    FESystem<dim>   fe_local;
-    DoFHandler<dim> dof_handler_local;
-    Vector<double>  update_local;
-    Vector<double>  current_solution_local;
-    FESystem<dim>   fe;
-    DoFHandler<dim> dof_handler;
-    Vector<double>  update;
-    Vector<double>  current_solution;
+    FESystem<dim>   fe_cell;
+    DoFHandler<dim> dof_handler_cell;
+    Vector<double>  update_cell;
+    Vector<double>  current_solution_cell;
+    FESystem<dim>   fe_trace;
+    DoFHandler<dim> dof_handler_trace;
+    Vector<double>  update_trace;
+    Vector<double>  current_solution_trace;
     Vector<double>  system_rhs;
 
     AffineConstraints<double> constraints;
@@ -463,14 +463,14 @@ namespace Ddhdg
   template <int dim>
   struct Solver<dim>::PerTaskData
   {
-    FullMatrix<double>                   cell_matrix;
-    Vector<double>                       cell_vector;
+    FullMatrix<double>                   tt_matrix;
+    Vector<double>                       tt_vector;
     std::vector<types::global_dof_index> dof_indices;
     bool                                 trace_reconstruct;
 
     PerTaskData(const unsigned int n_dofs, const bool trace_reconstruct)
-      : cell_matrix(n_dofs, n_dofs)
-      , cell_vector(n_dofs)
+      : tt_matrix(n_dofs, n_dofs)
+      , tt_vector(n_dofs)
       , dof_indices(n_dofs)
       , trace_reconstruct(trace_reconstruct)
     {}
@@ -479,14 +479,14 @@ namespace Ddhdg
   template <int dim>
   struct Solver<dim>::ScratchData
   {
-    FEValues<dim>                                    fe_values_local;
-    FEFaceValues<dim>                                fe_face_values_local;
-    FEFaceValues<dim>                                fe_face_values;
-    FullMatrix<double>                               ll_matrix;
-    FullMatrix<double>                               lf_matrix;
-    FullMatrix<double>                               fl_matrix;
+    FEValues<dim>                                    fe_values_cell;
+    FEFaceValues<dim>                                fe_face_values_cell;
+    FEFaceValues<dim>                                fe_face_values_trace;
+    FullMatrix<double>                               cc_matrix;
+    FullMatrix<double>                               ct_matrix;
+    FullMatrix<double>                               tc_matrix;
     FullMatrix<double>                               tmp_matrix;
-    Vector<double>                                   l_rhs;
+    Vector<double>                                   cc_rhs;
     Vector<double>                                   tmp_rhs;
     std::vector<Point<dim>>                          cell_quadrature_points;
     std::vector<Point<dim>>                          face_quadrature_points;
@@ -505,17 +505,17 @@ namespace Ddhdg
     std::map<Component, std::vector<double>>         dr_p_cell;
     std::map<Component, std::vector<double>>         previous_c_cell;
     std::map<Component, std::vector<double>>         previous_c_face;
-    std::map<Component, std::vector<Tensor<1, dim>>> previous_f_cell;
-    std::map<Component, std::vector<Tensor<1, dim>>> previous_f_face;
+    std::map<Component, std::vector<Tensor<1, dim>>> previous_d_cell;
+    std::map<Component, std::vector<Tensor<1, dim>>> previous_d_face;
     std::map<Component, std::vector<double>>         previous_tr_c_face;
-    std::map<Component, std::vector<Tensor<1, dim>>> f;
-    std::map<Component, std::vector<double>>         f_div;
+    std::map<Component, std::vector<Tensor<1, dim>>> d;
+    std::map<Component, std::vector<double>>         d_div;
     std::map<Component, std::vector<double>>         c;
     std::map<Component, std::vector<Tensor<1, dim>>> c_grad;
     std::map<Component, std::vector<double>>         tr_c;
     std::map<Component, std::vector<double>>         tr_c_solution_values;
-    std::vector<std::vector<unsigned int>>           fe_local_support_on_face;
-    std::vector<std::vector<unsigned int>>           fe_support_on_face;
+    std::vector<std::vector<unsigned int>>           fe_cell_support_on_face;
+    std::vector<std::vector<unsigned int>>           fe_trace_support_on_face;
 
     static std::map<Component, std::vector<double>>
     initialize_double_map_on_components(unsigned int n);
@@ -526,24 +526,22 @@ namespace Ddhdg
     static std::map<Component, std::vector<double>>
     initialize_double_map_on_n_and_p(unsigned int k);
 
-    ScratchData(const FiniteElement<dim> &fe,
-                const FiniteElement<dim> &fe_local,
+    ScratchData(const FiniteElement<dim> &fe_trace,
+                const FiniteElement<dim> &fe_cell,
                 const QGauss<dim> &       quadrature_formula,
                 const QGauss<dim - 1> &   face_quadrature_formula,
-                const UpdateFlags         local_flags,
-                const UpdateFlags         local_face_flags,
-                const UpdateFlags         flags)
-      : fe_values_local(fe_local, quadrature_formula, local_flags)
-      , fe_face_values_local(fe_local,
-                             face_quadrature_formula,
-                             local_face_flags)
-      , fe_face_values(fe, face_quadrature_formula, flags)
-      , ll_matrix(fe_local.dofs_per_cell, fe_local.dofs_per_cell)
-      , lf_matrix(fe_local.dofs_per_cell, fe.dofs_per_cell)
-      , fl_matrix(fe.dofs_per_cell, fe_local.dofs_per_cell)
-      , tmp_matrix(fe.dofs_per_cell, fe_local.dofs_per_cell)
-      , l_rhs(fe_local.dofs_per_cell)
-      , tmp_rhs(fe_local.dofs_per_cell)
+                const UpdateFlags         cell_flags,
+                const UpdateFlags         cell_face_flags,
+                const UpdateFlags         trace_flags)
+      : fe_values_cell(fe_cell, quadrature_formula, cell_flags)
+      , fe_face_values_cell(fe_cell, face_quadrature_formula, cell_face_flags)
+      , fe_face_values_trace(fe_trace, face_quadrature_formula, trace_flags)
+      , cc_matrix(fe_cell.dofs_per_cell, fe_cell.dofs_per_cell)
+      , ct_matrix(fe_cell.dofs_per_cell, fe_trace.dofs_per_cell)
+      , tc_matrix(fe_trace.dofs_per_cell, fe_cell.dofs_per_cell)
+      , tmp_matrix(fe_trace.dofs_per_cell, fe_cell.dofs_per_cell)
+      , cc_rhs(fe_cell.dofs_per_cell)
+      , tmp_rhs(fe_cell.dofs_per_cell)
       , cell_quadrature_points(quadrature_formula.size())
       , face_quadrature_points(face_quadrature_formula.size())
       , epsilon_cell(quadrature_formula.size())
@@ -563,53 +561,53 @@ namespace Ddhdg
           initialize_double_map_on_components(quadrature_formula.size()))
       , previous_c_face(
           initialize_double_map_on_components(face_quadrature_formula.size()))
-      , previous_f_cell(
+      , previous_d_cell(
           initialize_tensor_map_on_components(quadrature_formula.size()))
-      , previous_f_face(
+      , previous_d_face(
           initialize_tensor_map_on_components(face_quadrature_formula.size()))
       , previous_tr_c_face(
           initialize_double_map_on_components(face_quadrature_formula.size()))
-      , f(initialize_tensor_map_on_components(fe_local.dofs_per_cell))
-      , f_div(initialize_double_map_on_components(fe_local.dofs_per_cell))
-      , c(initialize_double_map_on_components(fe_local.dofs_per_cell))
-      , c_grad(initialize_tensor_map_on_components(fe_local.dofs_per_cell))
-      , tr_c(initialize_double_map_on_components(fe.dofs_per_cell))
+      , d(initialize_tensor_map_on_components(fe_cell.dofs_per_cell))
+      , d_div(initialize_double_map_on_components(fe_cell.dofs_per_cell))
+      , c(initialize_double_map_on_components(fe_cell.dofs_per_cell))
+      , c_grad(initialize_tensor_map_on_components(fe_cell.dofs_per_cell))
+      , tr_c(initialize_double_map_on_components(fe_trace.dofs_per_cell))
       , tr_c_solution_values(
           initialize_double_map_on_components(face_quadrature_formula.size()))
-      , fe_local_support_on_face(GeometryInfo<dim>::faces_per_cell)
-      , fe_support_on_face(GeometryInfo<dim>::faces_per_cell)
+      , fe_cell_support_on_face(GeometryInfo<dim>::faces_per_cell)
+      , fe_trace_support_on_face(GeometryInfo<dim>::faces_per_cell)
     {
       for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
            ++face)
-        for (unsigned int i = 0; i < fe_local.dofs_per_cell; ++i)
+        for (unsigned int i = 0; i < fe_cell.dofs_per_cell; ++i)
           {
-            if (fe_local.has_support_on_face(i, face))
-              fe_local_support_on_face[face].push_back(i);
+            if (fe_cell.has_support_on_face(i, face))
+              fe_cell_support_on_face[face].push_back(i);
           }
       for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
            ++face)
-        for (unsigned int i = 0; i < fe.dofs_per_cell; ++i)
+        for (unsigned int i = 0; i < fe_trace.dofs_per_cell; ++i)
           {
-            if (fe.has_support_on_face(i, face))
-              fe_support_on_face[face].push_back(i);
+            if (fe_trace.has_support_on_face(i, face))
+              fe_trace_support_on_face[face].push_back(i);
           }
     }
 
     ScratchData(const ScratchData &sd)
-      : fe_values_local(sd.fe_values_local.get_fe(),
-                        sd.fe_values_local.get_quadrature(),
-                        sd.fe_values_local.get_update_flags())
-      , fe_face_values_local(sd.fe_face_values_local.get_fe(),
-                             sd.fe_face_values_local.get_quadrature(),
-                             sd.fe_face_values_local.get_update_flags())
-      , fe_face_values(sd.fe_face_values.get_fe(),
-                       sd.fe_face_values.get_quadrature(),
-                       sd.fe_face_values.get_update_flags())
-      , ll_matrix(sd.ll_matrix)
-      , lf_matrix(sd.lf_matrix)
-      , fl_matrix(sd.fl_matrix)
+      : fe_values_cell(sd.fe_values_cell.get_fe(),
+                       sd.fe_values_cell.get_quadrature(),
+                       sd.fe_values_cell.get_update_flags())
+      , fe_face_values_cell(sd.fe_face_values_cell.get_fe(),
+                            sd.fe_face_values_cell.get_quadrature(),
+                            sd.fe_face_values_cell.get_update_flags())
+      , fe_face_values_trace(sd.fe_face_values_trace.get_fe(),
+                             sd.fe_face_values_trace.get_quadrature(),
+                             sd.fe_face_values_trace.get_update_flags())
+      , cc_matrix(sd.cc_matrix)
+      , ct_matrix(sd.ct_matrix)
+      , tc_matrix(sd.tc_matrix)
       , tmp_matrix(sd.tmp_matrix)
-      , l_rhs(sd.l_rhs)
+      , cc_rhs(sd.cc_rhs)
       , tmp_rhs(sd.tmp_rhs)
       , cell_quadrature_points(sd.cell_quadrature_points)
       , face_quadrature_points(sd.face_quadrature_points)
@@ -628,17 +626,17 @@ namespace Ddhdg
       , dr_p_cell(sd.dr_p_cell)
       , previous_c_cell(sd.previous_c_cell)
       , previous_c_face(sd.previous_c_face)
-      , previous_f_cell(sd.previous_f_cell)
-      , previous_f_face(sd.previous_f_face)
+      , previous_d_cell(sd.previous_d_cell)
+      , previous_d_face(sd.previous_d_face)
       , previous_tr_c_face(sd.previous_tr_c_face)
-      , f(sd.f)
-      , f_div(sd.f_div)
+      , d(sd.d)
+      , d_div(sd.d_div)
       , c(sd.c)
       , c_grad(sd.c_grad)
       , tr_c(sd.tr_c)
       , tr_c_solution_values(sd.tr_c_solution_values)
-      , fe_local_support_on_face(sd.fe_local_support_on_face)
-      , fe_support_on_face(sd.fe_support_on_face)
+      , fe_cell_support_on_face(sd.fe_cell_support_on_face)
+      , fe_trace_support_on_face(sd.fe_trace_support_on_face)
     {}
 
 
