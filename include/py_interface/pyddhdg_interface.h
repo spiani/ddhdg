@@ -172,6 +172,15 @@ py::class_<Solver<DIM>>(m, "Solver")
        py::arg("p_function"),
        py::arg("use_projection") = false)
   .def("set_multithreading", &Solver<DIM>::set_multithreading)
+  .def("enable_component", &Solver<DIM>::enable_component, py::arg("component"))
+  .def("disable_component",
+       &Solver<DIM>::disable_component,
+       py::arg("component"))
+  .def("set_enabled_components",
+       &Solver<DIM>::set_enabled_components,
+       py::arg("v_enabled"),
+       py::arg("n_enabled"),
+       py::arg("p_enabled"))
   .def("run", &Solver<DIM>::run)
   .def("estimate_l2_error",
        py::overload_cast<const std::string &, const Ddhdg::Component>(

@@ -330,6 +330,44 @@ namespace pyddhdg
 
 
   template <int dim>
+  bool
+  Solver<dim>::is_enabled(Ddhdg::Component c) const
+  {
+    return this->ddhdg_solver->is_enabled(c);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::enable_component(Ddhdg::Component c)
+  {
+    this->ddhdg_solver->enable_component(c);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::disable_component(Ddhdg::Component c)
+  {
+    this->ddhdg_solver->disable_component(c);
+  }
+
+
+
+  template <int dim>
+  void
+  Solver<dim>::set_enabled_components(const bool V_enabled,
+                                      const bool n_enabled,
+                                      const bool p_enabled)
+  {
+    this->ddhdg_solver->set_enabled_components(V_enabled, n_enabled, p_enabled);
+  }
+
+
+
+  template <int dim>
   Ddhdg::NonlinearIteratorStatus
   Solver<dim>::run()
   {

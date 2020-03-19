@@ -57,10 +57,10 @@ namespace Ddhdg
   }
 
   inline unsigned int
-  get_component_index(const Component c)
+  get_component_index(const Component c, const std::set<Component>& components)
   {
     unsigned int i = 0;
-    for (const Component current_cmp : all_components())
+    for (const Component current_cmp : components)
       {
         if (current_cmp == c)
           return i;
@@ -68,6 +68,12 @@ namespace Ddhdg
       }
     Assert(false, UnknownComponent());
     return 9999;
+  }
+
+  inline unsigned int
+  get_component_index(const Component c)
+  {
+    return get_component_index(c, all_components());
   }
 
   enum Displacement

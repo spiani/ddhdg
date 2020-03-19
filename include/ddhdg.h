@@ -152,10 +152,25 @@ namespace Ddhdg
       bool                                         use_projection = false);
 
     void
-    set_multithreading(bool multithreading = true)
-    {
-      this->parameters->multithreading = multithreading;
-    }
+    set_multithreading(bool multithreading = true);
+
+    [[nodiscard]] bool
+    is_enabled(Component c) const;
+
+    void
+    enable_component(Component c);
+
+    void
+    disable_component(Component c);
+
+    void
+    enable_components(const std::set<Component>& c);
+
+    void
+    disable_components(const std::set<Component>& c);
+
+    void
+    set_enabled_components(bool V_enabled, bool n_enabled, bool p_enabled);
 
     NonlinearIteratorStatus
     run(double absolute_tol,
@@ -278,7 +293,8 @@ namespace Ddhdg
     get_displacement_extractor(Displacement displacement) const;
 
     dealii::FEValuesExtractors::Scalar
-    get_trace_component_extractor(Component component) const;
+    get_trace_component_extractor(Component component,
+                                  bool      restricted = false) const;
 
     std::shared_ptr<dealii::Function<dim>>
     extend_function_on_all_components(
@@ -295,8 +311,16 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Function<dim>> f,
       Component                                    c) const;
 
+    std::map<Component, unsigned int>
+    restrict_degrees_on_enabled_component() const;
+
+    unsigned int get_number_of_quadrature_points() const;
+
     void
-    setup_system();
+    setup_overall_system();
+
+    void
+    setup_restricted_trace_system();
 
     void
     assemble_system_multithreaded(bool reconstruct_trace = false);
@@ -365,20 +389,20 @@ namespace Ddhdg
     template <typename prm, Component c>
     inline void
     add_tc_matrix_terms_to_tt_rhs(ScratchData &                    scratch,
-                                 Ddhdg::Solver<dim>::PerTaskData &task_data,
-                                 unsigned int                     face);
+                                  Ddhdg::Solver<dim>::PerTaskData &task_data,
+                                  unsigned int                     face);
 
     template <typename prm, Component c>
     inline void
     assemble_tt_matrix(ScratchData &scratch,
-                         PerTaskData &task_data,
-                         unsigned int face);
+                       PerTaskData &task_data,
+                       unsigned int face);
 
     template <typename prm, Component c>
     inline void
     add_tt_matrix_terms_to_tt_rhs(ScratchData &                    scratch,
-                                   Ddhdg::Solver<dim>::PerTaskData &task_data,
-                                   unsigned int                     face);
+                                  Ddhdg::Solver<dim>::PerTaskData &task_data,
+                                  unsigned int                     face);
 
     template <Component c>
     inline void
@@ -429,6 +453,12 @@ namespace Ddhdg
     void
     copy_local_to_global(const PerTaskData &data);
 
+    void
+    build_restricted_to_trace_dof_map();
+
+    void
+    copy_restricted_to_trace();
+
     const std::unique_ptr<Triangulation<dim>>           triangulation;
     const std::shared_ptr<const Permittivity<dim>>      permittivity;
     const std::shared_ptr<const ElectronMobility<dim>>  n_electron_mobility;
@@ -443,19 +473,28 @@ namespace Ddhdg
 
     const std::unique_ptr<SolverParameters> parameters;
 
-    FESystem<dim>   fe_cell;
-    DoFHandler<dim> dof_handler_cell;
-    Vector<double>  update_cell;
-    Vector<double>  current_solution_cell;
-    FESystem<dim>   fe_trace;
-    DoFHandler<dim> dof_handler_trace;
-    Vector<double>  update_trace;
-    Vector<double>  current_solution_trace;
-    Vector<double>  system_rhs;
+    std::unique_ptr<const FESystem<dim>> fe_cell;
+    DoFHandler<dim>                      dof_handler_cell;
+    Vector<double>                       update_cell;
+    Vector<double>                       current_solution_cell;
+    std::unique_ptr<const FESystem<dim>> fe_trace;
+    std::unique_ptr<const FESystem<dim>> fe_trace_restricted;
+    DoFHandler<dim>                      dof_handler_trace;
+    DoFHandler<dim>                      dof_handler_trace_restricted;
+    Vector<double>                       update_trace;
+    Vector<double>                       current_solution_trace;
+    Vector<double>                       system_rhs;
+    Vector<double>                       system_solution;
+    std::vector<unsigned int>            restricted_to_trace_dof_map;
+
 
     AffineConstraints<double> constraints;
     SparsityPattern           sparsity_pattern;
     SparseMatrix<double>      system_matrix;
+
+    std::set<Component> enabled_components = {Component::V,
+                                              Component::n,
+                                              Component::p};
 
     bool initialized = false;
   };
@@ -479,15 +518,21 @@ namespace Ddhdg
   template <int dim>
   struct Solver<dim>::ScratchData
   {
-    FEValues<dim>                                    fe_values_cell;
-    FEFaceValues<dim>                                fe_face_values_cell;
-    FEFaceValues<dim>                                fe_face_values_trace;
+    FEValues<dim>                   fe_values_cell;
+    FEFaceValues<dim>               fe_face_values_cell;
+    FEFaceValues<dim>               fe_face_values_trace;
+    FEFaceValues<dim>               fe_face_values_trace_restricted;
+    const std::vector<unsigned int> enabled_component_indices;
+    const std::vector<std::vector<unsigned int>>     fe_cell_support_on_face;
+    const std::vector<std::vector<unsigned int>>     fe_trace_support_on_face;
+    const unsigned int                               dofs_on_enabled_components;
     FullMatrix<double>                               cc_matrix;
     FullMatrix<double>                               ct_matrix;
     FullMatrix<double>                               tc_matrix;
     FullMatrix<double>                               tmp_matrix;
     Vector<double>                                   cc_rhs;
     Vector<double>                                   tmp_rhs;
+    Vector<double>                                   restricted_tmp_rhs;
     std::vector<Point<dim>>                          cell_quadrature_points;
     std::vector<Point<dim>>                          face_quadrature_points;
     std::vector<Tensor<2, dim>>                      epsilon_cell;
@@ -514,8 +559,6 @@ namespace Ddhdg
     std::map<Component, std::vector<Tensor<1, dim>>> c_grad;
     std::map<Component, std::vector<double>>         tr_c;
     std::map<Component, std::vector<double>>         tr_c_solution_values;
-    std::vector<std::vector<unsigned int>>           fe_cell_support_on_face;
-    std::vector<std::vector<unsigned int>>           fe_trace_support_on_face;
 
     static std::map<Component, std::vector<double>>
     initialize_double_map_on_components(unsigned int n);
@@ -526,119 +569,32 @@ namespace Ddhdg
     static std::map<Component, std::vector<double>>
     initialize_double_map_on_n_and_p(unsigned int k);
 
-    ScratchData(const FiniteElement<dim> &fe_trace,
-                const FiniteElement<dim> &fe_cell,
-                const QGauss<dim> &       quadrature_formula,
-                const QGauss<dim - 1> &   face_quadrature_formula,
-                const UpdateFlags         cell_flags,
-                const UpdateFlags         cell_face_flags,
-                const UpdateFlags         trace_flags)
-      : fe_values_cell(fe_cell, quadrature_formula, cell_flags)
-      , fe_face_values_cell(fe_cell, face_quadrature_formula, cell_face_flags)
-      , fe_face_values_trace(fe_trace, face_quadrature_formula, trace_flags)
-      , cc_matrix(fe_cell.dofs_per_cell, fe_cell.dofs_per_cell)
-      , ct_matrix(fe_cell.dofs_per_cell, fe_trace.dofs_per_cell)
-      , tc_matrix(fe_trace.dofs_per_cell, fe_cell.dofs_per_cell)
-      , tmp_matrix(fe_trace.dofs_per_cell, fe_cell.dofs_per_cell)
-      , cc_rhs(fe_cell.dofs_per_cell)
-      , tmp_rhs(fe_cell.dofs_per_cell)
-      , cell_quadrature_points(quadrature_formula.size())
-      , face_quadrature_points(face_quadrature_formula.size())
-      , epsilon_cell(quadrature_formula.size())
-      , epsilon_face(face_quadrature_formula.size())
-      , mu_n_cell(quadrature_formula.size())
-      , mu_p_cell(quadrature_formula.size())
-      , mu_n_face(face_quadrature_formula.size())
-      , mu_p_face(face_quadrature_formula.size())
-      , T_cell(quadrature_formula.size())
-      , T_face(face_quadrature_formula.size())
-      , doping_cell(quadrature_formula.size())
-      , r_n_cell(quadrature_formula.size())
-      , r_p_cell(quadrature_formula.size())
-      , dr_n_cell(initialize_double_map_on_n_and_p(quadrature_formula.size()))
-      , dr_p_cell(initialize_double_map_on_n_and_p(quadrature_formula.size()))
-      , previous_c_cell(
-          initialize_double_map_on_components(quadrature_formula.size()))
-      , previous_c_face(
-          initialize_double_map_on_components(face_quadrature_formula.size()))
-      , previous_d_cell(
-          initialize_tensor_map_on_components(quadrature_formula.size()))
-      , previous_d_face(
-          initialize_tensor_map_on_components(face_quadrature_formula.size()))
-      , previous_tr_c_face(
-          initialize_double_map_on_components(face_quadrature_formula.size()))
-      , d(initialize_tensor_map_on_components(fe_cell.dofs_per_cell))
-      , d_div(initialize_double_map_on_components(fe_cell.dofs_per_cell))
-      , c(initialize_double_map_on_components(fe_cell.dofs_per_cell))
-      , c_grad(initialize_tensor_map_on_components(fe_cell.dofs_per_cell))
-      , tr_c(initialize_double_map_on_components(fe_trace.dofs_per_cell))
-      , tr_c_solution_values(
-          initialize_double_map_on_components(face_quadrature_formula.size()))
-      , fe_cell_support_on_face(GeometryInfo<dim>::faces_per_cell)
-      , fe_trace_support_on_face(GeometryInfo<dim>::faces_per_cell)
-    {
-      for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
-           ++face)
-        for (unsigned int i = 0; i < fe_cell.dofs_per_cell; ++i)
-          {
-            if (fe_cell.has_support_on_face(i, face))
-              fe_cell_support_on_face[face].push_back(i);
-          }
-      for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
-           ++face)
-        for (unsigned int i = 0; i < fe_trace.dofs_per_cell; ++i)
-          {
-            if (fe_trace.has_support_on_face(i, face))
-              fe_trace_support_on_face[face].push_back(i);
-          }
-    }
+    static std::vector<unsigned int>
+    check_dofs_on_enabled_components(
+      const FiniteElement<dim> & fe_cell,
+      const std::set<Component> &enabled_components);
 
-    ScratchData(const ScratchData &sd)
-      : fe_values_cell(sd.fe_values_cell.get_fe(),
-                       sd.fe_values_cell.get_quadrature(),
-                       sd.fe_values_cell.get_update_flags())
-      , fe_face_values_cell(sd.fe_face_values_cell.get_fe(),
-                            sd.fe_face_values_cell.get_quadrature(),
-                            sd.fe_face_values_cell.get_update_flags())
-      , fe_face_values_trace(sd.fe_face_values_trace.get_fe(),
-                             sd.fe_face_values_trace.get_quadrature(),
-                             sd.fe_face_values_trace.get_update_flags())
-      , cc_matrix(sd.cc_matrix)
-      , ct_matrix(sd.ct_matrix)
-      , tc_matrix(sd.tc_matrix)
-      , tmp_matrix(sd.tmp_matrix)
-      , cc_rhs(sd.cc_rhs)
-      , tmp_rhs(sd.tmp_rhs)
-      , cell_quadrature_points(sd.cell_quadrature_points)
-      , face_quadrature_points(sd.face_quadrature_points)
-      , epsilon_cell(sd.epsilon_cell)
-      , epsilon_face(sd.epsilon_face)
-      , mu_n_cell(sd.mu_n_cell)
-      , mu_p_cell(sd.mu_p_cell)
-      , mu_n_face(sd.mu_n_face)
-      , mu_p_face(sd.mu_p_face)
-      , T_cell(sd.T_cell)
-      , T_face(sd.T_face)
-      , doping_cell(sd.doping_cell)
-      , r_n_cell(sd.r_n_cell)
-      , r_p_cell(sd.r_p_cell)
-      , dr_n_cell(sd.dr_n_cell)
-      , dr_p_cell(sd.dr_p_cell)
-      , previous_c_cell(sd.previous_c_cell)
-      , previous_c_face(sd.previous_c_face)
-      , previous_d_cell(sd.previous_d_cell)
-      , previous_d_face(sd.previous_d_face)
-      , previous_tr_c_face(sd.previous_tr_c_face)
-      , d(sd.d)
-      , d_div(sd.d_div)
-      , c(sd.c)
-      , c_grad(sd.c_grad)
-      , tr_c(sd.tr_c)
-      , tr_c_solution_values(sd.tr_c_solution_values)
-      , fe_cell_support_on_face(sd.fe_cell_support_on_face)
-      , fe_trace_support_on_face(sd.fe_trace_support_on_face)
-    {}
+    static std::vector<std::vector<unsigned int>>
+    check_dofs_on_faces_for_cells(
+      const FiniteElement<dim> &       fe_cell,
+      const std::vector<unsigned int> &enabled_component_indices);
 
+    static std::vector<std::vector<unsigned int>>
+    check_dofs_on_faces_for_trace(
+      const FiniteElement<dim> &fe_trace_restricted);
+
+    ScratchData(const FiniteElement<dim> & fe_trace_restricted,
+                const FiniteElement<dim> & fe_trace,
+                const FiniteElement<dim> & fe_cell,
+                const QGauss<dim> &        quadrature_formula,
+                const QGauss<dim - 1> &    face_quadrature_formula,
+                UpdateFlags                cell_flags,
+                UpdateFlags                cell_face_flags,
+                UpdateFlags                trace_flags,
+                UpdateFlags                trace_restricted_flags,
+                const std::set<Component> &enabled_components);
+
+    ScratchData(const ScratchData &sd);
 
     template <EinsteinDiffusionModel m, Component cmp, bool on_face = true>
     inline dealii::Tensor<2, dim>

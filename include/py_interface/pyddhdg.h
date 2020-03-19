@@ -199,6 +199,18 @@ namespace pyddhdg
     void
     set_multithreading(bool multithreading = true);
 
+    [[nodiscard]] bool
+    is_enabled(Ddhdg::Component c) const;
+
+    void
+    enable_component(Ddhdg::Component c);
+
+    void
+    disable_component(Ddhdg::Component c);
+
+    void
+    set_enabled_components(bool V_enabled, bool n_enabled, bool p_enabled);
+
     Ddhdg::NonlinearIteratorStatus
     run();
 

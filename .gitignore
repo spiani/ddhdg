@@ -1,5 +1,6 @@
 build/
 cmake-build-*/
+internal_tests/*
 */__pycache__/*
 */*/__pycache__/*
 clean_results.sh
