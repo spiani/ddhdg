@@ -86,29 +86,47 @@ public:
     add_parameter("doping",
                   doping_str,
                   "A function that defines the temperature on the domain");
+    enter_subsection("n recombination term");
     add_parameter(
-      "recombination term zero order term",
-      recombination_term_constant_term,
+      "zero order term",
+      n_recombination_term_constant_term,
       "A function of the space that represent the value of the recombination"
       "term when n = 0 and p = 0");
     add_parameter(
-      "recombination term n coefficient",
-      recombination_term_n_coefficient,
+      "n coefficient",
+      n_recombination_term_n_coefficient,
       "Let the recombination term be R = a + b * n + c * p where "
       "a, b, c are space functions; then this field is the value of b");
     add_parameter(
-      "recombination term p coefficient",
-      recombination_term_p_coefficient,
+      "p coefficient",
+      n_recombination_term_p_coefficient,
       "Let the recombination term be R = a + b * n + c * p where "
       "a, b, c are space functions; this this field is the value of c");
+    leave_subsection();
+    enter_subsection("p recombination term");
+    add_parameter(
+      "zero order term",
+      p_recombination_term_constant_term,
+      "A function of the space that represent the value of the recombination"
+      "term when n = 0 and p = 0");
+    add_parameter(
+      "n coefficient",
+      p_recombination_term_n_coefficient,
+      "Let the recombination term be R = a + b * n + c * p where "
+      "a, b, c are space functions; then this field is the value of b");
+    add_parameter(
+      "p coefficient",
+      p_recombination_term_p_coefficient,
+      "Let the recombination term be R = a + b * n + c * p where "
+      "a, b, c are space functions; this this field is the value of c");
+    leave_subsection();
     add_parameter(
       "einstein diffusion model",
       einstein_diffusion_model,
       "If this number is 0, the Einstein diffusion coefficient will be set "
       "to zero. It this number is one it will be computed as Kb *T / q * mu_n. "
       "Any other number is not allowed.",
-      dealii::Patterns::Integer (0, 1)
-      );
+      dealii::Patterns::Integer(0, 1));
     leave_subsection();
 
     enter_subsection("boundary conditions");
@@ -224,9 +242,14 @@ public:
   std::string                                  doping_str = "0.";
   std::shared_ptr<dealii::FunctionParser<dim>> doping;
 
-  std::string recombination_term_constant_term = "0.";
-  std::string recombination_term_n_coefficient = "0.";
-  std::string recombination_term_p_coefficient = "0.";
+  std::string n_recombination_term_constant_term = "0.";
+  std::string n_recombination_term_n_coefficient = "0.";
+  std::string n_recombination_term_p_coefficient = "0.";
+
+  std::string p_recombination_term_constant_term = "0.";
+  std::string p_recombination_term_n_coefficient = "0.";
+  std::string p_recombination_term_p_coefficient = "0.";
+
 
   unsigned int einstein_diffusion_model = 1;
 
@@ -389,36 +412,43 @@ main(int argc, char **argv)
   const std::shared_ptr<const Ddhdg::ElectronMobility<dim>> electron_mobility =
     std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.);
 
-  // Set the recombination term
+  // Set the recombination terms
   const std::shared_ptr<const Ddhdg::RecombinationTerm<dim>>
-    recombination_term =
+    n_recombination_term =
       std::make_shared<const Ddhdg::LinearRecombinationTerm<dim>>(
-        prm.recombination_term_constant_term,
-        prm.recombination_term_n_coefficient,
-        prm.recombination_term_p_coefficient);
+        prm.n_recombination_term_constant_term,
+        prm.n_recombination_term_n_coefficient,
+        prm.n_recombination_term_p_coefficient);
+  const std::shared_ptr<const Ddhdg::RecombinationTerm<dim>>
+    p_recombination_term =
+      std::make_shared<const Ddhdg::LinearRecombinationTerm<dim>>(
+        prm.p_recombination_term_constant_term,
+        prm.p_recombination_term_n_coefficient,
+        prm.p_recombination_term_p_coefficient);
 
   // Get the Einstein recombination model that must be used
   Ddhdg::EinsteinDiffusionModel einstein_diffusion_model;
-  switch(prm.einstein_diffusion_model){
-    case 0:
-      einstein_diffusion_model = Ddhdg::EinsteinDiffusionModel::M0;
-      break;
-    case 1:
-      einstein_diffusion_model = Ddhdg::EinsteinDiffusionModel::M1;
-      break;
-    default:
-      AssertIndexRange(prm.einstein_diffusion_model, 2);
-      einstein_diffusion_model = Ddhdg::EinsteinDiffusionModel::M0;
-  }
+  switch (prm.einstein_diffusion_model)
+    {
+      case 0:
+        einstein_diffusion_model = Ddhdg::EinsteinDiffusionModel::M0;
+        break;
+      case 1:
+        einstein_diffusion_model = Ddhdg::EinsteinDiffusionModel::M1;
+        break;
+      default:
+        AssertIndexRange(prm.einstein_diffusion_model, 2);
+        einstein_diffusion_model = Ddhdg::EinsteinDiffusionModel::M0;
+    }
 
   // Create an object that represent the problem we are going to solve
   std::shared_ptr<const Ddhdg::Problem<dim>> problem =
     std::make_shared<const Ddhdg::Problem<dim>>(triangulation,
                                                 permittivity,
                                                 electron_mobility,
-                                                recombination_term,
+                                                n_recombination_term,
                                                 electron_mobility,
-                                                recombination_term,
+                                                p_recombination_term,
                                                 prm.temperature,
                                                 prm.doping,
                                                 boundary_handler,

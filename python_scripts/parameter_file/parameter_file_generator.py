@@ -8,6 +8,15 @@ class ParameterSubsection:
                 continue
             if val in ('subsection_name', 'to_prm_file', 'to_dict'):
                 continue
+
+            if hasattr(item, "to_prm_file"):
+                adding_lines = item.to_prm_file(indent)
+                adding_lines = adding_lines.replace('\n', '\n' + ' ' * indent)
+                adding_lines = ' ' * indent + adding_lines
+                adding_lines = adding_lines[:-indent]
+                output += adding_lines
+                continue
+
             val_real_name = val.replace('_', ' ')
             output += ' ' * indent + 'set {} = {}\n'.format(
                 val_real_name,
@@ -27,14 +36,59 @@ class ParameterSubsection:
         return output
 
 
+
+class NRecombinationTerm(ParameterSubsection):
+    subsection_name = "n recombination term"
+
+    def __init__(self, zero_order_term="0.", n_coefficient="0.",
+                 p_coefficient="0."):
+        self._zero_order_term = zero_order_term
+        self._n_coefficient = n_coefficient
+        self._p_coefficient = p_coefficient
+
+    @property
+    def zero_order_term(self):
+        return self._zero_order_term
+
+    @property
+    def n_coefficient(self):
+        return self._n_coefficient
+
+    @property
+    def p_coefficient(self):
+        return self._p_coefficient
+
+
+class PRecombinationTerm(ParameterSubsection):
+    subsection_name = "p recombination term"
+
+    def __init__(self, zero_order_term="0.", n_coefficient="0.",
+                 p_coefficient="0."):
+        self._zero_order_term = zero_order_term
+        self._n_coefficient = n_coefficient
+        self._p_coefficient = p_coefficient
+
+    @property
+    def zero_order_term(self):
+        return self._zero_order_term
+
+    @property
+    def n_coefficient(self):
+        return self._n_coefficient
+
+    @property
+    def p_coefficient(self):
+        return self._p_coefficient
+
+
 class PhysicalQuantitiesParameters(ParameterSubsection):
     subsection_name = "physical quantities"
 
-    def __init__(self, recombination="0.", recombination_n_der="0.",
-                 recombination_p_der="0.", temperature="q / kb", doping="0."):
-        self._recombination_zero_term = recombination
-        self._recombination_n_coefficient = recombination_n_der
-        self._recombination_p_coefficient = recombination_p_der
+    def __init__(self, n_recombination_term=NRecombinationTerm(),
+                 p_recombination_term=PRecombinationTerm(),
+                 temperature="q / kb", doping="0."):
+        self._n_recombination_term = n_recombination_term
+        self._p_recombination_term = p_recombination_term
         self._temperature = temperature
         self._doping = doping
 
@@ -47,16 +101,13 @@ class PhysicalQuantitiesParameters(ParameterSubsection):
         return self._doping
 
     @property
-    def recombination_term_zero_order_term(self):
-        return self._recombination_zero_term
+    def n_recombination_term(self):
+        return self._n_recombination_term
 
     @property
-    def recombination_term_n_coefficient(self):
-        return self._recombination_n_coefficient
+    def p_recombination_term(self):
+        return self._p_recombination_term
 
-    @property
-    def recombination_term_p_coefficient(self):
-        return self._recombination_p_coefficient
 
 
 class NonlinearSolverParameters(ParameterSubsection):

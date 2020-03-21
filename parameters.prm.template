@@ -10,11 +10,18 @@ set n tau                           = 1.
 set p tau                           = 1.
 
 subsection physical quantities
-  set recombination term zero order term  = q / (1 + x^2)
-  set recombination term n coefficient    = 0
-  set recombination term p coefficient    = 0
-  set temperature                         = q / kb
-  set doping                              = 0.
+  subsection n recombination term
+    set zero order term             = q / (1 + x^2)
+    set n coefficient               = 0
+    set p coefficient               = 0
+  end
+  subsection p recombination term
+    set zero order term             = 0
+    set n coefficient               = 0
+    set p coefficient               = 0
+  end
+  set temperature                   = q / kb
+  set doping                        = 0.
 end
 
 subsection nonlinear solver
