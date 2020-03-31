@@ -22,6 +22,7 @@
 #include "einstein_diffusion_model.h"
 #include "electron_mobility.h"
 #include "permittivity.h"
+#include "problem.h"
 #include "recombination_term.h"
 
 namespace Ddhdg
@@ -29,46 +30,6 @@ namespace Ddhdg
   using namespace dealii;
 
   DeclExceptionMsg(NoTraceIn1D, "The trace can not be saved in 1D");
-
-  template <int dim>
-  struct Problem
-  {
-    const std::shared_ptr<const Triangulation<dim>>     triangulation;
-    const std::shared_ptr<const Permittivity<dim>>      permittivity;
-    const std::shared_ptr<const ElectronMobility<dim>>  n_electron_mobility;
-    const std::shared_ptr<const RecombinationTerm<dim>> n_recombination_term;
-    const std::shared_ptr<const ElectronMobility<dim>>  p_electron_mobility;
-    const std::shared_ptr<const RecombinationTerm<dim>> p_recombination_term;
-    const std::shared_ptr<const dealii::Function<dim>>  temperature;
-    const std::shared_ptr<const dealii::Function<dim>>  doping;
-    const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
-
-    const EinsteinDiffusionModel einstein_diffusion_model;
-
-    explicit Problem(
-      const std::shared_ptr<const Triangulation<dim>>     triangulation,
-      const std::shared_ptr<const Permittivity<dim>>      permittivity,
-      const std::shared_ptr<const ElectronMobility<dim>>  n_electron_mobility,
-      const std::shared_ptr<const RecombinationTerm<dim>> n_recombination_term,
-      const std::shared_ptr<const ElectronMobility<dim>>  p_electron_mobility,
-      const std::shared_ptr<const RecombinationTerm<dim>> p_recombination_term,
-      const std::shared_ptr<const dealii::Function<dim>>  temperature,
-      const std::shared_ptr<const dealii::Function<dim>>  doping,
-      const std::shared_ptr<const BoundaryConditionHandler<dim>>
-                                   boundary_handler,
-      const EinsteinDiffusionModel einstein_diffusion_model)
-      : triangulation(triangulation)
-      , permittivity(permittivity)
-      , n_electron_mobility(n_electron_mobility)
-      , n_recombination_term(n_recombination_term)
-      , p_electron_mobility(p_electron_mobility)
-      , p_recombination_term(p_recombination_term)
-      , temperature(temperature)
-      , doping(doping)
-      , boundary_handler(boundary_handler)
-      , einstein_diffusion_model(einstein_diffusion_model)
-    {}
-  };
 
   struct SolverParameters
   {
@@ -164,10 +125,10 @@ namespace Ddhdg
     disable_component(Component c);
 
     void
-    enable_components(const std::set<Component>& c);
+    enable_components(const std::set<Component> &c);
 
     void
-    disable_components(const std::set<Component>& c);
+    disable_components(const std::set<Component> &c);
 
     void
     set_enabled_components(bool V_enabled, bool n_enabled, bool p_enabled);
@@ -314,7 +275,8 @@ namespace Ddhdg
     std::map<Component, unsigned int>
     restrict_degrees_on_enabled_component() const;
 
-    unsigned int get_number_of_quadrature_points() const;
+    unsigned int
+    get_number_of_quadrature_points() const;
 
     void
     setup_overall_system();

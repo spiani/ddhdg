@@ -2745,7 +2745,7 @@ namespace Ddhdg
              i < scratch.fe_cell_support_on_face[face].size();
              ++i)
           {
-            const unsigned int ii = scratch.fe_cell_support_on_face[face][i];
+            const unsigned int ii  = scratch.fe_cell_support_on_face[face][i];
             const unsigned int iii = scratch.enabled_component_indices[ii];
 
             if (prm::is_V_enabled)
@@ -3879,9 +3879,7 @@ namespace Ddhdg
 
 
   template class Solver<1>;
-
   template class Solver<2>;
-
   template class Solver<3>;
 
 } // end of namespace Ddhdg
