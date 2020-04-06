@@ -557,7 +557,7 @@ namespace Ddhdg
                   return Constants::KB / Constants::Q * this->T_cell[q] *
                          this->mu_p_cell[q];
                 default:
-                  Assert(false, UnknownComponent());
+                  Assert(false, InvalidComponent());
                   break;
               }
             break;
@@ -594,7 +594,7 @@ namespace Ddhdg
                            Component::p>(q) *
                          normal * normal * c_tau;
                 default:
-                  Assert(false, UnknownComponent());
+                  Assert(false, InvalidComponent());
               }
           default:
             AssertThrow(false, UnknownEinsteinDiffusionModel());

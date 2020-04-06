@@ -138,7 +138,7 @@ namespace Ddhdg
         case Component::p:
           return this->parsed_p_linear_coefficient.value(q);
         default:
-          Assert(false, UnknownComponent());
+          Assert(false, InvalidComponent());
           break;
       }
     return 0.;
@@ -206,7 +206,7 @@ namespace Ddhdg
           this->parsed_p_linear_coefficient.value_list(P, r);
           break;
         default:
-          Assert(false, UnknownComponent());
+          Assert(false, InvalidComponent());
           break;
       }
   }

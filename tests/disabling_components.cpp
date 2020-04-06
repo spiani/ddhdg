@@ -41,7 +41,7 @@ protected:
         case Ddhdg::Component::p:
           return get_function("sin(4*pi*x)*sin(4*pi*y)");
         default:
-        AssertThrow(false, Ddhdg::UnknownComponent());
+        AssertThrow(false, Ddhdg::InvalidComponent());
         break;
       }
     return get_function("0");
@@ -98,7 +98,7 @@ protected:
             "* cos(pi*y)*sin(pi*x))*sin(pi*y)";
         break;
         default:
-        AssertThrow(false, Ddhdg::UnknownComponent());
+        AssertThrow(false, Ddhdg::InvalidComponent());
         break;
       }
 

@@ -2,8 +2,8 @@
 
 namespace Ddhdg
 {
-  DeclExceptionMsg(UnknownComponent, "Invalid component specified");
-  DeclExceptionMsg(UnknownDisplacement, "Invalid displacement specified");
+  DeclExceptionMsg(InvalidComponent, "Invalid component specified");
+  DeclExceptionMsg(InvalidDisplacement, "Invalid displacement specified");
 
   enum Component
   {
@@ -32,10 +32,10 @@ namespace Ddhdg
         case p:
           return "hole_density";
         default:
-          Assert(false, UnknownComponent());
+          Assert(false, InvalidComponent());
           break;
       }
-    return "UnknownComponent";
+    return "InvalidComponent";
   }
 
   inline std::string
@@ -50,10 +50,10 @@ namespace Ddhdg
         case p:
           return "p";
         default:
-          Assert(false, UnknownComponent());
+          Assert(false, InvalidComponent());
           break;
       }
-    return "UnknownComponent";
+    return "InvalidComponent";
   }
 
   inline unsigned int
@@ -66,7 +66,7 @@ namespace Ddhdg
           return i;
         i++;
       }
-    Assert(false, UnknownComponent());
+    Assert(false, InvalidComponent());
     return 9999;
   }
 
@@ -95,10 +95,10 @@ namespace Ddhdg
         case Wp:
           return "hole_displacement";
         default:
-          Assert(false, UnknownDisplacement());
+          Assert(false, InvalidDisplacement());
           break;
       }
-    return "UnknownDisplacement";
+    return "InvalidDisplacement";
   }
 
   inline std::string
@@ -113,10 +113,10 @@ namespace Ddhdg
         case Wp:
           return "Wp";
         default:
-          Assert(false, UnknownDisplacement());
+          Assert(false, InvalidDisplacement());
           break;
       }
-    return "UnknownDisplacement";
+    return "InvalidDisplacement";
   }
 
   inline Displacement
@@ -131,7 +131,7 @@ namespace Ddhdg
         case p:
           return Wp;
         default:
-          Assert(false, UnknownComponent());
+          Assert(false, InvalidComponent());
           break;
       }
     return E;
@@ -149,7 +149,7 @@ namespace Ddhdg
         case Wp:
           return p;
         default:
-          Assert(false, UnknownDisplacement());
+          Assert(false, InvalidDisplacement());
           break;
       }
     return V;

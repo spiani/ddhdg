@@ -462,7 +462,7 @@ namespace Ddhdg
           mask.set(3 * dim + 2, true);
         break;
         default:
-        Assert(false, UnknownComponent());
+        Assert(false, InvalidComponent());
         break;
       }
     return mask;
@@ -490,7 +490,7 @@ namespace Ddhdg
             mask.set(i, true);
         break;
         default:
-        Assert(false, UnknownDisplacement());
+        Assert(false, InvalidDisplacement());
         break;
       }
     return mask;
@@ -515,7 +515,7 @@ namespace Ddhdg
           mask.set(2, true);
         break;
         default:
-        Assert(false, UnknownComponent());
+        Assert(false, InvalidComponent());
         break;
       }
     return mask;
@@ -546,7 +546,7 @@ namespace Ddhdg
             break;
           }
         default:
-        Assert(false, UnknownComponent());
+        Assert(false, InvalidComponent());
         break;
       }
     std::shared_ptr<dealii::Function<dim>> function_extended =
@@ -594,7 +594,7 @@ namespace Ddhdg
             break;
           }
         default:
-        Assert(false, UnknownDisplacement());
+        Assert(false, InvalidDisplacement());
         break;
       }
     std::shared_ptr<dealii::Function<dim>> function_extended =
@@ -627,7 +627,7 @@ namespace Ddhdg
             break;
           }
         default:
-        Assert(false, UnknownComponent());
+        Assert(false, InvalidComponent());
         break;
       }
     std::shared_ptr<dealii::Function<dim>> function_extended =
@@ -1179,7 +1179,7 @@ namespace Ddhdg
           extractor = dealii::FEValuesExtractors::Scalar(3 * dim + 2);
         break;
         default:
-        Assert(false, UnknownComponent());
+        Assert(false, InvalidComponent());
         break;
       }
     return extractor;
@@ -1204,7 +1204,7 @@ namespace Ddhdg
           extractor = dealii::FEValuesExtractors::Vector(2 * (dim + 1));
         break;
         default:
-        Assert(false, UnknownDisplacement());
+        Assert(false, InvalidDisplacement());
         break;
       }
     return extractor;
@@ -2161,7 +2161,7 @@ namespace Ddhdg
                                   const unsigned int               face)
   {
     if (c != V and c != n and c != p)
-    AssertThrow(false, UnknownComponent());
+    AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -2278,7 +2278,7 @@ namespace Ddhdg
     const unsigned int               face)
   {
     if (c != V and c != n and c != p)
-    AssertThrow(false, UnknownComponent());
+    AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -2379,7 +2379,7 @@ namespace Ddhdg
                                   const unsigned int               face)
   {
     if (c != V and c != n and c != p)
-    AssertThrow(false, UnknownComponent());
+    AssertThrow(false, InvalidComponent());
 
     auto &tr_c = scratch.tr_c.at(c);
     auto &xi   = scratch.tr_c.at(c);
@@ -2431,7 +2431,7 @@ namespace Ddhdg
     const unsigned int               face)
   {
     if (c != V and c != n and c != p)
-    AssertThrow(false, UnknownComponent());
+    AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -2480,7 +2480,7 @@ namespace Ddhdg
     unsigned int                                  face)
   {
     if (c != V and c != n and c != p)
-    Assert(false, UnknownComponent());
+    Assert(false, InvalidComponent());
 
     auto &tr_c  = scratch.tr_c.at(c);
     auto &tr_c0 = scratch.previous_tr_c_face.at(c);
@@ -2527,7 +2527,7 @@ namespace Ddhdg
     unsigned int                                face)
   {
     if (c != V and c != n and c != p)
-    Assert(false, UnknownComponent());
+    Assert(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -2846,7 +2846,7 @@ namespace Ddhdg
                     Component::p>(tau, normal, q);
                 break;
                 default:
-                Assert(false, UnknownComponent());
+                Assert(false, InvalidComponent());
                 tau_stabilized = 1.;
               }
 
@@ -2944,7 +2944,7 @@ namespace Ddhdg
             face);
         break;
         default:
-        Assert(false, UnknownComponent());
+        Assert(false, InvalidComponent());
         break;
       }
   }
