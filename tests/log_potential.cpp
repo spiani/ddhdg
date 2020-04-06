@@ -162,7 +162,7 @@ TYPED_TEST(LogPotentialTest, LogPotentialTest) // NOLINT
   this->refine_grid(4 - dim);
   this->set_current_solution(zero_function, zero_function, zero_function);
 
-  const Ddhdg::NonlinearIteratorStatus status = this->run();
+  const Ddhdg::NonlinearIterationResults status = this->run();
 
   const unsigned int number_of_iterations = status.iterations;
 

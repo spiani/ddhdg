@@ -368,7 +368,7 @@ namespace pyddhdg
 
 
   template <int dim>
-  Ddhdg::NonlinearIteratorStatus
+  Ddhdg::NonlinearIterationResults
   Solver<dim>::run()
   {
     return this->ddhdg_solver->run();

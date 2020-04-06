@@ -160,7 +160,7 @@ TEST_F(DisablingComponentsTest, RunWithAll) // NOLINT
   this->set_multithreading(false);
   this->refine_grid(3);
 
-  const Ddhdg::NonlinearIteratorStatus status = this->run();
+  const Ddhdg::NonlinearIterationResults status = this->run();
 
   ASSERT_TRUE(status.converged);
 
@@ -192,7 +192,7 @@ TEST_F(DisablingComponentsTest, RunForV) // NOLINT
   this->set_component(Ddhdg::Component::n, n_expected_solution, true);
   this->set_component(Ddhdg::Component::p, p_expected_solution, true);
 
-  const Ddhdg::NonlinearIteratorStatus status = this->run();
+  const Ddhdg::NonlinearIterationResults status = this->run();
 
   ASSERT_TRUE(status.converged);
 
@@ -218,7 +218,7 @@ TEST_F(DisablingComponentsTest, RunForN) // NOLINT
   this->set_component(Ddhdg::Component::V, V_expected_solution, true);
   this->set_component(Ddhdg::Component::p, p_expected_solution, true);
 
-  const Ddhdg::NonlinearIteratorStatus status = this->run();
+  const Ddhdg::NonlinearIterationResults status = this->run();
 
   ASSERT_TRUE(status.converged);
 
@@ -244,7 +244,7 @@ TEST_F(DisablingComponentsTest, RunForP) // NOLINT
   this->set_component(Ddhdg::Component::V, V_expected_solution, true);
   this->set_component(Ddhdg::Component::n, n_expected_solution, true);
 
-  const Ddhdg::NonlinearIteratorStatus status = this->run();
+  const Ddhdg::NonlinearIterationResults status = this->run();
 
   ASSERT_TRUE(status.converged);
 
@@ -268,7 +268,7 @@ TEST_F(DisablingComponentsTest, RunForVAndP) // NOLINT
 
   this->set_component(Ddhdg::Component::n, n_expected_solution, true);
 
-  const Ddhdg::NonlinearIteratorStatus status = this->run();
+  const Ddhdg::NonlinearIterationResults status = this->run();
 
   ASSERT_TRUE(status.converged);
 

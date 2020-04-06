@@ -1,11 +1,12 @@
 add_library(DDHDG SHARED
-        ddhdg.cpp
         boundary_conditions.cpp
         electron_mobility.cpp
         function_tools.cpp
+        nonlinear_iteration_results.cpp
         permittivity.cpp
         problem.cpp
         recombination_term.cpp
+        solver.cpp
         )
 
 if (WITH_PYTHON_INTERFACE)

@@ -150,12 +150,12 @@ py::class_<Ddhdg::SolverParameters>(m, "SolverParameters")
     return a.tau.at(Ddhdg::Component::p);
   });
 
-py::class_<Ddhdg::NonlinearIteratorStatus>(m, "NonlinearIteratorStatus")
+py::class_<Ddhdg::NonlinearIterationResults>(m, "NonlinearIterationResults")
   .def(py::init<const bool, const unsigned int, const double>())
-  .def_readonly("converged", &Ddhdg::NonlinearIteratorStatus::converged)
-  .def_readonly("iterations", &Ddhdg::NonlinearIteratorStatus::iterations)
+  .def_readonly("converged", &Ddhdg::NonlinearIterationResults::converged)
+  .def_readonly("iterations", &Ddhdg::NonlinearIterationResults::iterations)
   .def_readonly("last_update_norm",
-                &Ddhdg::NonlinearIteratorStatus::last_update_norm);
+                &Ddhdg::NonlinearIterationResults::last_update_norm);
 
 py::class_<Solver<DIM>>(m, "Solver")
   .def(py::init<const Problem<DIM> &, Ddhdg::SolverParameters &>())

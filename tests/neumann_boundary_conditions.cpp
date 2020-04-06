@@ -170,7 +170,7 @@ TYPED_TEST(NeumannBCLinearTest, NeumannBCLinearTest) // NOLINT
   this->set_component(Ddhdg::Component::n, zero_function);
   this->set_component(Ddhdg::Component::p, zero_function);
 
-  const Ddhdg::NonlinearIteratorStatus status = this->run();
+  const Ddhdg::NonlinearIterationResults status = this->run();
 
   const unsigned int number_of_iterations = status.iterations;
 
@@ -371,7 +371,7 @@ TEST_F(NeumannBCTrigonometricTest, NeumannBCTrigonometricTest) // NOLINT
   this->set_multithreading(false);
   this->refine_grid(3);
 
-  const Ddhdg::NonlinearIteratorStatus status = this->run();
+  const Ddhdg::NonlinearIterationResults status = this->run();
 
   ASSERT_TRUE(status.converged);
 

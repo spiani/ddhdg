@@ -211,7 +211,7 @@ namespace pyddhdg
     void
     set_enabled_components(bool V_enabled, bool n_enabled, bool p_enabled);
 
-    Ddhdg::NonlinearIteratorStatus
+    Ddhdg::NonlinearIterationResults
     run();
 
     [[nodiscard]] double
