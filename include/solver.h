@@ -19,7 +19,6 @@
 
 #include "boundary_conditions.h"
 #include "convergence_table.h"
-#include "einstein_diffusion_model.h"
 #include "electron_mobility.h"
 #include "nonlinear_iteration_results.h"
 #include "permittivity.h"
@@ -357,12 +356,12 @@ namespace Ddhdg
 
     template <typename prm, Component c>
     inline void
-    assemble_flux_conditions(ScratchData &            scratch,
-                             PerTaskData &            task_data,
-                             bool                     has_dirichlet_conditions,
-                             bool                     has_neumann_conditions,
-                             const types::boundary_id face_boundary_id,
-                             unsigned int             face);
+    assemble_flux_conditions(ScratchData &      scratch,
+                             PerTaskData &      task_data,
+                             bool               has_dirichlet_conditions,
+                             bool               has_neumann_conditions,
+                             types::boundary_id face_boundary_id,
+                             unsigned int       face);
 
     template <typename prm>
     inline void
@@ -372,7 +371,7 @@ namespace Ddhdg
       PerTaskData &                           task_data,
       const std::map<Ddhdg::Component, bool> &has_dirichlet_conditions,
       const std::map<Ddhdg::Component, bool> &has_neumann_conditions,
-      const types::boundary_id                face_boundary_id,
+      types::boundary_id                      face_boundary_id,
       unsigned int                            face);
 
     template <typename prm>
@@ -405,8 +404,6 @@ namespace Ddhdg
     const std::shared_ptr<const dealii::Function<dim>>  temperature;
     const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
-
-    EinsteinDiffusionModel einstein_diffusion_model;
 
     const std::unique_ptr<SolverParameters> parameters;
 
@@ -533,74 +530,52 @@ namespace Ddhdg
 
     ScratchData(const ScratchData &sd);
 
-    template <EinsteinDiffusionModel m, Component cmp, bool on_face = true>
+    template <Component cmp, bool on_face = true>
     inline dealii::Tensor<2, dim>
     compute_einstein_diffusion_coefficient(const unsigned int q) const
     {
-      switch (m)
+      switch (cmp)
         {
-          case EinsteinDiffusionModel::M0:
-            return Tensor<2, dim>();
-          case EinsteinDiffusionModel::M1:
-            switch (cmp)
-              {
-                case n:
-                  if (on_face)
-                    return Constants::KB / Constants::Q * this->T_face[q] *
-                           this->mu_n_face[q];
-                  return Constants::KB / Constants::Q * this->T_cell[q] *
-                         this->mu_n_cell[q];
-                case p:
-                  if (on_face)
-                    return Constants::KB / Constants::Q * this->T_face[q] *
-                           this->mu_p_face[q];
-                  return Constants::KB / Constants::Q * this->T_cell[q] *
-                         this->mu_p_cell[q];
-                default:
-                  Assert(false, InvalidComponent());
-                  break;
-              }
-            break;
+          case n:
+            if (on_face)
+              return Constants::KB / Constants::Q * this->T_face[q] *
+                     this->mu_n_face[q];
+            return Constants::KB / Constants::Q * this->T_cell[q] *
+                   this->mu_n_cell[q];
+          case p:
+            if (on_face)
+              return Constants::KB / Constants::Q * this->T_face[q] *
+                     this->mu_p_face[q];
+            return Constants::KB / Constants::Q * this->T_cell[q] *
+                   this->mu_p_cell[q];
           default:
-            Assert(false, UnknownEinsteinDiffusionModel());
-            break;
+            Assert(false, InvalidComponent());
+            return Tensor<2, dim>();
         }
-      return Tensor<2, dim>();
     }
 
-    template <EinsteinDiffusionModel m, Component cmp>
+    template <Component cmp>
     inline double
     compute_stabilized_tau(const double          c_tau,
                            const Tensor<1, dim> &normal,
                            const unsigned int    q) const
     {
-      switch (m)
+      switch (cmp)
         {
-          case EinsteinDiffusionModel::M0:
-            return c_tau;
-          case EinsteinDiffusionModel::M1:
-            switch (cmp)
-              {
-                case Component::V:
-                  return this->epsilon_face[q] * normal * normal * c_tau;
-                case Component::n:
-                  return this->template compute_einstein_diffusion_coefficient<
-                           EinsteinDiffusionModel::M1,
-                           Component::n>(q) *
-                         normal * normal * c_tau;
-                case Component::p:
-                  return this->template compute_einstein_diffusion_coefficient<
-                           EinsteinDiffusionModel::M1,
-                           Component::p>(q) *
-                         normal * normal * c_tau;
-                default:
-                  Assert(false, InvalidComponent());
-              }
+          case Component::V:
+            return this->epsilon_face[q] * normal * normal * c_tau;
+          case Component::n:
+            return this->template compute_einstein_diffusion_coefficient<
+                     Component::n>(q) *
+                   normal * normal * c_tau;
+          case Component::p:
+            return this->template compute_einstein_diffusion_coefficient<
+                     Component::p>(q) *
+                   normal * normal * c_tau;
           default:
-            AssertThrow(false, UnknownEinsteinDiffusionModel());
-            break;
+            Assert(false, InvalidComponent());
+            return 1.;
         }
-      return 1.;
     }
   };
 

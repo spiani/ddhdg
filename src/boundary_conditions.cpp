@@ -126,11 +126,11 @@ Ddhdg::BoundaryConditionHandler<dim>::get_dirichlet_conditions_for_id(
 template <int dim>
 Ddhdg::DirichletBoundaryCondition<dim>
 Ddhdg::BoundaryConditionHandler<dim>::get_dirichlet_conditions_for_id(
-  dealii::types::boundary_id id, Ddhdg::Component c) const
+  dealii::types::boundary_id id,
+  Ddhdg::Component           c) const
 {
   auto boundary_map = dbc_map.at(id);
   return boundary_map.find(c)->second;
-
 }
 
 template <int dim>
@@ -144,11 +144,11 @@ Ddhdg::BoundaryConditionHandler<dim>::get_neumann_conditions_for_id(
 template <int dim>
 Ddhdg::NeumannBoundaryCondition<dim>
 Ddhdg::BoundaryConditionHandler<dim>::get_neumann_conditions_for_id(
-  dealii::types::boundary_id id, Ddhdg::Component c) const
+  dealii::types::boundary_id id,
+  Ddhdg::Component           c) const
 {
   auto boundary_map = nbc_map.at(id);
   return boundary_map.find(c)->second;
-
 }
 
 template class Ddhdg::BoundaryConditionHandler<1>;

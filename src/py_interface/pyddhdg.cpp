@@ -204,8 +204,7 @@ namespace pyddhdg
                         RecombinationTerm<dim> &       p_recombination_term,
                         Temperature<dim> &             temperature,
                         Doping<dim> &                  doping,
-                        BoundaryConditionHandler<dim> &bc_handler,
-                        Ddhdg::EinsteinDiffusionModel  einstein_diffusion_model)
+                        BoundaryConditionHandler<dim> &bc_handler)
     : ddhdg_problem(std::make_shared<Ddhdg::Problem<dim>>(
         generate_triangulation(),
         permittivity.generate_ddhdg_permittivity(),
@@ -215,8 +214,7 @@ namespace pyddhdg
         p_recombination_term.generate_ddhdg_recombination_term(),
         temperature.get_dealii_function(),
         doping.get_dealii_function(),
-        bc_handler.get_ddhdg_boundary_condition_handler(),
-        einstein_diffusion_model))
+        bc_handler.get_ddhdg_boundary_condition_handler()))
   {}
 
 

@@ -6,7 +6,7 @@
 
 template <typename D>
 class SetComponentMethod : public Ddhdg::Solver<D::value>,
-                             public ::testing::Test
+                           public ::testing::Test
 {
 public:
   SetComponentMethod()
@@ -165,8 +165,7 @@ protected:
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         get_temperature(),
         get_doping(),
-        get_boundary_conditions(),
-        Ddhdg::EinsteinDiffusionModel::M0);
+        get_boundary_conditions());
     return problem;
   }
 };

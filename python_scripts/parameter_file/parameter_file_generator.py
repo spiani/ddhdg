@@ -1,5 +1,6 @@
 from inspect import getmembers
 
+
 class ParameterSubsection:
     def to_prm_file(self, indent=4):
         output = 'subsection {}\n'.format(self.subsection_name)
@@ -34,7 +35,6 @@ class ParameterSubsection:
                 continue
             output[val] = item
         return output
-
 
 
 class NRecombinationTerm(ParameterSubsection):
@@ -107,7 +107,6 @@ class PhysicalQuantitiesParameters(ParameterSubsection):
     @property
     def p_recombination_term(self):
         return self._p_recombination_term
-
 
 
 class NonlinearSolverParameters(ParameterSubsection):

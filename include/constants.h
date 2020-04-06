@@ -17,4 +17,4 @@ namespace Ddhdg::Constants
                                                    {"epsilon0", EPSILON0},
                                                    {"q", Q},
                                                    {"kb", KB}};
-}
+} // namespace Ddhdg::Constants

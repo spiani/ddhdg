@@ -160,8 +160,7 @@ namespace pyddhdg
             RecombinationTerm<dim> &       p_recombination_term,
             Temperature<dim> &             temperature,
             Doping<dim> &                  doping,
-            BoundaryConditionHandler<dim> &bc_handler,
-            Ddhdg::EinsteinDiffusionModel  einstein_diffusion_model);
+            BoundaryConditionHandler<dim> &bc_handler);
 
     Problem(const Problem<dim> &problem);
 

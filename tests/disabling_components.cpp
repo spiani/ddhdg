@@ -41,8 +41,8 @@ protected:
         case Ddhdg::Component::p:
           return get_function("sin(4*pi*x)*sin(4*pi*y)");
         default:
-        AssertThrow(false, Ddhdg::InvalidComponent());
-        break;
+          AssertThrow(false, Ddhdg::InvalidComponent());
+          break;
       }
     return get_function("0");
   }
@@ -85,7 +85,7 @@ protected:
             "- 32*pi^2*q*cos(pi*x)*cos(pi*y)*sin(pi*x)*sin(pi*y) "
             "+ 4*(6*pi^2*q*cos(pi*x)*sin(pi*x)^2 "
             "- pi^2*q*cos(pi*x))*cos(pi*y)*sin(pi*y)^2";
-        break;
+          break;
         case Ddhdg::Component::p:
           recombination_constant_term =
             "-32*(20*pi^2*q*cos(pi*x)^5 - 26*pi^2*q*cos(pi*x)^3 "
@@ -96,10 +96,10 @@ protected:
             "- pi^2*q*cos(pi*x))*cos(pi*y)^3*sin(pi*x) "
             "- (2*pi^2*q*cos(pi*x)^3 - pi^2*q*cos(pi*x)) "
             "* cos(pi*y)*sin(pi*x))*sin(pi*y)";
-        break;
+          break;
         default:
-        AssertThrow(false, Ddhdg::InvalidComponent());
-        break;
+          AssertThrow(false, Ddhdg::InvalidComponent());
+          break;
       }
 
     std::shared_ptr<Ddhdg::LinearRecombinationTerm<dim>> recombination_term =
@@ -143,8 +143,7 @@ protected:
         get_recombination_term(Ddhdg::Component::p),
         get_temperature(),
         get_doping(),
-        get_boundary_conditions(),
-        Ddhdg::EinsteinDiffusionModel::M1);
+        get_boundary_conditions());
     return problem;
   }
 };

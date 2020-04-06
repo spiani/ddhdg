@@ -120,13 +120,6 @@ public:
       "Let the recombination term be R = a + b * n + c * p where "
       "a, b, c are space functions; this this field is the value of c");
     leave_subsection();
-    add_parameter(
-      "einstein diffusion model",
-      einstein_diffusion_model,
-      "If this number is 0, the Einstein diffusion coefficient will be set "
-      "to zero. It this number is one it will be computed as Kb *T / q * mu_n. "
-      "Any other number is not allowed.",
-      dealii::Patterns::Integer(0, 1));
     leave_subsection();
 
     enter_subsection("boundary conditions");
@@ -249,9 +242,6 @@ public:
   std::string p_recombination_term_constant_term = "0.";
   std::string p_recombination_term_n_coefficient = "0.";
   std::string p_recombination_term_p_coefficient = "0.";
-
-
-  unsigned int einstein_diffusion_model = 1;
 
   std::shared_ptr<Ddhdg::ConvergenceTable> error_table;
 
@@ -426,21 +416,6 @@ main(int argc, char **argv)
         prm.p_recombination_term_n_coefficient,
         prm.p_recombination_term_p_coefficient);
 
-  // Get the Einstein recombination model that must be used
-  Ddhdg::EinsteinDiffusionModel einstein_diffusion_model;
-  switch (prm.einstein_diffusion_model)
-    {
-      case 0:
-        einstein_diffusion_model = Ddhdg::EinsteinDiffusionModel::M0;
-        break;
-      case 1:
-        einstein_diffusion_model = Ddhdg::EinsteinDiffusionModel::M1;
-        break;
-      default:
-        AssertIndexRange(prm.einstein_diffusion_model, 2);
-        einstein_diffusion_model = Ddhdg::EinsteinDiffusionModel::M0;
-    }
-
   // Create an object that represent the problem we are going to solve
   std::shared_ptr<const Ddhdg::Problem<dim>> problem =
     std::make_shared<const Ddhdg::Problem<dim>>(triangulation,
@@ -451,8 +426,7 @@ main(int argc, char **argv)
                                                 p_recombination_term,
                                                 prm.temperature,
                                                 prm.doping,
-                                                boundary_handler,
-                                                einstein_diffusion_model);
+                                                boundary_handler);
 
   // Choose the parameters for the solver
   std::shared_ptr<const Ddhdg::SolverParameters> parameters =

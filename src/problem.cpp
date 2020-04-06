@@ -12,8 +12,7 @@ namespace Ddhdg
     const std::shared_ptr<const RecombinationTerm<dim>> p_recombination_term,
     const std::shared_ptr<const dealii::Function<dim>>  temperature,
     const std::shared_ptr<const dealii::Function<dim>>  doping,
-    const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler,
-    const EinsteinDiffusionModel einstein_diffusion_model)
+    const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler)
     : triangulation(triangulation)
     , permittivity(permittivity)
     , n_electron_mobility(n_electron_mobility)
@@ -23,7 +22,6 @@ namespace Ddhdg
     , temperature(temperature)
     , doping(doping)
     , boundary_handler(boundary_handler)
-    , einstein_diffusion_model(einstein_diffusion_model)
   {}
 
   template struct Problem<1>;

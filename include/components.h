@@ -57,7 +57,7 @@ namespace Ddhdg
   }
 
   inline unsigned int
-  get_component_index(const Component c, const std::set<Component>& components)
+  get_component_index(const Component c, const std::set<Component> &components)
   {
     unsigned int i = 0;
     for (const Component current_cmp : components)

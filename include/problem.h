@@ -4,7 +4,6 @@
 #include <deal.II/grid/tria.h>
 
 #include "boundary_conditions.h"
-#include "einstein_diffusion_model.h"
 #include "electron_mobility.h"
 #include "permittivity.h"
 #include "recombination_term.h"
@@ -23,8 +22,7 @@ namespace Ddhdg
       std::shared_ptr<const RecombinationTerm<dim>>        p_recombination_term,
       std::shared_ptr<const dealii::Function<dim>>         temperature,
       std::shared_ptr<const dealii::Function<dim>>         doping,
-      std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler,
-      const EinsteinDiffusionModel einstein_diffusion_model);
+      std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler);
 
 
     const std::shared_ptr<const dealii::Triangulation<dim>> triangulation;
@@ -36,8 +34,6 @@ namespace Ddhdg
     const std::shared_ptr<const dealii::Function<dim>>  temperature;
     const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
-
-    const EinsteinDiffusionModel einstein_diffusion_model;
   };
 
 } // namespace Ddhdg

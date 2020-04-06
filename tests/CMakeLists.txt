@@ -1,12 +1,12 @@
 set(_target tests)
 
 set(_test_files
-		disabling_components.cpp
-		set_component.cpp
-		linear_potential.cpp
-		log_potential.cpp
-		neumann_boundary_conditions.cpp
-		)
+        disabling_components.cpp
+        set_component.cpp
+        linear_potential.cpp
+        log_potential.cpp
+        neumann_boundary_conditions.cpp
+        )
 
 add_executable(${_target} main.cpp ${_test_files})
 DEAL_II_SETUP_TARGET(${_target})

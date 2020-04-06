@@ -143,8 +143,7 @@ protected:
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         get_temperature(),
         get_doping(),
-        get_boundary_conditions(),
-        Ddhdg::EinsteinDiffusionModel::M1);
+        get_boundary_conditions());
     return problem;
   }
 };
@@ -356,8 +355,7 @@ protected:
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         get_temperature(),
         get_doping(),
-        get_boundary_conditions(),
-        Ddhdg::EinsteinDiffusionModel::M1);
+        get_boundary_conditions());
     return problem;
   }
 };

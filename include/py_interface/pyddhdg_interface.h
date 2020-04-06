@@ -11,11 +11,6 @@ py::enum_<Ddhdg::Displacement>(m, "Displacement")
   .value("wp", Ddhdg::Displacement::Wp)
   .export_values();
 
-py::enum_<Ddhdg::EinsteinDiffusionModel>(m, "EinsteinDiffusionModel")
-  .value("m0", Ddhdg::EinsteinDiffusionModel::M0)
-  .value("m1", Ddhdg::EinsteinDiffusionModel::M1)
-  .export_values();
-
 py::class_<Permittivity<DIM>>(m, "Permittivity");
 
 py::class_<HomogeneousPermittivity<DIM>, Permittivity<DIM>>(
@@ -81,8 +76,7 @@ py::class_<Problem<DIM>>(m, "Problem")
                 RecombinationTerm<DIM> &,
                 Temperature<DIM> &,
                 Doping<DIM> &,
-                BoundaryConditionHandler<DIM> &,
-                Ddhdg::EinsteinDiffusionModel>(),
+                BoundaryConditionHandler<DIM> &>(),
        py::arg("permittivity"),
        py::arg("n_electron_mobility"),
        py::arg("n_recombination_term"),
@@ -90,8 +84,7 @@ py::class_<Problem<DIM>>(m, "Problem")
        py::arg("p_recombination_term"),
        py::arg("temperature"),
        py::arg("doping"),
-       py::arg("boundary_condition_handler"),
-       py::arg("einstein_diffusion_model") = Ddhdg::EinsteinDiffusionModel::M1);
+       py::arg("boundary_condition_handler"));
 
 py::class_<Ddhdg::SolverParameters>(m, "SolverParameters")
   .def(py::init<const unsigned int,
