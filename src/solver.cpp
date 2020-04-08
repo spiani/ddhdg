@@ -22,7 +22,6 @@
 #include <fstream>
 
 #include "constants.h"
-#include "ddhdg.h"
 #include "function_tools.h"
 #include "templatized_parameters.h"
 
@@ -1314,51 +1313,32 @@ namespace Ddhdg
   typename Solver<dim>::assemble_system_one_cell_pointer
   Solver<dim>::get_assemble_system_one_cell_function()
   {
-    // This is by far the ugliest code I have ever written! I hope I will find
-    // a better solution (without using the boost percompiler, if it is
-    // possible)
+    // The last three bits of parameter_mask are the values of the flags
+    // this->is_enabled(Component::V), this->is_enabled(Component::n) and
+    // this->is_enabled(Component::p); as usual 1 is for TRUE, 0 is FALSE.
+    unsigned int parameter_mask = 0;
     if (this->is_enabled(Component::V))
+      parameter_mask += 4;
+    if (this->is_enabled(Component::n))
+      parameter_mask += 2;
+    if (this->is_enabled(Component::p))
+      parameter_mask += 1;
+
+    TemplatizedParametersInterface<dim> *p1;
+    TemplatizedParametersInterface<dim> *p2;
+
+    p1 = new TemplatizedParameters<dim, 7>();
+    while (p1->get_parameter_mask() != parameter_mask)
       {
-        if (this->is_enabled(Component::n))
-          {
-            if (this->is_enabled(Component::p))
-              return &Solver<dim>::assemble_system_one_cell<
-                TemplatizedParameters<true, true, true>>;
-            else
-              return &Solver<dim>::assemble_system_one_cell<
-                TemplatizedParameters<true, true, false>>;
-          }
-        else
-          {
-            if (this->is_enabled(Component::p))
-              return &Solver<dim>::assemble_system_one_cell<
-                TemplatizedParameters<true, false, true>>;
-            else
-              return &Solver<dim>::assemble_system_one_cell<
-                TemplatizedParameters<true, false, false>>;
-          }
+        p2 = p1->get_previous();
+        delete p1;
+        p1 = p2;
       }
-    else
-      {
-        if (this->is_enabled(Component::n))
-          {
-            if (this->is_enabled(Component::p))
-              return &Solver<dim>::assemble_system_one_cell<
-                TemplatizedParameters<false, true, true>>;
-            else
-              return &Solver<dim>::assemble_system_one_cell<
-                TemplatizedParameters<false, true, false>>;
-          }
-        else
-          {
-            if (this->is_enabled(Component::p))
-              return &Solver<dim>::assemble_system_one_cell<
-                TemplatizedParameters<false, false, true>>;
-            else
-              return &Solver<dim>::assemble_system_one_cell<
-                TemplatizedParameters<false, false, false>>;
-          }
-      }
+
+    typename Solver<dim>::assemble_system_one_cell_pointer f =
+      p1->get_assemble_system_one_cell_function();
+    delete p1;
+    return f;
   }
 
 

@@ -31,6 +31,12 @@ namespace Ddhdg
 
   DeclExceptionMsg(NoTraceIn1D, "The trace can not be saved in 1D");
 
+  template <int dim>
+  class TemplatizedParametersInterface;
+
+  template <int dim, unsigned int parameter_mask>
+  class TemplatizedParameters;
+
   struct SolverParameters
   {
     explicit SolverParameters(
@@ -431,6 +437,11 @@ namespace Ddhdg
                                               Component::p};
 
     bool initialized = false;
+
+    friend class TemplatizedParametersInterface<dim>;
+
+    template <int d, unsigned int parameter_mask>
+    friend class TemplatizedParameters;
   };
 
   template <int dim>
