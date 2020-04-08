@@ -22,7 +22,11 @@ namespace Ddhdg
       std::shared_ptr<const RecombinationTerm<dim>>        p_recombination_term,
       std::shared_ptr<const dealii::Function<dim>>         temperature,
       std::shared_ptr<const dealii::Function<dim>>         doping,
-      std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler);
+      std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler,
+      double conduction_band_density,
+      double valence_band_density,
+      double conduction_band_edge_energy = 0.,
+      double valence_band_edge_energy    = 0.);
 
 
     const std::shared_ptr<const dealii::Triangulation<dim>> triangulation;
@@ -34,6 +38,9 @@ namespace Ddhdg
     const std::shared_ptr<const dealii::Function<dim>>  temperature;
     const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
+
+    const std::map<Component, double> band_density;
+    const std::map<Component, double> band_edge_energy;
   };
 
 } // namespace Ddhdg

@@ -86,6 +86,22 @@ public:
     add_parameter("doping",
                   doping_str,
                   "A function that defines the temperature on the domain");
+    add_parameter("conduction band density",
+                  conduction_band_density,
+                  "The conduction band density (Nc) in m^-3",
+                  dealii::Patterns::Double());
+    add_parameter("valence band density",
+                  valence_band_density,
+                  "The valence band density (Nv) in m^-3",
+                  dealii::Patterns::Double());
+    add_parameter("conduction band edge energy",
+                  conduction_band_edge_energy,
+                  "The conduction band edge energy (Ec) in eV",
+                  dealii::Patterns::Double());
+    add_parameter("valence band edge energy",
+                  valence_band_edge_energy,
+                  "The valence band edge energy (Ev) in eV",
+                  dealii::Patterns::Double());
     enter_subsection("n recombination term");
     add_parameter(
       "zero order term",
@@ -242,6 +258,11 @@ public:
   std::string p_recombination_term_constant_term = "0.";
   std::string p_recombination_term_n_coefficient = "0.";
   std::string p_recombination_term_p_coefficient = "0.";
+
+  double conduction_band_density     = 4.7e23;
+  double valence_band_density        = 9.0e24;
+  double conduction_band_edge_energy = 1.424;
+  double valence_band_edge_energy    = 0.;
 
   std::shared_ptr<Ddhdg::ConvergenceTable> error_table;
 
@@ -426,7 +447,11 @@ main(int argc, char **argv)
                                                 p_recombination_term,
                                                 prm.temperature,
                                                 prm.doping,
-                                                boundary_handler);
+                                                boundary_handler,
+                                                prm.conduction_band_density,
+                                                prm.valence_band_density,
+                                                prm.conduction_band_edge_energy,
+                                                prm.valence_band_edge_energy);
 
   // Choose the parameters for the solver
   std::shared_ptr<const Ddhdg::SolverParameters> parameters =

@@ -121,7 +121,11 @@ protected:
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         get_temperature(),
         get_doping(),
-        get_boundary_conditions());
+        get_boundary_conditions(),
+        1.,
+        1.,
+        0.,
+        0.);
     return problem;
   }
 };

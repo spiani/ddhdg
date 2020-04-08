@@ -86,11 +86,18 @@ class PhysicalQuantitiesParameters(ParameterSubsection):
 
     def __init__(self, n_recombination_term=NRecombinationTerm(),
                  p_recombination_term=PRecombinationTerm(),
-                 temperature="q / kb", doping="0."):
+                 temperature="q / kb", doping="0.",
+                 conduction_band_density="0.", valence_band_density="0.",
+                 conduction_band_edge_energy="0.",
+                 valence_band_edge_energy="0."):
         self._n_recombination_term = n_recombination_term
         self._p_recombination_term = p_recombination_term
         self._temperature = temperature
         self._doping = doping
+        self._conduction_band_density = conduction_band_density
+        self._valence_band_density = valence_band_density
+        self._conduction_band_edge_energy = conduction_band_edge_energy
+        self._valence_band_edge_energy = valence_band_edge_energy
 
     @property
     def temperature(self):
@@ -99,6 +106,22 @@ class PhysicalQuantitiesParameters(ParameterSubsection):
     @property
     def doping(self):
         return self._doping
+
+    @property
+    def conduction_band_density(self):
+        return self._conduction_band_density
+
+    @property
+    def valence_band_density(self):
+        return self._valence_band_density
+
+    @property
+    def conduction_band_edge_energy(self):
+        return self._conduction_band_edge_energy
+
+    @property
+    def valence_band_edge_energy(self):
+        return self._valence_band_edge_energy
 
     @property
     def n_recombination_term(self):

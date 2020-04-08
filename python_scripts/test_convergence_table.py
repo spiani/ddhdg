@@ -45,6 +45,7 @@ def test_convergence_table(degree, refinements):
         expected_solutions_parameters=expected_solutions_parameters
     )
 
+    # print(execution_parameters.to_prm_file())
     run_ddhdg(execution_parameters)
 
 

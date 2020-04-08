@@ -12,7 +12,11 @@ namespace Ddhdg
     const std::shared_ptr<const RecombinationTerm<dim>> p_recombination_term,
     const std::shared_ptr<const dealii::Function<dim>>  temperature,
     const std::shared_ptr<const dealii::Function<dim>>  doping,
-    const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler)
+    const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler,
+    const double conduction_band_density,
+    const double valence_band_density,
+    const double conduction_band_edge_energy,
+    const double valence_band_edge_energy)
     : triangulation(triangulation)
     , permittivity(permittivity)
     , n_electron_mobility(n_electron_mobility)
@@ -22,6 +26,10 @@ namespace Ddhdg
     , temperature(temperature)
     , doping(doping)
     , boundary_handler(boundary_handler)
+    , band_density{{Component::n, conduction_band_density},
+                   {Component::p, valence_band_density}}
+    , band_edge_energy{{Component::n, conduction_band_edge_energy},
+                       {Component::p, valence_band_edge_energy}}
   {}
 
   template struct Problem<1>;

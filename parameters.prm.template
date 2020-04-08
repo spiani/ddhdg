@@ -22,6 +22,10 @@ subsection physical quantities
   end
   set temperature                   = q / kb
   set doping                        = 0.
+  set conduction band density       = 4.7e23
+  set valence band density          = 9.0e24
+  set conduction band edge energy   = 0.
+  set valence band edge energy      = 0.
 end
 
 subsection nonlinear solver

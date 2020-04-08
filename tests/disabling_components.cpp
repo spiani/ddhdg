@@ -143,7 +143,11 @@ protected:
         get_recombination_term(Ddhdg::Component::p),
         get_temperature(),
         get_doping(),
-        get_boundary_conditions());
+        get_boundary_conditions(),
+        1.,
+        1.,
+        0.,
+        0.);
     return problem;
   }
 };

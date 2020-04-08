@@ -204,7 +204,11 @@ namespace pyddhdg
                         RecombinationTerm<dim> &       p_recombination_term,
                         Temperature<dim> &             temperature,
                         Doping<dim> &                  doping,
-                        BoundaryConditionHandler<dim> &bc_handler)
+                        BoundaryConditionHandler<dim> &bc_handler,
+                        const double                   conduction_band_density,
+                        const double                   valence_band_density,
+                        const double conduction_band_edge_energy,
+                        const double valence_band_edge_energy)
     : ddhdg_problem(std::make_shared<Ddhdg::Problem<dim>>(
         generate_triangulation(),
         permittivity.generate_ddhdg_permittivity(),
@@ -214,7 +218,11 @@ namespace pyddhdg
         p_recombination_term.generate_ddhdg_recombination_term(),
         temperature.get_dealii_function(),
         doping.get_dealii_function(),
-        bc_handler.get_ddhdg_boundary_condition_handler()))
+        bc_handler.get_ddhdg_boundary_condition_handler(),
+        conduction_band_density,
+        valence_band_density,
+        conduction_band_edge_energy,
+        valence_band_edge_energy))
   {}
 
 

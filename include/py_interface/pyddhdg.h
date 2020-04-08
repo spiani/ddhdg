@@ -160,7 +160,11 @@ namespace pyddhdg
             RecombinationTerm<dim> &       p_recombination_term,
             Temperature<dim> &             temperature,
             Doping<dim> &                  doping,
-            BoundaryConditionHandler<dim> &bc_handler);
+            BoundaryConditionHandler<dim> &bc_handler,
+            double                         conduction_band_density,
+            double                         valence_band_density,
+            double                         conduction_band_edge_energy,
+            double                         valence_band_edge_energy);
 
     Problem(const Problem<dim> &problem);
 

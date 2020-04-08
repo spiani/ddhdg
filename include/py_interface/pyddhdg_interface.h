@@ -76,7 +76,11 @@ py::class_<Problem<DIM>>(m, "Problem")
                 RecombinationTerm<DIM> &,
                 Temperature<DIM> &,
                 Doping<DIM> &,
-                BoundaryConditionHandler<DIM> &>(),
+                BoundaryConditionHandler<DIM> &,
+                double,
+                double,
+                double,
+                double>(),
        py::arg("permittivity"),
        py::arg("n_electron_mobility"),
        py::arg("n_recombination_term"),
@@ -84,7 +88,11 @@ py::class_<Problem<DIM>>(m, "Problem")
        py::arg("p_recombination_term"),
        py::arg("temperature"),
        py::arg("doping"),
-       py::arg("boundary_condition_handler"));
+       py::arg("boundary_condition_handler"),
+       py::arg("conduction_band_density"),
+       py::arg("valence_band_density"),
+       py::arg("conduction_band_edge_energy") = 0,
+       py::arg("valence_band_edge_energy")    = 0);
 
 py::class_<Ddhdg::SolverParameters>(m, "SolverParameters")
   .def(py::init<const unsigned int,
