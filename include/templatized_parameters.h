@@ -1,6 +1,6 @@
 #pragma once
 
-#include "solver.h"
+#include "np_solver.h"
 
 namespace Ddhdg
 {
@@ -17,7 +17,7 @@ namespace Ddhdg
     virtual TemplatizedParametersInterface<dim> *
     get_previous() const = 0;
 
-    virtual typename Solver<dim>::assemble_system_one_cell_pointer
+    virtual typename NPSolver<dim>::assemble_system_one_cell_pointer
     get_assemble_system_one_cell_function() const = 0;
 
     virtual ~TemplatizedParametersInterface() = default;
@@ -38,7 +38,7 @@ namespace Ddhdg
     TemplatizedParametersInterface<dim> *
     get_previous() const override;
 
-    typename Solver<dim>::assemble_system_one_cell_pointer
+    typename NPSolver<dim>::assemble_system_one_cell_pointer
     get_assemble_system_one_cell_function() const override;
   };
 
@@ -60,12 +60,12 @@ namespace Ddhdg
   }
 
   template <int dim, unsigned int parameter_mask>
-  typename Solver<dim>::assemble_system_one_cell_pointer
+  typename NPSolver<dim>::assemble_system_one_cell_pointer
   TemplatizedParameters<dim,
                         parameter_mask>::get_assemble_system_one_cell_function()
     const
   {
-    return &Solver<dim>::template assemble_system_one_cell<
+    return &NPSolver<dim>::template assemble_system_one_cell<
       TemplatizedParameters<dim, parameter_mask>>;
   }
 

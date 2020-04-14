@@ -258,18 +258,18 @@ namespace pyddhdg
 
 
   template <int dim>
-  Solver<dim>::Solver(const Problem<dim> &           problem,
-                      const Ddhdg::SolverParameters &parameters)
-    : ddhdg_solver(std::make_shared<Ddhdg::Solver<dim>>(
+  NPSolver<dim>::NPSolver(const Problem<dim> &             problem,
+                          const Ddhdg::NPSolverParameters &parameters)
+    : ddhdg_solver(std::make_shared<Ddhdg::NPSolver<dim>>(
         problem.get_ddhdg_problem(),
-        std::make_shared<const Ddhdg::SolverParameters>(parameters)))
+        std::make_shared<const Ddhdg::NPSolverParameters>(parameters)))
   {}
 
 
 
   template <int dim>
   void
-  Solver<dim>::refine_grid(const unsigned int i)
+  NPSolver<dim>::refine_grid(const unsigned int i)
   {
     this->ddhdg_solver->refine_grid(i);
   }
@@ -278,9 +278,9 @@ namespace pyddhdg
 
   template <int dim>
   void
-  Solver<dim>::set_component(const Ddhdg::Component c,
-                             const std::string &    f,
-                             const bool             use_projection)
+  NPSolver<dim>::set_component(const Ddhdg::Component c,
+                               const std::string &    f,
+                               const bool             use_projection)
   {
     std::shared_ptr<dealii::FunctionParser<dim>> c_function =
       std::make_shared<dealii::FunctionParser<dim>>();
@@ -295,10 +295,10 @@ namespace pyddhdg
 
   template <int dim>
   void
-  Solver<dim>::set_current_solution(const std::string &v_f,
-                                    const std::string &n_f,
-                                    const std::string &p_f,
-                                    const bool         use_projection)
+  NPSolver<dim>::set_current_solution(const std::string &v_f,
+                                      const std::string &n_f,
+                                      const std::string &p_f,
+                                      const bool         use_projection)
   {
     std::shared_ptr<dealii::FunctionParser<dim>> v_function =
       std::make_shared<dealii::FunctionParser<dim>>();
@@ -328,7 +328,7 @@ namespace pyddhdg
 
   template <int dim>
   void
-  Solver<dim>::set_multithreading(const bool multithreading)
+  NPSolver<dim>::set_multithreading(const bool multithreading)
   {
     this->ddhdg_solver->set_multithreading(multithreading);
   }
@@ -337,7 +337,7 @@ namespace pyddhdg
 
   template <int dim>
   bool
-  Solver<dim>::is_enabled(Ddhdg::Component c) const
+  NPSolver<dim>::is_enabled(Ddhdg::Component c) const
   {
     return this->ddhdg_solver->is_enabled(c);
   }
@@ -346,7 +346,7 @@ namespace pyddhdg
 
   template <int dim>
   void
-  Solver<dim>::enable_component(Ddhdg::Component c)
+  NPSolver<dim>::enable_component(Ddhdg::Component c)
   {
     this->ddhdg_solver->enable_component(c);
   }
@@ -355,7 +355,7 @@ namespace pyddhdg
 
   template <int dim>
   void
-  Solver<dim>::disable_component(Ddhdg::Component c)
+  NPSolver<dim>::disable_component(Ddhdg::Component c)
   {
     this->ddhdg_solver->disable_component(c);
   }
@@ -364,9 +364,9 @@ namespace pyddhdg
 
   template <int dim>
   void
-  Solver<dim>::set_enabled_components(const bool V_enabled,
-                                      const bool n_enabled,
-                                      const bool p_enabled)
+  NPSolver<dim>::set_enabled_components(const bool V_enabled,
+                                        const bool n_enabled,
+                                        const bool p_enabled)
   {
     this->ddhdg_solver->set_enabled_components(V_enabled, n_enabled, p_enabled);
   }
@@ -375,7 +375,7 @@ namespace pyddhdg
 
   template <int dim>
   Ddhdg::NonlinearIterationResults
-  Solver<dim>::run()
+  NPSolver<dim>::run()
   {
     return this->ddhdg_solver->run();
   }
@@ -384,8 +384,8 @@ namespace pyddhdg
 
   template <int dim>
   double
-  Solver<dim>::estimate_l2_error(const std::string &    expected_solution,
-                                 const Ddhdg::Component c) const
+  NPSolver<dim>::estimate_l2_error(const std::string &    expected_solution,
+                                   const Ddhdg::Component c) const
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>();
@@ -400,8 +400,8 @@ namespace pyddhdg
 
   template <int dim>
   double
-  Solver<dim>::estimate_l2_error(const std::string &       expected_solution,
-                                 const Ddhdg::Displacement d) const
+  NPSolver<dim>::estimate_l2_error(const std::string &       expected_solution,
+                                   const Ddhdg::Displacement d) const
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>(dim);
@@ -416,8 +416,8 @@ namespace pyddhdg
 
   template <int dim>
   double
-  Solver<dim>::estimate_h1_error(const std::string &    expected_solution,
-                                 const Ddhdg::Component c) const
+  NPSolver<dim>::estimate_h1_error(const std::string &    expected_solution,
+                                   const Ddhdg::Component c) const
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>();
@@ -432,8 +432,8 @@ namespace pyddhdg
 
   template <int dim>
   double
-  Solver<dim>::estimate_h1_error(const std::string &       expected_solution,
-                                 const Ddhdg::Displacement d) const
+  NPSolver<dim>::estimate_h1_error(const std::string &       expected_solution,
+                                   const Ddhdg::Displacement d) const
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>(dim);
@@ -448,8 +448,8 @@ namespace pyddhdg
 
   template <int dim>
   double
-  Solver<dim>::estimate_linfty_error(const std::string &    expected_solution,
-                                     const Ddhdg::Component c) const
+  NPSolver<dim>::estimate_linfty_error(const std::string &    expected_solution,
+                                       const Ddhdg::Component c) const
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>();
@@ -464,8 +464,8 @@ namespace pyddhdg
 
   template <int dim>
   double
-  Solver<dim>::estimate_linfty_error(const std::string &expected_solution,
-                                     const Ddhdg::Displacement d) const
+  NPSolver<dim>::estimate_linfty_error(const std::string &expected_solution,
+                                       const Ddhdg::Displacement d) const
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>(dim);
@@ -480,8 +480,9 @@ namespace pyddhdg
 
   template <int dim>
   double
-  Solver<dim>::estimate_l2_error_on_trace(const std::string &expected_solution,
-                                          const Ddhdg::Component c) const
+  NPSolver<dim>::estimate_l2_error_on_trace(
+    const std::string &    expected_solution,
+    const Ddhdg::Component c) const
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>();
@@ -497,7 +498,7 @@ namespace pyddhdg
 
   template <int dim>
   double
-  Solver<dim>::estimate_linfty_error_on_trace(
+  NPSolver<dim>::estimate_linfty_error_on_trace(
     const std::string &    expected_solution,
     const Ddhdg::Component c) const
   {
@@ -514,8 +515,8 @@ namespace pyddhdg
 
   template <int dim>
   void
-  Solver<dim>::output_results(const std::string &solution_filename,
-                              const bool         save_update) const
+  NPSolver<dim>::output_results(const std::string &solution_filename,
+                                const bool         save_update) const
   {
     this->ddhdg_solver->output_results(solution_filename, save_update);
   }
@@ -524,9 +525,9 @@ namespace pyddhdg
 
   template <int dim>
   void
-  Solver<dim>::output_results(const std::string &solution_filename,
-                              const std::string &trace_filename,
-                              const bool         save_update) const
+  NPSolver<dim>::output_results(const std::string &solution_filename,
+                                const std::string &trace_filename,
+                                const bool         save_update) const
   {
     this->ddhdg_solver->output_results(solution_filename,
                                        trace_filename,
@@ -537,11 +538,11 @@ namespace pyddhdg
 
   template <int dim>
   void
-  Solver<dim>::print_convergence_table(const std::string &expected_V_solution,
-                                       const std::string &expected_n_solution,
-                                       const std::string &expected_p_solution,
-                                       const unsigned int n_cycles,
-                                       const unsigned int initial_refinements)
+  NPSolver<dim>::print_convergence_table(const std::string &expected_V_solution,
+                                         const std::string &expected_n_solution,
+                                         const std::string &expected_p_solution,
+                                         const unsigned int n_cycles,
+                                         const unsigned int initial_refinements)
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_V_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>();
@@ -574,14 +575,14 @@ namespace pyddhdg
 
   template <int dim>
   void
-  Solver<dim>::print_convergence_table(const std::string &expected_V_solution,
-                                       const std::string &expected_n_solution,
-                                       const std::string &expected_p_solution,
-                                       const std::string &initial_V_function,
-                                       const std::string &initial_n_function,
-                                       const std::string &initial_p_function,
-                                       const unsigned int n_cycles,
-                                       const unsigned int initial_refinements)
+  NPSolver<dim>::print_convergence_table(const std::string &expected_V_solution,
+                                         const std::string &expected_n_solution,
+                                         const std::string &expected_p_solution,
+                                         const std::string &initial_V_function,
+                                         const std::string &initial_n_function,
+                                         const std::string &initial_p_function,
+                                         const unsigned int n_cycles,
+                                         const unsigned int initial_refinements)
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_V_solution_f =
       std::make_shared<dealii::FunctionParser<dim>>();
@@ -665,7 +666,7 @@ namespace pyddhdg
   template class Problem<2>;
   template class Problem<3>;
 
-  template class Solver<1>;
-  template class Solver<2>;
-  template class Solver<3>;
+  template class NPSolver<1>;
+  template class NPSolver<2>;
+  template class NPSolver<3>;
 } // namespace pyddhdg

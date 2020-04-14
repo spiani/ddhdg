@@ -5,12 +5,12 @@
 #include <gtest/gtest.h>
 
 template <typename D>
-class NeumannBCLinearTest : public Ddhdg::Solver<D::value>,
+class NeumannBCLinearTest : public Ddhdg::NPSolver<D::value>,
                             public ::testing::Test
 {
 public:
   NeumannBCLinearTest()
-    : Ddhdg::Solver<D::value>(get_problem()){};
+    : Ddhdg::NPSolver<D::value>(get_problem()){};
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<D::value>>
@@ -170,8 +170,8 @@ TYPED_TEST(NeumannBCLinearTest, NeumannBCLinearTest) // NOLINT
 
   this->set_multithreading(false);
   this->refine_grid(3 - dim);
-  this->set_component(Ddhdg::Component::n, zero_function);
-  this->set_component(Ddhdg::Component::p, zero_function);
+  this->set_component(Ddhdg::Component::n, zero_function, false);
+  this->set_component(Ddhdg::Component::p, zero_function, false);
 
   const Ddhdg::NonlinearIterationResults status = this->run();
 
@@ -193,12 +193,12 @@ TYPED_TEST(NeumannBCLinearTest, NeumannBCLinearTest) // NOLINT
 
 
 
-class NeumannBCTrigonometricTest : public Ddhdg::Solver<2>,
+class NeumannBCTrigonometricTest : public Ddhdg::NPSolver<2>,
                                    public ::testing::Test
 {
 public:
   NeumannBCTrigonometricTest()
-    : Ddhdg::Solver<2>(get_problem()){};
+    : Ddhdg::NPSolver<2>(get_problem()){};
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<2>>

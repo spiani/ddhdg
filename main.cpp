@@ -454,8 +454,8 @@ main(int argc, char **argv)
                                                 prm.valence_band_edge_energy);
 
   // Choose the parameters for the solver
-  std::shared_ptr<const Ddhdg::SolverParameters> parameters =
-    std::make_shared<const Ddhdg::SolverParameters>(
+  std::shared_ptr<const Ddhdg::NPSolverParameters> parameters =
+    std::make_shared<const Ddhdg::NPSolverParameters>(
       prm.V_degree,
       prm.n_degree,
       prm.p_degree,
@@ -469,7 +469,7 @@ main(int argc, char **argv)
       prm.multithreading);
 
   // Create a solver for the problem
-  Ddhdg::Solver<dim> solver(problem, parameters);
+  Ddhdg::NPSolver<dim> solver(problem, parameters);
 
   std::cout << std::endl
             << std::endl

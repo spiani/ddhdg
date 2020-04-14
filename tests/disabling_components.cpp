@@ -3,12 +3,15 @@
 #include <ddhdg.h>
 #include <gtest/gtest.h>
 
-class DisablingComponentsTest : public Ddhdg::Solver<2>, public ::testing::Test
+class DisablingComponentsTest : public Ddhdg::NPSolver<2>,
+                                public ::testing::Test
 {
 public:
   DisablingComponentsTest()
-    : Ddhdg::Solver<2>(get_problem(),
-                       std::make_shared<Ddhdg::SolverParameters>(1, 2, 3)){};
+    : Ddhdg::NPSolver<2>(get_problem(),
+                         std::make_shared<Ddhdg::NPSolverParameters>(1,
+                                                                     2,
+                                                                     3)){};
 
 protected:
   constexpr static const unsigned int dim = 2;

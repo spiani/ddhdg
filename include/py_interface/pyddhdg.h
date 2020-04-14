@@ -179,11 +179,11 @@ namespace pyddhdg
   };
 
   template <int dim>
-  class Solver
+  class NPSolver
   {
   public:
-    Solver(const Problem<dim> &           problem,
-           const Ddhdg::SolverParameters &parameters);
+    NPSolver(const Problem<dim> &             problem,
+             const Ddhdg::NPSolverParameters &parameters);
 
     void
     refine_grid(unsigned int i = 1);
@@ -276,7 +276,7 @@ namespace pyddhdg
                             unsigned int       initial_refinements = 0);
 
   private:
-    const std::shared_ptr<Ddhdg::Solver<dim>> ddhdg_solver;
+    const std::shared_ptr<Ddhdg::NPSolver<dim>> ddhdg_solver;
   };
 
 } // namespace pyddhdg

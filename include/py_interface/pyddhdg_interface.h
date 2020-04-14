@@ -94,7 +94,7 @@ py::class_<Problem<DIM>>(m, "Problem")
        py::arg("conduction_band_edge_energy") = 0,
        py::arg("valence_band_edge_energy")    = 0);
 
-py::class_<Ddhdg::SolverParameters>(m, "SolverParameters")
+py::class_<Ddhdg::NPSolverParameters>(m, "NPSolverParameters")
   .def(py::init<const unsigned int,
                 const unsigned int,
                 const unsigned int,
@@ -118,36 +118,36 @@ py::class_<Ddhdg::SolverParameters>(m, "SolverParameters")
        py::arg("iterative_linear_solver")  = false,
        py::arg("multithreading")           = true)
   .def_property_readonly("v_degree",
-                         [](const Ddhdg::SolverParameters &a) {
+                         [](const Ddhdg::NPSolverParameters &a) {
                            return a.degree.at(Ddhdg::Component::V);
                          })
   .def_property_readonly("n_degree",
-                         [](const Ddhdg::SolverParameters &a) {
+                         [](const Ddhdg::NPSolverParameters &a) {
                            return a.degree.at(Ddhdg::Component::n);
                          })
   .def_property_readonly("p_degree",
-                         [](const Ddhdg::SolverParameters &a) {
+                         [](const Ddhdg::NPSolverParameters &a) {
                            return a.degree.at(Ddhdg::Component::p);
                          })
   .def_readonly("abs_tolerance",
-                &Ddhdg::SolverParameters::nonlinear_solver_absolute_tolerance)
+                &Ddhdg::NPSolverParameters::nonlinear_solver_absolute_tolerance)
   .def_readonly("rel_tolerance",
-                &Ddhdg::SolverParameters::nonlinear_solver_relative_tolerance)
+                &Ddhdg::NPSolverParameters::nonlinear_solver_relative_tolerance)
   .def_readonly(
     "max_number_of_iterations",
-    &Ddhdg::SolverParameters::nonlinear_solver_max_number_of_iterations)
+    &Ddhdg::NPSolverParameters::nonlinear_solver_max_number_of_iterations)
   .def_readonly("iterative_linear_solver",
-                &Ddhdg::SolverParameters::iterative_linear_solver)
-  .def_readonly("multithreading", &Ddhdg::SolverParameters::multithreading)
+                &Ddhdg::NPSolverParameters::iterative_linear_solver)
+  .def_readonly("multithreading", &Ddhdg::NPSolverParameters::multithreading)
   .def_property_readonly("v_tau",
-                         [](const Ddhdg::SolverParameters &a) {
+                         [](const Ddhdg::NPSolverParameters &a) {
                            return a.tau.at(Ddhdg::Component::V);
                          })
   .def_property_readonly("n_tau",
-                         [](const Ddhdg::SolverParameters &a) {
+                         [](const Ddhdg::NPSolverParameters &a) {
                            return a.tau.at(Ddhdg::Component::n);
                          })
-  .def_property_readonly("p_tau", [](const Ddhdg::SolverParameters &a) {
+  .def_property_readonly("p_tau", [](const Ddhdg::NPSolverParameters &a) {
     return a.tau.at(Ddhdg::Component::p);
   });
 
@@ -158,85 +158,87 @@ py::class_<Ddhdg::NonlinearIterationResults>(m, "NonlinearIterationResults")
   .def_readonly("last_update_norm",
                 &Ddhdg::NonlinearIterationResults::last_update_norm);
 
-py::class_<Solver<DIM>>(m, "Solver")
-  .def(py::init<const Problem<DIM> &, Ddhdg::SolverParameters &>())
-  .def("refine_grid", &Solver<DIM>::refine_grid, py::arg("n") = 1)
+py::class_<NPSolver<DIM>>(m, "NPSolver")
+  .def(py::init<const Problem<DIM> &, Ddhdg::NPSolverParameters &>())
+  .def("refine_grid", &NPSolver<DIM>::refine_grid, py::arg("n") = 1)
   .def("set_component",
-       &Solver<DIM>::set_component,
+       &NPSolver<DIM>::set_component,
        py::arg("component"),
        py::arg("analytic_function"),
        py::arg("use_projection") = false)
   .def("set_current_solution",
-       &Solver<DIM>::set_current_solution,
+       &NPSolver<DIM>::set_current_solution,
        py::arg("V_function"),
        py::arg("n_function"),
        py::arg("p_function"),
        py::arg("use_projection") = false)
-  .def("set_multithreading", &Solver<DIM>::set_multithreading)
-  .def("enable_component", &Solver<DIM>::enable_component, py::arg("component"))
+  .def("set_multithreading", &NPSolver<DIM>::set_multithreading)
+  .def("enable_component",
+       &NPSolver<DIM>::enable_component,
+       py::arg("component"))
   .def("disable_component",
-       &Solver<DIM>::disable_component,
+       &NPSolver<DIM>::disable_component,
        py::arg("component"))
   .def("set_enabled_components",
-       &Solver<DIM>::set_enabled_components,
+       &NPSolver<DIM>::set_enabled_components,
        py::arg("v_enabled"),
        py::arg("n_enabled"),
        py::arg("p_enabled"))
-  .def("run", &Solver<DIM>::run)
+  .def("run", &NPSolver<DIM>::run)
   .def("estimate_l2_error",
        py::overload_cast<const std::string &, const Ddhdg::Component>(
-         &Solver<DIM>::estimate_l2_error,
+         &NPSolver<DIM>::estimate_l2_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("component"))
   .def("estimate_l2_error",
        py::overload_cast<const std::string &, const Ddhdg::Displacement>(
-         &Solver<DIM>::estimate_l2_error,
+         &NPSolver<DIM>::estimate_l2_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("displacement"))
   .def("estimate_h1_error",
        py::overload_cast<const std::string &, const Ddhdg::Component>(
-         &Solver<DIM>::estimate_h1_error,
+         &NPSolver<DIM>::estimate_h1_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("component"))
   .def("estimate_h1_error",
        py::overload_cast<const std::string &, const Ddhdg::Displacement>(
-         &Solver<DIM>::estimate_h1_error,
+         &NPSolver<DIM>::estimate_h1_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("displacement"))
   .def("estimate_linfty_error",
        py::overload_cast<const std::string &, const Ddhdg::Component>(
-         &Solver<DIM>::estimate_linfty_error,
+         &NPSolver<DIM>::estimate_linfty_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("component"))
   .def("estimate_linfty_error",
        py::overload_cast<const std::string &, const Ddhdg::Displacement>(
-         &Solver<DIM>::estimate_linfty_error,
+         &NPSolver<DIM>::estimate_linfty_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("displacement"))
   .def("estimate_l2_error_on_trace",
-       &Solver<DIM>::estimate_l2_error_on_trace,
+       &NPSolver<DIM>::estimate_l2_error_on_trace,
        py::arg("expected_solution"),
        py::arg("component"))
   .def("estimate_linfty_error_on_trace",
-       &Solver<DIM>::estimate_linfty_error_on_trace,
+       &NPSolver<DIM>::estimate_linfty_error_on_trace,
        py::arg("expected_solution"),
        py::arg("component"))
   .def("output_results",
        py::overload_cast<const std::string &, const bool>(
-         &Solver<DIM>::output_results,
+         &NPSolver<DIM>::output_results,
          py::const_),
        py::arg("solution_filename"),
        py::arg("save_update") = false)
 #  if DIM != 1
   .def("output_results",
        py::overload_cast<const std::string &, const std::string &, const bool>(
-         &Solver<DIM>::output_results,
+         &NPSolver<DIM>::output_results,
          py::const_),
        py::arg("solution_filename"),
        py::arg("trace_filename"),
@@ -248,7 +250,7 @@ py::class_<Solver<DIM>>(m, "Solver")
                          const std::string &,
                          const unsigned int,
                          const unsigned int>(
-         &Solver<DIM>::print_convergence_table),
+         &NPSolver<DIM>::print_convergence_table),
        py::arg("expected_v_solution"),
        py::arg("expected_n_solution"),
        py::arg("expected_p_solution"),
@@ -263,7 +265,7 @@ py::class_<Solver<DIM>>(m, "Solver")
                          const std::string &,
                          const unsigned int,
                          const unsigned int>(
-         &Solver<DIM>::print_convergence_table),
+         &NPSolver<DIM>::print_convergence_table),
        py::arg("expected_v_solution"),
        py::arg("expected_n_solution"),
        py::arg("expected_p_solution"),

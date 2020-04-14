@@ -3,6 +3,7 @@ add_library(DDHDG SHARED
         electron_mobility.cpp
         function_tools.cpp
         nonlinear_iteration_results.cpp
+        np_solver.cpp
         permittivity.cpp
         problem.cpp
         recombination_term.cpp

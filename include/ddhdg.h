@@ -1,3 +1,3 @@
 #pragma once
 
-#include "solver.h"
+#include "np_solver.h"

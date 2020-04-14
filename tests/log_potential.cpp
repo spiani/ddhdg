@@ -4,14 +4,14 @@
 #include <gtest/gtest.h>
 
 template <typename D>
-class LogPotentialTest : public Ddhdg::Solver<D::value>, public ::testing::Test
+class LogPotentialTest : public Ddhdg::NPSolver<D::value>,
+                         public ::testing::Test
 {
 public:
   LogPotentialTest()
-    : Ddhdg::Solver<D::value>(get_problem(),
-                              std::make_shared<Ddhdg::SolverParameters>(1,
-                                                                        2,
-                                                                        1)){};
+    : Ddhdg::NPSolver<D::value>(
+        get_problem(),
+        std::make_shared<Ddhdg::NPSolverParameters>(1, 2, 1)){};
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<D::value>>
@@ -163,7 +163,10 @@ TYPED_TEST(LogPotentialTest, LogPotentialTest) // NOLINT
 
   this->set_multithreading(false);
   this->refine_grid(4 - dim);
-  this->set_current_solution(zero_function, zero_function, zero_function);
+  this->set_current_solution(zero_function,
+                             zero_function,
+                             zero_function,
+                             false);
 
   const Ddhdg::NonlinearIterationResults status = this->run();
 

@@ -4,12 +4,12 @@
 #include <gtest/gtest.h>
 
 template <typename D>
-class LinearPotentialTest : public Ddhdg::Solver<D::value>,
+class LinearPotentialTest : public Ddhdg::NPSolver<D::value>,
                             public ::testing::Test
 {
 public:
   LinearPotentialTest()
-    : Ddhdg::Solver<D::value>(get_problem()){};
+    : Ddhdg::NPSolver<D::value>(get_problem()){};
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<D::value>>
@@ -151,8 +151,8 @@ TYPED_TEST(LinearPotentialTest, LinearPotentialTest) // NOLINT
 
   this->set_multithreading(false);
   this->refine_grid(3 - dim);
-  this->set_component(Ddhdg::Component::n, zero_function);
-  this->set_component(Ddhdg::Component::p, zero_function);
+  this->set_component(Ddhdg::Component::n, zero_function, false);
+  this->set_component(Ddhdg::Component::p, zero_function, false);
 
   const Ddhdg::NonlinearIterationResults status = this->run();
 

@@ -5,15 +5,14 @@
 #include <gtest/gtest.h>
 
 template <typename D>
-class SetComponentMethod : public Ddhdg::Solver<D::value>,
+class SetComponentMethod : public Ddhdg::NPSolver<D::value>,
                            public ::testing::Test
 {
 public:
   SetComponentMethod()
-    : Ddhdg::Solver<D::value>(get_problem(),
-                              std::make_shared<Ddhdg::SolverParameters>(0,
-                                                                        1,
-                                                                        2)){};
+    : Ddhdg::NPSolver<D::value>(
+        get_problem(),
+        std::make_shared<Ddhdg::NPSolverParameters>(0, 1, 2)){};
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<D::value>>
@@ -203,9 +202,9 @@ TYPED_TEST(SetComponentMethod, interpolation) // NOLINT
 
   this->set_multithreading(false);
   this->refine_grid(3);
-  this->set_component(Ddhdg::Component::V, V_expected_solution);
-  this->set_component(Ddhdg::Component::p, p_expected_solution);
-  this->set_component(Ddhdg::Component::n, n_expected_solution);
+  this->set_component(Ddhdg::Component::V, V_expected_solution, false);
+  this->set_component(Ddhdg::Component::p, p_expected_solution, false);
+  this->set_component(Ddhdg::Component::n, n_expected_solution, false);
 
   const double V_l2_error =
     this->estimate_l2_error(V_expected_solution, Ddhdg::Component::V);
