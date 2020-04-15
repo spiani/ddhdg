@@ -353,6 +353,8 @@ namespace Ddhdg
     , temperature(problem->temperature)
     , doping(problem->doping)
     , boundary_handler(problem->boundary_handler)
+    , band_density(problem->band_density)
+    , band_edge_energy(problem->band_edge_energy)
     , parameters(std::make_unique<NPSolverParameters>(*parameters))
     , fe_cell(std::make_unique<dealii::FESystem<dim>>(
         generate_fe_system(parameters->degree, false)))
@@ -1241,7 +1243,9 @@ namespace Ddhdg
 
   template <int dim>
   void
-  NPSolver<dim>::assemble_system_multithreaded(bool trace_reconstruct)
+  NPSolver<dim>::assemble_system_multithreaded(
+    const bool trace_reconstruct,
+    const bool compute_thermodynamic_equilibrium)
   {
     Assert(this->initialized, dealii::ExcNotInitialized());
 
@@ -1272,7 +1276,8 @@ namespace Ddhdg
     WorkStream::run(dof_handler_trace_restricted.begin_active(),
                     dof_handler_trace_restricted.end(),
                     *this,
-                    this->get_assemble_system_one_cell_function(),
+                    this->get_assemble_system_one_cell_function(
+                      compute_thermodynamic_equilibrium),
                     &NPSolver<dim>::copy_local_to_global,
                     scratch,
                     task_data);
@@ -1280,7 +1285,8 @@ namespace Ddhdg
 
   template <int dim>
   void
-  NPSolver<dim>::assemble_system(bool trace_reconstruct)
+  NPSolver<dim>::assemble_system(const bool trace_reconstruct,
+                                 const bool compute_thermodynamic_equilibrium)
   {
     Assert(this->initialized, dealii::ExcNotInitialized());
 
@@ -1313,9 +1319,8 @@ namespace Ddhdg
     for (const auto &cell :
          this->dof_handler_trace_restricted.active_cell_iterators())
       {
-        (this->*get_assemble_system_one_cell_function())(cell,
-                                                         scratch,
-                                                         task_data);
+        (this->*get_assemble_system_one_cell_function(
+                  compute_thermodynamic_equilibrium))(cell, scratch, task_data);
         copy_local_to_global(task_data);
       }
   }
@@ -1324,12 +1329,15 @@ namespace Ddhdg
 
   template <int dim>
   typename NPSolver<dim>::assemble_system_one_cell_pointer
-  NPSolver<dim>::get_assemble_system_one_cell_function()
+  NPSolver<dim>::get_assemble_system_one_cell_function(
+    const bool compute_thermodynamic_equilibrium)
   {
     // The last three bits of parameter_mask are the values of the flags
     // this->is_enabled(Component::V), this->is_enabled(Component::n) and
     // this->is_enabled(Component::p); as usual 1 is for TRUE, 0 is FALSE.
     unsigned int parameter_mask = 0;
+    if (compute_thermodynamic_equilibrium)
+      parameter_mask += 8;
     if (this->is_enabled(Component::V))
       parameter_mask += 4;
     if (this->is_enabled(Component::n))
@@ -1340,7 +1348,7 @@ namespace Ddhdg
     TemplatizedParametersInterface<dim> *p1;
     TemplatizedParametersInterface<dim> *p2;
 
-    p1 = new TemplatizedParameters<dim, 7>();
+    p1 = new TemplatizedParameters<dim, 15>();
     while (p1->get_parameter_mask() != parameter_mask)
       {
         p2 = p1->get_previous();
@@ -1512,6 +1520,7 @@ namespace Ddhdg
     auto &z3      = scratch.c.at(Component::p);
     auto &z3_grad = scratch.c_grad.at(Component::p);
 
+    const auto &V0 = scratch.previous_c_cell.at(Component::V);
     const auto &n0 = scratch.previous_c_cell.at(Component::n);
     const auto &p0 = scratch.previous_c_cell.at(Component::p);
     const auto &E0 = scratch.previous_d_cell.at(Component::V);
@@ -1530,6 +1539,13 @@ namespace Ddhdg
 
     const std::vector<double> &dr_p_n = scratch.dr_p_cell.at(Component::n);
     const std::vector<double> &dr_p_p = scratch.dr_p_cell.at(Component::p);
+
+    const double nv = this->band_density.at(Component::n);
+    const double nc = this->band_density.at(Component::p);
+    const double ev = this->band_edge_energy.at(Component::n);
+    const double ec = this->band_edge_energy.at(Component::p);
+
+    double thermodynamic_equilibrium_der = 0.;
 
     for (unsigned int q = 0; q < n_q_points; ++q)
       {
@@ -1586,6 +1602,16 @@ namespace Ddhdg
               .template compute_einstein_diffusion_coefficient<Component::p,
                                                                false>(q);
 
+        if (prm::thermodyn_eq)
+          {
+            const double KbT        = Constants::KB * scratch.T_cell[q];
+            const double q_over_KbT = Constants::Q / KbT;
+            thermodynamic_equilibrium_der =
+              -Constants::Q *
+              (nv * q_over_KbT * exp((ev - Constants::Q * V0[q]) / KbT) +
+               nc * q_over_KbT * exp((Constants::Q * V0[q] - ec) / KbT));
+          }
+
         for (unsigned int i = 0; i < dofs_per_component; ++i)
           {
             const unsigned int ii = scratch.enabled_component_indices[i];
@@ -1593,11 +1619,19 @@ namespace Ddhdg
               {
                 const unsigned int jj = scratch.enabled_component_indices[j];
                 if (prm::is_V_enabled)
-                  scratch.cc_matrix(i, j) +=
-                    (-V[jj] * q1_div[ii] + E[jj] * q1[ii] -
-                     (scratch.epsilon_cell[q] * E[jj]) * z1_grad[ii] +
-                     Constants::Q * (n[jj] - p[jj]) * z1[ii]) *
-                    JxW;
+                  {
+                    scratch.cc_matrix(i, j) +=
+                      (-V[jj] * q1_div[ii] + E[jj] * q1[ii] -
+                       (scratch.epsilon_cell[q] * E[jj]) * z1_grad[ii]) *
+                      JxW;
+
+                    if (prm::thermodyn_eq)
+                      scratch.cc_matrix(i, j) +=
+                        -thermodynamic_equilibrium_der * V[jj] * z1[ii] * JxW;
+                    else
+                      scratch.cc_matrix(i, j) +=
+                        Constants::Q * (n[jj] - p[jj]) * z1[ii] * JxW;
+                  }
                 if (prm::is_n_enabled)
                   scratch.cc_matrix(i, j) +=
                     (-n[jj] * q2_div[ii] + Wn[jj] * q2[ii] -
@@ -1662,6 +1696,13 @@ namespace Ddhdg
     dealii::Tensor<1, dim> Jn;
     dealii::Tensor<1, dim> Jp;
 
+    const double nv = this->band_density.at(Component::n);
+    const double nc = this->band_density.at(Component::p);
+    const double ev = this->band_edge_energy.at(Component::n);
+    const double ec = this->band_edge_energy.at(Component::p);
+
+    double thermodynamic_equilibrium_rhs = 0.;
+
     for (unsigned int q = 0; q < n_q_points; ++q)
       {
         const double JxW = scratch.fe_values_cell.JxW(q);
@@ -1684,6 +1725,14 @@ namespace Ddhdg
           Jp = -p0[q] * (scratch.mu_p_cell[q] * E0[q]) -
                (p_einstein_diffusion_coefficient * Wp0[q]);
 
+        if (prm::thermodyn_eq)
+          {
+            const double KbT = Constants::KB * scratch.T_cell[q];
+            thermodynamic_equilibrium_rhs =
+              Constants::Q * (nv * exp((ev - Constants::Q * V0[q]) / KbT) -
+                              nc * exp((Constants::Q * V0[q] - ec) / KbT));
+          }
+
         for (unsigned int i = 0; i < dofs_per_component; ++i)
           {
             const unsigned int ii = scratch.enabled_component_indices[i];
@@ -1701,8 +1750,14 @@ namespace Ddhdg
                 scratch.cc_rhs[i] +=
                   (V0[q] * q1_div - E0[q] * q1 +
                    (scratch.epsilon_cell[q] * E0[q]) * z1_grad +
-                   Constants::Q * (c0[q] - n0[q] + p0[q]) * z1) *
+                   Constants::Q * c0[q] * z1) *
                   JxW;
+
+                if (prm::thermodyn_eq)
+                  scratch.cc_rhs[i] += thermodynamic_equilibrium_rhs * z1;
+                else
+                  scratch.cc_rhs[i] +=
+                    Constants::Q * (-n0[q] + p0[q]) * z1 * JxW;
               }
 
             if (prm::is_n_enabled)
@@ -2772,9 +2827,12 @@ namespace Ddhdg
   {
     if (has_dirichlet_conditions)
       {
-        const auto dbc =
-          this->boundary_handler->get_dirichlet_conditions_for_id(
-            face_boundary_id, c);
+        const DirichletBoundaryCondition<dim> dbc =
+          (prm::thermodyn_eq) ?
+            DirichletBoundaryCondition<dim>(
+              std::make_shared<dealii::ZeroFunction<dim>>(), Component::V) :
+            this->boundary_handler->get_dirichlet_conditions_for_id(
+              face_boundary_id, c);
         this->apply_dbc_on_face<c>(scratch, task_data, dbc, face);
       }
     else
@@ -2785,9 +2843,12 @@ namespace Ddhdg
         this->add_tt_matrix_terms_to_tt_rhs<prm, c>(scratch, task_data, face);
         if (has_neumann_conditions)
           {
-            const auto nbc =
-              this->boundary_handler->get_neumann_conditions_for_id(
-                face_boundary_id, c);
+            const NeumannBoundaryCondition<dim> nbc =
+              (prm::thermodyn_eq) ?
+                NeumannBoundaryCondition<dim>(
+                  std::make_shared<dealii::ZeroFunction<dim>>(), c) :
+                this->boundary_handler->get_neumann_conditions_for_id(
+                  face_boundary_id, c);
             this->apply_nbc_on_face<c>(scratch, task_data, nbc, face);
           }
       }
@@ -2917,16 +2978,32 @@ namespace Ddhdg
         std::map<Ddhdg::Component, bool> has_neumann_conditions;
 
         // Now we populate the previous maps
-        for (const auto c : this->enabled_components)
+        if (prm::thermodyn_eq)
           {
-            has_dirichlet_conditions.insert(
-              {c,
-               this->boundary_handler->has_dirichlet_boundary_conditions(
-                 face_boundary_id, c)});
-            has_neumann_conditions.insert(
-              {c,
-               this->boundary_handler->has_neumann_boundary_conditions(
-                 face_boundary_id, c)});
+            if (cell->face(face)->at_boundary())
+              {
+                has_dirichlet_conditions.insert({Component::V, true});
+                has_dirichlet_conditions.insert({Component::n, false});
+                has_dirichlet_conditions.insert({Component::p, false});
+
+                has_neumann_conditions.insert({Component::V, false});
+                has_neumann_conditions.insert({Component::n, true});
+                has_neumann_conditions.insert({Component::p, true});
+              }
+          }
+        else
+          {
+            for (const auto c : this->enabled_components)
+              {
+                has_dirichlet_conditions.insert(
+                  {c,
+                   this->boundary_handler->has_dirichlet_boundary_conditions(
+                     face_boundary_id, c)});
+                has_neumann_conditions.insert(
+                  {c,
+                   this->boundary_handler->has_neumann_boundary_conditions(
+                     face_boundary_id, c)});
+              }
           }
 
         // Before assembling the other parts of the matrix, we need the values
@@ -3143,9 +3220,10 @@ namespace Ddhdg
 
   template <int dim>
   NonlinearIterationResults
-  NPSolver<dim>::run(const double absolute_tol,
-                     const double relative_tol,
-                     const int    max_number_of_iterations)
+  NPSolver<dim>::private_run(const double absolute_tol,
+                             const double relative_tol,
+                             const int    max_number_of_iterations,
+                             const bool   compute_thermodynamic_equilibrium)
   {
     if (!this->initialized)
       setup_overall_system();
@@ -3168,17 +3246,19 @@ namespace Ddhdg
         this->system_solution = 0;
 
         if (parameters->multithreading)
-          assemble_system_multithreaded(false);
+          assemble_system_multithreaded(false,
+                                        compute_thermodynamic_equilibrium);
         else
-          assemble_system(false);
+          assemble_system(false, compute_thermodynamic_equilibrium);
 
         solve_linear_problem();
         this->copy_restricted_to_trace();
 
         if (parameters->multithreading)
-          assemble_system_multithreaded(true);
+          assemble_system_multithreaded(true,
+                                        compute_thermodynamic_equilibrium);
         else
-          assemble_system(true);
+          assemble_system(true, compute_thermodynamic_equilibrium);
 
         update_cell_norm           = this->update_cell.linfty_norm();
         current_solution_cell_norm = this->current_solution_cell.linfty_norm();
@@ -3214,9 +3294,61 @@ namespace Ddhdg
 
   template <int dim>
   NonlinearIterationResults
+  NPSolver<dim>::run(const double absolute_tol,
+                     const double relative_tol,
+                     const int    max_number_of_iterations)
+  {
+    return this->private_run(absolute_tol,
+                             relative_tol,
+                             max_number_of_iterations,
+                             false);
+  }
+
+
+
+  template <int dim>
+  NonlinearIterationResults
   NPSolver<dim>::run()
   {
     return this->run(
+      this->parameters->nonlinear_solver_absolute_tolerance,
+      this->parameters->nonlinear_solver_relative_tolerance,
+      this->parameters->nonlinear_solver_max_number_of_iterations);
+  }
+
+
+  template <int dim>
+  NonlinearIterationResults
+  NPSolver<dim>::compute_thermodynamic_equilibrium(
+    const double absolute_tol,
+    const double relative_tol,
+    const int    max_number_of_iterations)
+  {
+    std::map<Component, bool> current_active_components;
+    for (Component c : all_components())
+      {
+        current_active_components[c] = this->is_enabled(c);
+      }
+
+    this->set_enabled_components(true, false, false);
+
+    NonlinearIterationResults iterations = this->private_run(
+      absolute_tol, relative_tol, max_number_of_iterations, true);
+
+    this->set_enabled_components(current_active_components[Component::V],
+                                 current_active_components[Component::n],
+                                 current_active_components[Component::p]);
+
+    return iterations;
+  }
+
+
+
+  template <int dim>
+  NonlinearIterationResults
+  NPSolver<dim>::compute_thermodynamic_equilibrium()
+  {
+    return this->compute_thermodynamic_equilibrium(
       this->parameters->nonlinear_solver_absolute_tolerance,
       this->parameters->nonlinear_solver_relative_tolerance,
       this->parameters->nonlinear_solver_max_number_of_iterations);

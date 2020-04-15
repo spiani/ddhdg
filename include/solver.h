@@ -85,6 +85,14 @@ namespace Ddhdg
     virtual NonlinearIterationResults
     run() = 0;
 
+    virtual NonlinearIterationResults
+    compute_thermodynamic_equilibrium(double absolute_tol,
+                                      double relative_tol,
+                                      int    max_number_of_iterations) = 0;
+
+    virtual NonlinearIterationResults
+    compute_thermodynamic_equilibrium() = 0;
+
     virtual double
     estimate_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,

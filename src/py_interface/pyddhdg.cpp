@@ -383,6 +383,15 @@ namespace pyddhdg
 
 
   template <int dim>
+  Ddhdg::NonlinearIterationResults
+  NPSolver<dim>::compute_thermodynamic_equilibrium()
+  {
+    return this->ddhdg_solver->compute_thermodynamic_equilibrium();
+  }
+
+
+
+  template <int dim>
   double
   NPSolver<dim>::estimate_l2_error(const std::string &    expected_solution,
                                    const Ddhdg::Component c) const

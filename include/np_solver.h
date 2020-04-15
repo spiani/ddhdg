@@ -99,6 +99,14 @@ namespace Ddhdg
     NonlinearIterationResults
     run() override;
 
+    virtual NonlinearIterationResults
+    compute_thermodynamic_equilibrium(double absolute_tol,
+                                      double relative_tol,
+                                      int    max_number_of_iterations) override;
+
+    virtual NonlinearIterationResults
+    compute_thermodynamic_equilibrium() override;
+
     double
     estimate_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
@@ -243,10 +251,13 @@ namespace Ddhdg
     setup_restricted_trace_system();
 
     void
-    assemble_system_multithreaded(bool reconstruct_trace = false);
+    assemble_system_multithreaded(
+      bool reconstruct_trace                 = false,
+      bool compute_thermodynamic_equilibrium = false);
 
     void
-    assemble_system(bool reconstruct_trace = false);
+    assemble_system(bool reconstruct_trace                 = false,
+                    bool compute_thermodynamic_equilibrium = false);
 
     void
     solve_linear_problem();
@@ -261,7 +272,8 @@ namespace Ddhdg
       PerTaskData &                                         task_data);
 
     assemble_system_one_cell_pointer
-    get_assemble_system_one_cell_function();
+    get_assemble_system_one_cell_function(
+      bool compute_thermodynamic_equilibrium);
 
     template <typename prm>
     void
@@ -379,6 +391,12 @@ namespace Ddhdg
     void
     copy_restricted_to_trace();
 
+    NonlinearIterationResults
+    private_run(double absolute_tol,
+                double relative_tol,
+                int    max_number_of_iterations,
+                bool   compute_thermodynamic_equilibrium);
+
     const std::unique_ptr<Triangulation<dim>>           triangulation;
     const std::shared_ptr<const Permittivity<dim>>      permittivity;
     const std::shared_ptr<const ElectronMobility<dim>>  n_electron_mobility;
@@ -388,6 +406,9 @@ namespace Ddhdg
     const std::shared_ptr<const dealii::Function<dim>>  temperature;
     const std::shared_ptr<const dealii::Function<dim>>  doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
+
+    const std::map<Component, double> band_density;
+    const std::map<Component, double> band_edge_energy;
 
     const std::unique_ptr<NPSolverParameters> parameters;
 

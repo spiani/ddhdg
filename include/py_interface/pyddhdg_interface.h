@@ -185,6 +185,8 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("n_enabled"),
        py::arg("p_enabled"))
   .def("run", &NPSolver<DIM>::run)
+  .def("compute_thermodynamic_equilibrium",
+       &NPSolver<DIM>::compute_thermodynamic_equilibrium)
   .def("estimate_l2_error",
        py::overload_cast<const std::string &, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_l2_error,

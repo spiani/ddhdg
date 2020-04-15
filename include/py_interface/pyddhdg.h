@@ -217,6 +217,9 @@ namespace pyddhdg
     Ddhdg::NonlinearIterationResults
     run();
 
+    Ddhdg::NonlinearIterationResults
+    compute_thermodynamic_equilibrium();
+
     [[nodiscard]] double
     estimate_l2_error(const std::string &expected_solution,
                       Ddhdg::Component   c) const;

@@ -11,7 +11,7 @@ namespace Ddhdg
   class TemplatizedParametersInterface
   {
   public:
-    virtual unsigned int
+    [[nodiscard]] virtual unsigned int
     get_parameter_mask() const = 0;
 
     virtual TemplatizedParametersInterface<dim> *
@@ -28,11 +28,12 @@ namespace Ddhdg
   {
   public:
     static const unsigned int mask         = parameter_mask;
+    static const bool         thermodyn_eq = (parameter_mask / 8) % 2;
     static const bool         is_V_enabled = (parameter_mask / 4) % 2;
     static const bool         is_n_enabled = (parameter_mask / 2) % 2;
     static const bool         is_p_enabled = (parameter_mask / 1) % 2;
 
-    unsigned int
+    [[nodiscard]] unsigned int
     get_parameter_mask() const override;
 
     TemplatizedParametersInterface<dim> *
