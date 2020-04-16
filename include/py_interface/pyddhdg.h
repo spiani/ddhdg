@@ -170,7 +170,9 @@ namespace pyddhdg
   class Problem
   {
   public:
-    Problem(Permittivity<dim> &            permittivity,
+    Problem(double                         left,
+            double                         right,
+            Permittivity<dim> &            permittivity,
             ElectronMobility<dim> &        n_electron_mobility,
             RecombinationTerm<dim> &       n_recombination_term,
             ElectronMobility<dim> &        p_electron_mobility,
@@ -190,7 +192,7 @@ namespace pyddhdg
 
   private:
     static std::shared_ptr<dealii::Triangulation<dim>>
-    generate_triangulation();
+    generate_triangulation(double left = 0., double right = 1.);
 
     const std::shared_ptr<const Ddhdg::Problem<dim>> ddhdg_problem;
   };

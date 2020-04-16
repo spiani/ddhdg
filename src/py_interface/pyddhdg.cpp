@@ -270,7 +270,9 @@ namespace pyddhdg
 
 
   template <int dim>
-  Problem<dim>::Problem(Permittivity<dim> &            permittivity,
+  Problem<dim>::Problem(const double                   left,
+                        const double                   right,
+                        Permittivity<dim> &            permittivity,
                         ElectronMobility<dim> &        n_electron_mobility,
                         RecombinationTerm<dim> &       n_recombination_term,
                         ElectronMobility<dim> &        p_electron_mobility,
@@ -283,7 +285,7 @@ namespace pyddhdg
                         const double conduction_band_edge_energy,
                         const double valence_band_edge_energy)
     : ddhdg_problem(std::make_shared<Ddhdg::Problem<dim>>(
-        generate_triangulation(),
+        generate_triangulation(left, right),
         permittivity.generate_ddhdg_permittivity(),
         n_electron_mobility.generate_ddhdg_electron_mobility(),
         n_recombination_term.generate_ddhdg_recombination_term(),
@@ -318,12 +320,12 @@ namespace pyddhdg
 
   template <int dim>
   std::shared_ptr<dealii::Triangulation<dim>>
-  Problem<dim>::generate_triangulation()
+  Problem<dim>::generate_triangulation(const double left, const double right)
   {
     std::shared_ptr<dealii::Triangulation<dim>> triangulation =
       std::make_shared<dealii::Triangulation<dim>>();
 
-    dealii::GridGenerator::hyper_cube(*triangulation, 0., 1., true);
+    dealii::GridGenerator::hyper_cube(*triangulation, left, right, true);
 
     return triangulation;
   }

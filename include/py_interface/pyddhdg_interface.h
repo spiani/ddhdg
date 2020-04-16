@@ -69,7 +69,9 @@ py::class_<BoundaryConditionHandler<DIM>>(m, "BoundaryConditionHandler")
        &BoundaryConditionHandler<DIM>::has_neumann_boundary_conditions);
 
 py::class_<Problem<DIM>>(m, "Problem")
-  .def(py::init<Permittivity<DIM> &,
+  .def(py::init<double,
+                double,
+                Permittivity<DIM> &,
                 ElectronMobility<DIM> &,
                 RecombinationTerm<DIM> &,
                 ElectronMobility<DIM> &,
@@ -81,6 +83,8 @@ py::class_<Problem<DIM>>(m, "Problem")
                 double,
                 double,
                 double>(),
+       py::arg("left"),
+       py::arg("right"),
        py::arg("permittivity"),
        py::arg("n_electron_mobility"),
        py::arg("n_recombination_term"),
