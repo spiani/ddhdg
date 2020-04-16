@@ -2990,6 +2990,12 @@ namespace Ddhdg
                 has_neumann_conditions.insert({Component::n, true});
                 has_neumann_conditions.insert({Component::p, true});
               }
+            else
+              for (const auto c : all_components())
+                {
+                  has_dirichlet_conditions.insert({c, false});
+                  has_neumann_conditions.insert({c, false});
+                }
           }
         else
           {
