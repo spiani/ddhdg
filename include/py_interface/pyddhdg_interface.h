@@ -31,6 +31,9 @@ py::class_<PythonFunction<DIM>>(m, "AnalyticFunction")
   .def("get_expression", &PythonFunction<DIM>::get_expression);
 
 py::class_<PiecewiseFunction<DIM>, PythonFunction<DIM>>(m, "PiecewiseFunction")
+  .def(py::init<const PythonFunction<DIM> &,
+                const PythonFunction<DIM> &,
+                const PythonFunction<DIM> &>())
   .def(
     py::init<const std::string &, const std::string &, const std::string &>())
   .def(py::init<const std::string &, const std::string &, double>())

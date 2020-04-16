@@ -80,9 +80,9 @@ namespace pyddhdg
   class PiecewiseFunction : public PythonFunction<dim>
   {
   public:
-    PiecewiseFunction(const PythonFunction<dim> condition,
-                      const PythonFunction<dim> f1,
-                      const PythonFunction<dim> f2);
+    PiecewiseFunction(const PythonFunction<dim> &condition,
+                      const PythonFunction<dim> &f1,
+                      const PythonFunction<dim> &f2);
 
     PiecewiseFunction(const std::string &condition,
                       const std::string &f1,
