@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include "function_tools.h"
+
 namespace pyddhdg
 {
   template <int dim>
@@ -35,15 +37,42 @@ namespace pyddhdg
   }
 
 
+
+  template <int dim>
+  std::shared_ptr<dealii::FunctionParser<dim>>
+  PythonFunction<dim>::get_function_from_string(const std::string &f_expr)
+  {
+    auto f = std::make_shared<dealii::FunctionParser<dim>>();
+    f->initialize(dealii::FunctionParser<dim>::default_variable_names(),
+                  f_expr,
+                  Ddhdg::Constants::constants);
+    return f;
+  }
+
+
+
   template <int dim>
   PythonFunction<dim>::PythonFunction(std::string f_expr)
-    : f_expr(std::move(f_expr))
-    , f(std::make_shared<dealii::FunctionParser<dim>>(1))
-  {
-    f->initialize(dealii::FunctionParser<dim>::default_variable_names(),
-                  this->f_expr,
-                  Ddhdg::Constants::constants);
-  }
+    : f_expr(f_expr)
+    , f(get_function_from_string(f_expr))
+  {}
+
+
+
+  template <int dim>
+  PythonFunction<dim>::PythonFunction(const double f_const)
+    : f_expr(std::to_string(f_const))
+    , f(std::make_shared<dealii::Functions::ConstantFunction<dim>>(f_const))
+  {}
+
+
+
+  template <int dim>
+  PythonFunction<dim>::PythonFunction(std::string f_expr,
+                                      std::shared_ptr<dealii::Function<dim>> f)
+    : f_expr(f_expr)
+    , f(f)
+  {}
 
 
 
@@ -66,15 +95,59 @@ namespace pyddhdg
 
 
   template <int dim>
-  Temperature<dim>::Temperature(const std::string &f_expr)
-    : PythonFunction<dim>(f_expr)
+  PiecewiseFunction<dim>::PiecewiseFunction(PythonFunction<dim> condition,
+                                            PythonFunction<dim> f1,
+                                            PythonFunction<dim> f2)
+    : PythonFunction<dim>("(" + condition.get_expression() + ") ? " +
+                            f1.get_expression() + " : " + f2.get_expression(),
+                          std::make_shared<Ddhdg::PiecewiseFunction<dim>>(
+                            condition.get_dealii_function(),
+                            f1.get_dealii_function(),
+                            f2.get_dealii_function()))
   {}
 
 
 
   template <int dim>
-  Doping<dim>::Doping(const std::string &f_expr)
-    : PythonFunction<dim>(f_expr)
+  PiecewiseFunction<dim>::PiecewiseFunction(const std::string &condition,
+                                            const std::string &f1,
+                                            const std::string &f2)
+    : PiecewiseFunction(PythonFunction<dim>(condition),
+                        PythonFunction<dim>(f1),
+                        PythonFunction<dim>(f2))
+  {}
+
+
+
+  template <int dim>
+  PiecewiseFunction<dim>::PiecewiseFunction(const std::string &condition,
+                                            const std::string &f1,
+                                            double             f2)
+    : PiecewiseFunction(PythonFunction<dim>(condition),
+                        PythonFunction<dim>(f1),
+                        PythonFunction<dim>(f2))
+  {}
+
+
+
+  template <int dim>
+  PiecewiseFunction<dim>::PiecewiseFunction(const std::string &condition,
+                                            double             f1,
+                                            const std::string &f2)
+    : PiecewiseFunction(PythonFunction<dim>(condition),
+                        PythonFunction<dim>(f1),
+                        PythonFunction<dim>(f2))
+  {}
+
+
+
+  template <int dim>
+  PiecewiseFunction<dim>::PiecewiseFunction(const std::string &condition,
+                                            double             f1,
+                                            double             f2)
+    : PiecewiseFunction(PythonFunction<dim>(condition),
+                        PythonFunction<dim>(f1),
+                        PythonFunction<dim>(f2))
   {}
 
 
@@ -202,8 +275,8 @@ namespace pyddhdg
                         RecombinationTerm<dim> &       n_recombination_term,
                         ElectronMobility<dim> &        p_electron_mobility,
                         RecombinationTerm<dim> &       p_recombination_term,
-                        Temperature<dim> &             temperature,
-                        Doping<dim> &                  doping,
+                        PythonFunction<dim> &          temperature,
+                        PythonFunction<dim> &          doping,
                         BoundaryConditionHandler<dim> &bc_handler,
                         const double                   conduction_band_density,
                         const double                   valence_band_density,
@@ -655,13 +728,9 @@ namespace pyddhdg
   template class PythonFunction<2>;
   template class PythonFunction<3>;
 
-  template class Temperature<1>;
-  template class Temperature<2>;
-  template class Temperature<3>;
-
-  template class Doping<1>;
-  template class Doping<2>;
-  template class Doping<3>;
+  template class PiecewiseFunction<1>;
+  template class PiecewiseFunction<2>;
+  template class PiecewiseFunction<3>;
 
   template class LinearRecombinationTerm<1>;
   template class LinearRecombinationTerm<2>;

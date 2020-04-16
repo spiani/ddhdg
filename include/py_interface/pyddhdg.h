@@ -55,7 +55,12 @@ namespace pyddhdg
   class PythonFunction
   {
   public:
-    explicit PythonFunction(std::string f_exp);
+    explicit PythonFunction(std::string f_expr);
+
+    explicit PythonFunction(double f_const);
+
+    PythonFunction(std::string                            f_expr,
+                   std::shared_ptr<dealii::Function<dim>> f);
 
     std::shared_ptr<dealii::Function<dim>>
     get_dealii_function() const;
@@ -64,22 +69,34 @@ namespace pyddhdg
     get_expression() const;
 
   private:
-    std::string                                        f_expr;
-    const std::shared_ptr<dealii::FunctionParser<dim>> f;
+    static std::shared_ptr<dealii::FunctionParser<dim>>
+    get_function_from_string(const std::string &f_expr);
+
+    std::string                                  f_expr;
+    const std::shared_ptr<dealii::Function<dim>> f;
   };
 
   template <int dim>
-  class Temperature : public PythonFunction<dim>
+  class PiecewiseFunction : public PythonFunction<dim>
   {
   public:
-    explicit Temperature(const std::string &f_expr);
-  };
+    PiecewiseFunction(const PythonFunction<dim> condition,
+                      const PythonFunction<dim> f1,
+                      const PythonFunction<dim> f2);
 
-  template <int dim>
-  class Doping : public PythonFunction<dim>
-  {
-  public:
-    explicit Doping(const std::string &f_expr);
+    PiecewiseFunction(const std::string &condition,
+                      const std::string &f1,
+                      const std::string &f2);
+
+    PiecewiseFunction(const std::string &condition,
+                      const std::string &f1,
+                      double             f2);
+
+    PiecewiseFunction(const std::string &condition,
+                      double             f1,
+                      const std::string &f2);
+
+    PiecewiseFunction(const std::string &condition, double f1, double f2);
   };
 
   template <int dim>
@@ -158,8 +175,8 @@ namespace pyddhdg
             RecombinationTerm<dim> &       n_recombination_term,
             ElectronMobility<dim> &        p_electron_mobility,
             RecombinationTerm<dim> &       p_recombination_term,
-            Temperature<dim> &             temperature,
-            Doping<dim> &                  doping,
+            PythonFunction<dim> &          temperature,
+            PythonFunction<dim> &          doping,
             BoundaryConditionHandler<dim> &bc_handler,
             double                         conduction_band_density,
             double                         valence_band_density,

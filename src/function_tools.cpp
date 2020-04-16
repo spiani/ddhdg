@@ -400,6 +400,140 @@ namespace Ddhdg
 
 
 
+  template <int dim>
+  PiecewiseFunction<dim>::PiecewiseFunction(
+    const std::shared_ptr<const dealii::Function<dim>> condition,
+    const std::shared_ptr<const dealii::Function<dim>> f1,
+    const std::shared_ptr<const dealii::Function<dim>> f2)
+    : dealii::Function<dim>(f1->n_components)
+    , condition(condition)
+    , f1(f1)
+    , f2(f2)
+  {
+    Assert(this->condition->n_components == 1, FunctionMustBeScalar());
+    Assert(this->f1->n_components == this->f2->n_components,
+           dealii::ExcDimensionMismatch(this->f1->n_components,
+                                        this->f2->n_components));
+  }
+
+
+
+  template <int dim>
+  double
+  PiecewiseFunction<dim>::value(const dealii::Point<dim> &p,
+                                unsigned int              component) const
+  {
+    Assert(component < this->n_components,
+           dealii::ExcIndexRange(component, 0, this->n_components));
+    const double condition_evaluation = this->condition->value(p);
+    if (condition_evaluation >= 0.)
+      return this->f1->value(p, component);
+    return -this->f2->value(p, component);
+  }
+
+
+
+  template <int dim>
+  void
+  PiecewiseFunction<dim>::vector_value(const dealii::Point<dim> &p,
+                                       dealii::Vector<double> &  values) const
+  {
+    Assert(values.size() == this->n_components,
+           dealii::ExcDimensionMismatch(values.size(), this->n_components));
+    const double condition_evaluation = this->condition->value(p);
+    if (condition_evaluation >= 0.)
+      this->f1->vector_value(p, values);
+    else
+      this->f2->vector_value(p, values);
+  }
+
+
+
+  template <int dim>
+  void
+  PiecewiseFunction<dim>::value_list(const std::vector<dealii::Point<dim>> &p,
+                                     std::vector<double> &values,
+                                     const unsigned int   component) const
+  {
+    Assert(values.size() == p.size(),
+           dealii::ExcDimensionMismatch(values.size(), p.size()));
+    Assert(component < this->n_components,
+           dealii::ExcIndexRange(component, 0, this->n_components));
+
+    const unsigned int  n_of_points = p.size();
+    std::vector<double> condition_evaluation(n_of_points);
+    this->condition->value_list(p, condition_evaluation);
+
+    for (unsigned int i = 0; i < n_of_points; i++)
+      {
+        if (condition_evaluation[i] > 0)
+          values[i] = this->f1->value(p[i], component);
+        else
+          values[i] = this->f2->value(p[i], component);
+      }
+  }
+
+
+
+  template <int dim>
+  dealii::Tensor<1, dim>
+  PiecewiseFunction<dim>::gradient(const dealii::Point<dim> &p,
+                                   unsigned int              component) const
+  {
+    Assert(component < this->n_components,
+           dealii::ExcIndexRange(component, 0, this->n_components));
+    const double condition_evaluation = this->condition->value(p);
+    if (condition_evaluation >= 0.)
+      return this->f1->gradient(p, component);
+    return -this->f2->gradient(p, component);
+  }
+
+
+
+  template <int dim>
+  void
+  PiecewiseFunction<dim>::vector_gradient(
+    const dealii::Point<dim> &           p,
+    std::vector<dealii::Tensor<1, dim>> &values) const
+  {
+    Assert(values.size() == this->n_components,
+           dealii::ExcDimensionMismatch(values.size(), this->n_components));
+    const double condition_evaluation = this->condition->value(p);
+    if (condition_evaluation >= 0.)
+      this->f1->vector_gradient(p, values);
+    else
+      this->f2->vector_gradient(p, values);
+  }
+
+
+
+  template <int dim>
+  void
+  PiecewiseFunction<dim>::gradient_list(
+    const std::vector<dealii::Point<dim>> &p,
+    std::vector<dealii::Tensor<1, dim>> &  values,
+    const unsigned int                     component) const
+  {
+    Assert(values.size() == p.size(),
+           dealii::ExcDimensionMismatch(values.size(), p.size()));
+    Assert(component < this->n_components,
+           dealii::ExcIndexRange(component, 0, this->n_components));
+
+    const unsigned int  n_of_points = p.size();
+    std::vector<double> condition_evaluation(n_of_points);
+    this->condition->value_list(p, condition_evaluation);
+
+    for (unsigned int i = 0; i < n_of_points; i++)
+      {
+        if (condition_evaluation[i] > 0)
+          values[i] = this->f1->gradient(p[i], component);
+        else
+          values[i] = this->f2->gradient(p[i], component);
+      }
+  }
+
+
+
   template class FunctionByComponents<1>;
   template class FunctionByComponents<2>;
   template class FunctionByComponents<3>;
@@ -415,5 +549,9 @@ namespace Ddhdg
   template class Opposite<1>;
   template class Opposite<2>;
   template class Opposite<3>;
+
+  template class PiecewiseFunction<1>;
+  template class PiecewiseFunction<2>;
+  template class PiecewiseFunction<3>;
 
 } // namespace Ddhdg

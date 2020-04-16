@@ -26,8 +26,16 @@ py::class_<HomogeneousElectronMobility<DIM>, ElectronMobility<DIM>>(
   .def(py::init<const double &>());
 
 py::class_<PythonFunction<DIM>>(m, "AnalyticFunction")
-  .def(py::init<const std::string &>())
+  .def(py::init<std::string>())
+  .def(py::init<double>())
   .def("get_expression", &PythonFunction<DIM>::get_expression);
+
+py::class_<PiecewiseFunction<DIM>, PythonFunction<DIM>>(m, "PiecewiseFunction")
+  .def(
+    py::init<const std::string &, const std::string &, const std::string &>())
+  .def(py::init<const std::string &, const std::string &, double>())
+  .def(py::init<const std::string &, double, const std::string &>())
+  .def(py::init<const std::string &, double, double>());
 
 py::class_<RecombinationTerm<DIM>>(m, "RecombinationTerm");
 
@@ -42,14 +50,6 @@ py::class_<LinearRecombinationTerm<DIM>, RecombinationTerm<DIM>>(
        &LinearRecombinationTerm<DIM>::get_n_linear_coefficient)
   .def("get_p_linear_coefficient",
        &LinearRecombinationTerm<DIM>::get_p_linear_coefficient);
-
-py::class_<Temperature<DIM>>(m, "Temperature")
-  .def(py::init<const std::string &>())
-  .def("get_expression", &Temperature<DIM>::get_expression);
-
-py::class_<Doping<DIM>>(m, "Doping")
-  .def(py::init<const std::string &>())
-  .def("get_expression", &Doping<DIM>::get_expression);
 
 py::enum_<Ddhdg::BoundaryConditionType>(m, "BoundaryConditionType")
   .value("DIRICHLET", Ddhdg::BoundaryConditionType::dirichlet)
@@ -74,8 +74,8 @@ py::class_<Problem<DIM>>(m, "Problem")
                 RecombinationTerm<DIM> &,
                 ElectronMobility<DIM> &,
                 RecombinationTerm<DIM> &,
-                Temperature<DIM> &,
-                Doping<DIM> &,
+                PythonFunction<DIM> &,
+                PythonFunction<DIM> &,
                 BoundaryConditionHandler<DIM> &,
                 double,
                 double,
