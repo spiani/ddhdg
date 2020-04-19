@@ -149,6 +149,8 @@ namespace Ddhdg
     , mu_p_face(face_quadrature_formula.size())
     , T_cell(quadrature_formula.size())
     , T_face(face_quadrature_formula.size())
+    , U_T_cell(quadrature_formula.size())
+    , U_T_face(face_quadrature_formula.size())
     , doping_cell(quadrature_formula.size())
     , r_n_cell(quadrature_formula.size())
     , r_p_cell(quadrature_formula.size())
@@ -285,6 +287,8 @@ namespace Ddhdg
     , mu_p_face(sd.mu_p_face)
     , T_cell(sd.T_cell)
     , T_face(sd.T_face)
+    , U_T_cell(sd.U_T_cell)
+    , U_T_face(sd.U_T_face)
     , doping_cell(sd.doping_cell)
     , r_n_cell(sd.r_n_cell)
     , r_p_cell(sd.r_p_cell)
@@ -1409,9 +1413,13 @@ namespace Ddhdg
         scratch.cell_quadrature_points, scratch.mu_p_cell);
 
     // Compute the value of T
-    if (this->is_enabled(Component::n) || this->is_enabled(Component::p))
-      this->temperature->value_list(scratch.cell_quadrature_points,
-                                    scratch.T_cell);
+    this->temperature->value_list(scratch.cell_quadrature_points,
+                                  scratch.T_cell);
+
+    // Compute the thermal voltage
+    for (unsigned int q = 0; q < n_q_points; ++q)
+      scratch.U_T_cell[q] = Constants::KB / Constants::Q * scratch.T_cell[q];
+
 
     // Compute the value of the doping
     if (this->is_enabled(Component::V))
@@ -1843,9 +1851,11 @@ namespace Ddhdg
       this->p_electron_mobility->compute_electron_mobility(
         scratch.face_quadrature_points, scratch.mu_p_face);
 
-    if (this->is_enabled(Component::n) || this->is_enabled(Component::p))
-      this->temperature->value_list(scratch.face_quadrature_points,
-                                    scratch.T_face);
+    this->temperature->value_list(scratch.face_quadrature_points,
+                                  scratch.T_face);
+
+    for (unsigned int q = 0; q < n_face_q_points; ++q)
+      scratch.U_T_face[q] = Constants::KB / Constants::Q * scratch.T_face[q];
   }
 
 
@@ -2830,7 +2840,8 @@ namespace Ddhdg
         const DirichletBoundaryCondition<dim> dbc =
           (prm::thermodyn_eq) ?
             DirichletBoundaryCondition<dim>(
-              std::make_shared<dealii::ZeroFunction<dim>>(), Component::V) :
+              std::make_shared<dealii::Functions::ZeroFunction<dim>>(),
+              Component::V) :
             this->boundary_handler->get_dirichlet_conditions_for_id(
               face_boundary_id, c);
         this->apply_dbc_on_face<c>(scratch, task_data, dbc, face);
@@ -2846,7 +2857,7 @@ namespace Ddhdg
             const NeumannBoundaryCondition<dim> nbc =
               (prm::thermodyn_eq) ?
                 NeumannBoundaryCondition<dim>(
-                  std::make_shared<dealii::ZeroFunction<dim>>(), c) :
+                  std::make_shared<dealii::Functions::ZeroFunction<dim>>(), c) :
                 this->boundary_handler->get_neumann_conditions_for_id(
                   face_boundary_id, c);
             this->apply_nbc_on_face<c>(scratch, task_data, nbc, face);

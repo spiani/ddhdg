@@ -487,6 +487,8 @@ namespace Ddhdg
     std::vector<Tensor<2, dim>>                      mu_p_face;
     std::vector<double>                              T_cell;
     std::vector<double>                              T_face;
+    std::vector<double>                              U_T_cell;
+    std::vector<double>                              U_T_face;
     std::vector<double>                              doping_cell;
     std::vector<double>                              r_n_cell;
     std::vector<double>                              r_p_cell;
@@ -548,16 +550,12 @@ namespace Ddhdg
         {
           case n:
             if (on_face)
-              return Constants::KB / Constants::Q * this->T_face[q] *
-                     this->mu_n_face[q];
-            return Constants::KB / Constants::Q * this->T_cell[q] *
-                   this->mu_n_cell[q];
+              return this->U_T_face[q] * this->mu_n_face[q];
+            return this->U_T_cell[q] * this->mu_n_cell[q];
           case p:
             if (on_face)
-              return Constants::KB / Constants::Q * this->T_face[q] *
-                     this->mu_p_face[q];
-            return Constants::KB / Constants::Q * this->T_cell[q] *
-                   this->mu_p_cell[q];
+              return this->U_T_face[q] * this->mu_p_face[q];
+            return this->U_T_cell[q] * this->mu_p_cell[q];
           default:
             Assert(false, InvalidComponent());
             return Tensor<2, dim>();
