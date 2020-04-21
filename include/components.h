@@ -1,5 +1,9 @@
 #pragma once
 
+#include "deal.II/base/exceptions.h"
+
+#include <set>
+
 namespace Ddhdg
 {
   DeclExceptionMsg(InvalidComponent, "Invalid component specified");

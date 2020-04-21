@@ -9,14 +9,16 @@ class DisablingComponentsTest : public Ddhdg::NPSolver<2>,
 public:
   DisablingComponentsTest()
     : Ddhdg::NPSolver<2>(get_problem(),
-                         std::make_shared<Ddhdg::NPSolverParameters>(1,
-                                                                     2,
-                                                                     3)){};
+                         std::make_shared<Ddhdg::NPSolverParameters>(1, 2, 3),
+                         std::make_shared<Ddhdg::Adimensionalizer>(
+                           1,
+                           Ddhdg::Constants::Q / Ddhdg::Constants::KB,
+                           1 / Ddhdg::Constants::Q)){};
 
 protected:
   constexpr static const unsigned int dim = 2;
 
-  constexpr static const double V_tolerance = 0.1;
+  constexpr static const double V_tolerance = 0.2;
   constexpr static const double n_tolerance = 0.1;
   constexpr static const double p_tolerance = 0.1;
 
@@ -40,9 +42,9 @@ protected:
         case Ddhdg::Component::V:
           return get_function("sin(pi*x)*sin(pi*y)");
         case Ddhdg::Component::n:
-          return get_function("sin(2*pi*x)*sin(2*pi*y)");
+          return get_function("1/q * sin(2*pi*x)*sin(2*pi*y)");
         case Ddhdg::Component::p:
-          return get_function("sin(4*pi*x)*sin(4*pi*y)");
+          return get_function("1/q * sin(4*pi*x)*sin(4*pi*y)");
         default:
           AssertThrow(false, Ddhdg::InvalidComponent());
           break;
@@ -70,9 +72,9 @@ protected:
   get_doping()
   {
     return get_function(
-      "2*(16*(2*q*cos(pi*x)^3 - q*cos(pi*x))*cos(pi*y)^3*sin(pi*x) "
-      "+ pi^2*sin(pi*x) - 2*(8*q*cos(pi*x)^3 "
-      "- 3*q*cos(pi*x))*cos(pi*y)*sin(pi*x))*sin(pi*y)/q");
+      "2*(16*(2*cos(pi*x)^3 - cos(pi*x))*cos(pi*y)^3*sin(pi*x) +"
+      " pi^2*sin(pi*x) - 2*(8*cos(pi*x)^3 - 3*cos(pi*x))*cos(pi*y)*sin(pi*x)"
+      ")*sin(pi*y)/q");
   }
 
   static std::shared_ptr<Ddhdg::RecombinationTerm<2>>
@@ -84,21 +86,21 @@ protected:
       {
         case Ddhdg::Component::n:
           recombination_constant_term =
-            "-4*pi^2*q*cos(pi*x)*cos(pi*y)*sin(pi*x)^2 "
-            "- 32*pi^2*q*cos(pi*x)*cos(pi*y)*sin(pi*x)*sin(pi*y) "
-            "+ 4*(6*pi^2*q*cos(pi*x)*sin(pi*x)^2 "
-            "- pi^2*q*cos(pi*x))*cos(pi*y)*sin(pi*y)^2";
+            "-4*pi^2*cos(pi*x)*cos(pi*y)*sin(pi*x)^2 - "
+            "32*pi^2*cos(pi*x)*cos(pi*y)*sin(pi*x)*sin(pi*y) + "
+            "4*(6*pi^2*cos(pi*x)*sin(pi*x)^2 - "
+            "pi^2*cos(pi*x))*cos(pi*y)*sin(pi*y)^2";
           break;
         case Ddhdg::Component::p:
           recombination_constant_term =
-            "-32*(20*pi^2*q*cos(pi*x)^5 - 26*pi^2*q*cos(pi*x)^3 "
-            "+ 7*pi^2*q*cos(pi*x))*cos(pi*y)^5 + 16*(52*pi^2*q*cos(pi*x)^5 "
-            "- 66*pi^2*q*cos(pi*x)^3 + 17*pi^2*q*cos(pi*x))*cos(pi*y)^3 "
-            "- 16*(14*pi^2*q*cos(pi*x)^5 - 17*pi^2*q*cos(pi*x)^3 "
-            "+ 4*pi^2*q*cos(pi*x))*cos(pi*y) - 512*(2*(2*pi^2*q*cos(pi*x)^3 "
-            "- pi^2*q*cos(pi*x))*cos(pi*y)^3*sin(pi*x) "
-            "- (2*pi^2*q*cos(pi*x)^3 - pi^2*q*cos(pi*x)) "
-            "* cos(pi*y)*sin(pi*x))*sin(pi*y)";
+            "-32*(20*pi^2*cos(pi*x)^5 - 26*pi^2*cos(pi*x)^3 "
+            "+ 7*pi^2*cos(pi*x))*cos(pi*y)^5 + 16*(52*pi^2*cos(pi*x)^5 "
+            "- 66*pi^2*cos(pi*x)^3 + 17*pi^2*cos(pi*x))*cos(pi*y)^3 "
+            "- 16*(14*pi^2*cos(pi*x)^5 - 17*pi^2*cos(pi*x)^3 "
+            "+ 4*pi^2*cos(pi*x))*cos(pi*y) - 512*(2*(2*pi^2*cos(pi*x)^3 "
+            "- pi^2*cos(pi*x))*cos(pi*y)^3*sin(pi*x) "
+            "- (2*pi^2*cos(pi*x)^3 - pi^2*cos(pi*x)) "
+            "*cos(pi*y)*sin(pi*x))*sin(pi*y)";
           break;
         default:
           AssertThrow(false, Ddhdg::InvalidComponent());

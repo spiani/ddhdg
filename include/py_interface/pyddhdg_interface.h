@@ -1,4 +1,8 @@
 #ifdef DIM
+m.attr("CONSTANT_Q")    = py::float_(Ddhdg::Constants::Q);
+m.attr("CONSTANT_KB")   = py::float_(Ddhdg::Constants::KB);
+m.attr("CONSTANT_EPS0") = py::float_(Ddhdg::Constants::EPSILON0);
+
 py::enum_<Ddhdg::Component>(m, "Component")
   .value("v", Ddhdg::Component::V)
   .value("n", Ddhdg::Component::n)
@@ -158,6 +162,19 @@ py::class_<Ddhdg::NPSolverParameters>(m, "NPSolverParameters")
     return a.tau.at(Ddhdg::Component::p);
   });
 
+py::class_<Ddhdg::Adimensionalizer>(m, "Adimensionalizer")
+  .def(py::init<double, double, double, double>(),
+       py::arg("scale_length")                = 1.,
+       py::arg("temperature_magnitude")       = 1.,
+       py::arg("doping_magnitude")            = 1.,
+       py::arg("electron_mobility_magnitude") = 1.)
+  .def_readonly("scale_length", &Ddhdg::Adimensionalizer::scale_length)
+  .def_readonly("temperature_magnitude",
+                &Ddhdg::Adimensionalizer::temperature_magnitude)
+  .def_readonly("doping_magnitude", &Ddhdg::Adimensionalizer::doping_magnitude)
+  .def_readonly("electron_mobility_magnitude",
+                &Ddhdg::Adimensionalizer::electron_mobility_magnitude);
+
 py::class_<Ddhdg::NonlinearIterationResults>(m, "NonlinearIterationResults")
   .def(py::init<const bool, const unsigned int, const double>())
   .def_readonly("converged", &Ddhdg::NonlinearIterationResults::converged)
@@ -166,7 +183,9 @@ py::class_<Ddhdg::NonlinearIterationResults>(m, "NonlinearIterationResults")
                 &Ddhdg::NonlinearIterationResults::last_update_norm);
 
 py::class_<NPSolver<DIM>>(m, "NPSolver")
-  .def(py::init<const Problem<DIM> &, Ddhdg::NPSolverParameters &>())
+  .def(py::init<const Problem<DIM> &,
+                const Ddhdg::NPSolverParameters &,
+                const Ddhdg::Adimensionalizer &>())
   .def("refine_grid", &NPSolver<DIM>::refine_grid, py::arg("n") = 1)
   .def("set_component",
        &NPSolver<DIM>::set_component,

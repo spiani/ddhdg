@@ -428,7 +428,7 @@ namespace Ddhdg
     const double condition_evaluation = this->condition->value(p);
     if (condition_evaluation >= 0.)
       return this->f1->value(p, component);
-    return -this->f2->value(p, component);
+    return this->f2->value(p, component);
   }
 
 
@@ -485,7 +485,7 @@ namespace Ddhdg
     const double condition_evaluation = this->condition->value(p);
     if (condition_evaluation >= 0.)
       return this->f1->gradient(p, component);
-    return -this->f2->gradient(p, component);
+    return this->f2->gradient(p, component);
   }
 
 
@@ -534,6 +534,114 @@ namespace Ddhdg
 
 
 
+  template <int dim>
+  FunctionTimesScalar<dim>::FunctionTimesScalar(
+    const std::shared_ptr<const dealii::Function<dim>> f,
+    double                                             s)
+    : dealii::Function<dim>(f->n_components)
+    , f(f)
+    , s(s)
+  {}
+
+
+
+  template <int dim>
+  double
+  FunctionTimesScalar<dim>::value(const dealii::Point<dim> &p,
+                                  unsigned int              component) const
+  {
+    Assert(component < this->n_components,
+           dealii::ExcIndexRange(component, 0, this->n_components));
+    return this->f->value(p, component) * this->s;
+  }
+
+
+
+  template <int dim>
+  void
+  FunctionTimesScalar<dim>::vector_value(const dealii::Point<dim> &p,
+                                         dealii::Vector<double> &  values) const
+  {
+    Assert(values.size() == this->n_components,
+           dealii::ExcDimensionMismatch(values.size(), this->n_components));
+    this->f->vector_value(p, values);
+    for (unsigned int i = 0; i < this->n_components; i++)
+      values[i] *= this->s;
+  }
+
+
+
+  template <int dim>
+  void
+  FunctionTimesScalar<dim>::value_list(const std::vector<dealii::Point<dim>> &p,
+                                       std::vector<double> &values,
+                                       const unsigned int   component) const
+  {
+    Assert(values.size() == p.size(),
+           dealii::ExcDimensionMismatch(values.size(), p.size()));
+    Assert(component < this->n_components,
+           dealii::ExcIndexRange(component, 0, this->n_components));
+
+    const unsigned int n_of_points = p.size();
+
+    this->f->value_list(p, values, component);
+
+    for (unsigned int i = 0; i < n_of_points; i++)
+      {
+        values[i] *= this->s;
+      }
+  }
+
+
+
+  template <int dim>
+  dealii::Tensor<1, dim>
+  FunctionTimesScalar<dim>::gradient(const dealii::Point<dim> &p,
+                                     unsigned int              component) const
+  {
+    Assert(component < this->n_components,
+           dealii::ExcIndexRange(component, 0, this->n_components));
+    return this->s * this->f->gradient(p, component);
+  }
+
+
+
+  template <int dim>
+  void
+  FunctionTimesScalar<dim>::vector_gradient(
+    const dealii::Point<dim> &           p,
+    std::vector<dealii::Tensor<1, dim>> &values) const
+  {
+    Assert(values.size() == this->n_components,
+           dealii::ExcDimensionMismatch(values.size(), this->n_components));
+
+    this->f->vector_gradient(p, values);
+    for (unsigned int i = 0; i < values.size(); i++)
+      values[i] *= this->s;
+  }
+
+
+
+  template <int dim>
+  void
+  FunctionTimesScalar<dim>::gradient_list(
+    const std::vector<dealii::Point<dim>> &p,
+    std::vector<dealii::Tensor<1, dim>> &  values,
+    const unsigned int                     component) const
+  {
+    Assert(values.size() == p.size(),
+           dealii::ExcDimensionMismatch(values.size(), p.size()));
+    Assert(component < this->n_components,
+           dealii::ExcIndexRange(component, 0, this->n_components));
+
+    const unsigned int n_of_points = p.size();
+    this->f->gradient_list(p, values, component);
+    for (unsigned int i = 0; i < n_of_points; i++)
+      values[i] *= this->s;
+  }
+
+
+
   template class FunctionByComponents<1>;
   template class FunctionByComponents<2>;
   template class FunctionByComponents<3>;
@@ -553,5 +661,9 @@ namespace Ddhdg
   template class PiecewiseFunction<1>;
   template class PiecewiseFunction<2>;
   template class PiecewiseFunction<3>;
+
+  template class FunctionTimesScalar<1>;
+  template class FunctionTimesScalar<2>;
+  template class FunctionTimesScalar<3>;
 
 } // namespace Ddhdg

@@ -1,3 +1,5 @@
+#include "adimensionalizer.h"
+#include "dof_types.h"
 #include "solver.h"
 
 namespace Ddhdg
@@ -46,7 +48,9 @@ namespace Ddhdg
 
     explicit NPSolver(std::shared_ptr<const Problem<dim>>       problem,
                       std::shared_ptr<const NPSolverParameters> parameters =
-                        std::make_shared<NPSolverParameters>());
+                        std::make_shared<NPSolverParameters>(),
+                      std::shared_ptr<const Adimensionalizer> adimensionalizer =
+                        std::make_shared<Adimensionalizer>());
 
     void
     refine_grid(unsigned int i) override;
@@ -99,12 +103,12 @@ namespace Ddhdg
     NonlinearIterationResults
     run() override;
 
-    virtual NonlinearIterationResults
+    NonlinearIterationResults
     compute_thermodynamic_equilibrium(double absolute_tol,
                                       double relative_tol,
                                       int    max_number_of_iterations) override;
 
-    virtual NonlinearIterationResults
+    NonlinearIterationResults
     compute_thermodynamic_equilibrium() override;
 
     double
@@ -243,6 +247,11 @@ namespace Ddhdg
 
     unsigned int
     get_number_of_quadrature_points() const;
+
+    void
+    generate_dof_to_component_map(std::vector<Component> &dof_to_component_map,
+                                  std::vector<DofType> &  dof_to_dof_type,
+                                  bool                    for_trace) const;
 
     void
     setup_overall_system();
@@ -410,7 +419,10 @@ namespace Ddhdg
     const std::map<Component, double> band_density;
     const std::map<Component, double> band_edge_energy;
 
-    const std::unique_ptr<NPSolverParameters> parameters;
+    const std::unique_ptr<NPSolverParameters>     parameters;
+    const std::shared_ptr<const Adimensionalizer> adimensionalizer;
+
+    const std::shared_ptr<const dealii::Function<dim>> rescaled_doping;
 
     std::unique_ptr<const FESystem<dim>> fe_cell;
     DoFHandler<dim>                      dof_handler_cell;

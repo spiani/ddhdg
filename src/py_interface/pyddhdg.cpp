@@ -95,9 +95,10 @@ namespace pyddhdg
 
 
   template <int dim>
-  PiecewiseFunction<dim>::PiecewiseFunction(const PythonFunction<dim> &condition,
-                                            const PythonFunction<dim> &f1,
-                                            const PythonFunction<dim> &f2)
+  PiecewiseFunction<dim>::PiecewiseFunction(
+    const PythonFunction<dim> &condition,
+    const PythonFunction<dim> &f1,
+    const PythonFunction<dim> &f2)
     : PythonFunction<dim>("(" + condition.get_expression() + ") ? " +
                             f1.get_expression() + " : " + f2.get_expression(),
                           std::make_shared<Ddhdg::PiecewiseFunction<dim>>(
@@ -334,10 +335,12 @@ namespace pyddhdg
 
   template <int dim>
   NPSolver<dim>::NPSolver(const Problem<dim> &             problem,
-                          const Ddhdg::NPSolverParameters &parameters)
+                          const Ddhdg::NPSolverParameters &parameters,
+                          const Ddhdg::Adimensionalizer &  adimensionalizer)
     : ddhdg_solver(std::make_shared<Ddhdg::NPSolver<dim>>(
         problem.get_ddhdg_problem(),
-        std::make_shared<const Ddhdg::NPSolverParameters>(parameters)))
+        std::make_shared<const Ddhdg::NPSolverParameters>(parameters),
+        std::make_shared<const Ddhdg::Adimensionalizer>(adimensionalizer)))
   {}
 
 

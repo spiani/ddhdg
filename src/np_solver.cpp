@@ -328,8 +328,8 @@ namespace Ddhdg
       for (std::pair<Component, unsigned int> c_degree : degree)
         {
           const unsigned int deg = c_degree.second;
-          fe_systems.push_back(
-            new FESystem<dim>(FE_DGQ<dim>(deg), dim, FE_DGQ<dim>(deg), 1));
+          fe_systems.push_back(new FESystem<dim>(
+            FESystem(FE_DGQ<dim>(deg), dim), 1, FE_DGQ<dim>(deg), 1));
           multiplicities.push_back(1);
         }
 
@@ -347,7 +347,8 @@ namespace Ddhdg
   template <int dim>
   NPSolver<dim>::NPSolver(
     const std::shared_ptr<const Problem<dim>>       problem,
-    const std::shared_ptr<const NPSolverParameters> parameters)
+    const std::shared_ptr<const NPSolverParameters> parameters,
+    const std::shared_ptr<const Adimensionalizer>   adimensionalizer)
     : triangulation(copy_triangulation(problem->triangulation))
     , permittivity(problem->permittivity)
     , n_electron_mobility(problem->n_electron_mobility)
@@ -360,6 +361,10 @@ namespace Ddhdg
     , band_density(problem->band_density)
     , band_edge_energy(problem->band_edge_energy)
     , parameters(std::make_unique<NPSolverParameters>(*parameters))
+    , adimensionalizer(adimensionalizer)
+    , rescaled_doping(
+        this->adimensionalizer->template adimensionalize_doping_function<dim>(
+          this->doping))
     , fe_cell(std::make_unique<dealii::FESystem<dim>>(
         generate_fe_system(parameters->degree, false)))
     , dof_handler_cell(*triangulation)
@@ -675,9 +680,13 @@ namespace Ddhdg
 
     const Displacement d = component2displacement(c);
 
+    std::shared_ptr<dealii::Function<dim>> c_function_rescaled =
+      this->adimensionalizer->template adimensionalize_component_function<dim>(
+        c_function, c);
+
     auto c_function_extended =
-      this->extend_function_on_all_components(c_function, c);
-    auto c_grad     = std::make_shared<Gradient<dim>>(c_function);
+      this->extend_function_on_all_components(c_function_rescaled, c);
+    auto c_grad     = std::make_shared<Gradient<dim>>(c_function_rescaled);
     auto d_function = std::make_shared<Opposite<dim>>(c_grad);
     auto d_function_extended =
       this->extend_function_on_all_components(d_function, d);
@@ -695,7 +704,7 @@ namespace Ddhdg
     if (dim == 2 || dim == 3)
       {
         auto c_function_trace_extended =
-          this->extend_function_on_all_trace_components(c_function, c);
+          this->extend_function_on_all_trace_components(c_function_rescaled, c);
         dealii::VectorTools::interpolate(this->dof_handler_trace,
                                          *c_function_trace_extended,
                                          this->current_solution_trace,
@@ -740,7 +749,8 @@ namespace Ddhdg
               face_quadrature_points[q] =
                 fe_face_trace_values.quadrature_point(q);
 
-            function_value = c_function->value(face_quadrature_points[0]);
+            function_value =
+              c_function_rescaled->value(face_quadrature_points[0]);
 
             nonzero_shape_functions = 0;
             for (unsigned int k = 0; k < dofs_per_cell; ++k)
@@ -785,6 +795,10 @@ namespace Ddhdg
       this->get_number_of_quadrature_points());
 
     const unsigned int c_index = get_component_index(c);
+
+    std::shared_ptr<dealii::Function<dim>> c_function_rescaled =
+      this->adimensionalizer->template adimensionalize_component_function<dim>(
+        c_function, c);
 
     // In this scope, the code takes care of project the right solution in the
     // FEM space of the cells. After that, we will project the solution on the
@@ -868,7 +882,7 @@ namespace Ddhdg
             cell_quadrature_points[q] = fe_values_cell.quadrature_point(q);
 
           // Evaluated the analytic functions over the quadrature points
-          c_function->value_list(cell_quadrature_points, evaluated_c);
+          c_function_rescaled->value_list(cell_quadrature_points, evaluated_c);
 
           for (unsigned int q = 0; q < n_q_points; ++q)
             {
@@ -903,7 +917,8 @@ namespace Ddhdg
               for (unsigned int q = 0; q < n_face_q_points; ++q)
                 face_quadrature_points[q] = fe_face_values.quadrature_point(q);
 
-              c_function->value_list(face_quadrature_points, evaluated_c_face);
+              c_function_rescaled->value_list(face_quadrature_points,
+                                              evaluated_c_face);
 
               for (unsigned int q = 0; q < n_face_q_points; ++q)
                 {
@@ -994,7 +1009,8 @@ namespace Ddhdg
                 face_quadrature_points[q] =
                   fe_face_trace_values.quadrature_point(q);
 
-              c_function->value_list(face_quadrature_points, evaluated_c_face);
+              c_function_rescaled->value_list(face_quadrature_points,
+                                              evaluated_c_face);
 
               for (unsigned int q = 0; q < n_face_q_points; ++q)
                 {
@@ -1230,6 +1246,106 @@ namespace Ddhdg
 
 
   template <int dim>
+  void
+  NPSolver<dim>::generate_dof_to_component_map(
+    std::vector<Component> &dof_to_component,
+    std::vector<DofType> &  dof_to_dof_type,
+    const bool              for_trace) const
+  {
+    Assert(this->initialized, dealii::ExcNotInitialized());
+
+    const auto &fe = (for_trace) ? *(this->fe_trace) : *(this->fe_cell);
+    const auto &dof_handler =
+      (for_trace) ? this->dof_handler_trace : this->dof_handler_cell;
+
+    const unsigned int dofs_per_cell = fe.dofs_per_cell;
+
+    AssertDimension(dof_to_component.size(), dof_handler.n_dofs());
+    AssertDimension(dof_to_dof_type.size(), dof_handler.n_dofs());
+
+    std::vector<Component> cell_dof_to_component(dofs_per_cell);
+    std::vector<DofType>   cell_dof_to_dof_type(dofs_per_cell);
+
+    std::vector<dealii::types::global_dof_index> global_indices(dofs_per_cell);
+
+    std::map<unsigned int, Component> component_from_index;
+    for (const Component c : Ddhdg::all_components())
+      component_from_index.insert({get_component_index(c), c});
+
+    // Create a map that associates to each component its FESystem
+    std::map<const Component, const dealii::FiniteElement<dim> &>
+      component_to_fe_system;
+    if (!for_trace)
+      for (const auto c : all_components())
+        {
+          const Displacement          d          = component2displacement(c);
+          const dealii::ComponentMask c_mask     = this->get_component_mask(c);
+          const dealii::ComponentMask d_mask     = this->get_component_mask(d);
+          const dealii::ComponentMask total_mask = c_mask | d_mask;
+          const dealii::FiniteElement<dim> &fe_system =
+            this->fe_cell->get_sub_fe(total_mask.first_selected_component(),
+                                      total_mask.n_selected_components());
+          component_to_fe_system.insert({c, fe_system});
+        }
+
+    // Fill the cell_dof_to_component vector
+    for (unsigned int i = 0; i < dofs_per_cell; i++)
+      {
+        const unsigned int current_block = fe.system_to_block_index(i).first;
+        const Component    current_component =
+          component_from_index.at(current_block);
+        cell_dof_to_component[i] = current_component;
+      }
+
+    // Fill the cell_dof_to_dof_type vector
+    if (for_trace)
+      for (unsigned int i = 0; i < dofs_per_cell; i++)
+        cell_dof_to_dof_type[i] = DofType::TRACE;
+    else
+      for (unsigned int i = 0; i < dofs_per_cell; i++)
+        {
+          const auto block_position = fe.system_to_block_index(i);
+
+          const unsigned int current_block       = block_position.first;
+          const unsigned int current_block_index = block_position.second;
+
+          const Component current_component =
+            component_from_index.at(current_block);
+          const dealii::FiniteElement<dim> &sub_fe =
+            component_to_fe_system.at(current_component);
+
+          const unsigned int component_or_displacement =
+            sub_fe.system_to_block_index(current_block_index).first;
+
+          switch (component_or_displacement)
+            {
+              case 0:
+                cell_dof_to_dof_type[i] = DofType::DISPLACEMENT;
+                break;
+              case 1:
+                cell_dof_to_dof_type[i] = DofType::COMPONENT;
+                break;
+              default:
+                Assert(false, ExcInternalError("Unexpected index value"));
+                break;
+            }
+        }
+
+    for (const auto &cell : dof_handler.active_cell_iterators())
+      {
+        cell->get_dof_indices(global_indices);
+        for (unsigned int i = 0; i < dofs_per_cell; i++)
+          {
+            const dealii::types::global_dof_index global_i = global_indices[i];
+            dof_to_component[global_i] = cell_dof_to_component[i];
+            dof_to_dof_type[global_i]  = cell_dof_to_dof_type[i];
+          }
+      }
+  }
+
+
+
+  template <int dim>
   dealii::FEValuesExtractors::Scalar
   NPSolver<dim>::get_trace_component_extractor(const Component component,
                                                const bool      restricted) const
@@ -1402,34 +1518,51 @@ namespace Ddhdg
     // Compute the value of epsilon
     this->permittivity->compute_absolute_permittivity(
       scratch.cell_quadrature_points, scratch.epsilon_cell);
+    // Rescale the permittivity to get adimensionality
+    this->adimensionalizer->template adimensionalize_permittivity<dim>(
+      scratch.epsilon_cell);
 
     // Compute the value of mu
     if (this->is_enabled(Component::n))
-      this->n_electron_mobility->compute_electron_mobility(
-        scratch.cell_quadrature_points, scratch.mu_n_cell);
+      {
+        this->n_electron_mobility->compute_electron_mobility(
+          scratch.cell_quadrature_points, scratch.mu_n_cell);
+        this->adimensionalizer->template adimensionalize_electron_mobility<dim>(
+          scratch.mu_n_cell);
+      }
 
     if (this->is_enabled(Component::p))
-      this->p_electron_mobility->compute_electron_mobility(
-        scratch.cell_quadrature_points, scratch.mu_p_cell);
+      {
+        this->p_electron_mobility->compute_electron_mobility(
+          scratch.cell_quadrature_points, scratch.mu_p_cell);
+        this->adimensionalizer->template adimensionalize_hole_mobility<dim>(
+          scratch.mu_p_cell);
+      }
 
     // Compute the value of T
     this->temperature->value_list(scratch.cell_quadrature_points,
                                   scratch.T_cell);
 
     // Compute the thermal voltage
+    const double thermal_voltage_rescaling_factor =
+      this->adimensionalizer->get_thermal_voltage_rescaling_factor();
     for (unsigned int q = 0; q < n_q_points; ++q)
-      scratch.U_T_cell[q] = Constants::KB / Constants::Q * scratch.T_cell[q];
+      scratch.U_T_cell[q] = (Constants::KB * scratch.T_cell[q] / Constants::Q) /
+                            thermal_voltage_rescaling_factor;
 
 
     // Compute the value of the doping
     if (this->is_enabled(Component::V))
-      this->doping->value_list(scratch.cell_quadrature_points,
-                               scratch.doping_cell);
+      this->rescaled_doping->value_list(scratch.cell_quadrature_points,
+                                        scratch.doping_cell);
 
     // Compute the value of the recombination term and its derivative respect
     // to n and p
     if (this->is_enabled(Component::n))
       {
+        auto &dr_n_n = scratch.dr_n_cell.at(Component::n);
+        auto &dr_n_p = scratch.dr_n_cell.at(Component::p);
+
         this->n_recombination_term->compute_multiple_recombination_terms(
           scratch.previous_c_cell.at(Component::n),
           scratch.previous_c_cell.at(Component::p),
@@ -1441,18 +1574,24 @@ namespace Ddhdg
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
             Component::n,
-            scratch.dr_n_cell.at(Component::n));
+            dr_n_n);
         this->n_recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
             Component::p,
-            scratch.dr_n_cell.at(Component::p));
+            dr_n_p);
+
+        this->adimensionalizer->adimensionalize_recombination_term(
+          scratch.r_n_cell, dr_n_n, dr_n_p);
       }
 
     if (this->is_enabled(Component::p))
       {
+        auto &dr_p_n = scratch.dr_p_cell.at(Component::n);
+        auto &dr_p_p = scratch.dr_p_cell.at(Component::p);
+
         this->p_recombination_term->compute_multiple_recombination_terms(
           scratch.previous_c_cell.at(Component::n),
           scratch.previous_c_cell.at(Component::p),
@@ -1464,14 +1603,17 @@ namespace Ddhdg
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
             Component::n,
-            scratch.dr_p_cell.at(Component::n));
+            dr_p_n);
         this->p_recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
             Component::p,
-            scratch.dr_p_cell.at(Component::p));
+            dr_p_p);
+
+        this->adimensionalizer->adimensionalize_recombination_term(
+          scratch.r_p_cell, dr_p_n, dr_p_p);
       }
   }
 
@@ -1554,6 +1696,9 @@ namespace Ddhdg
     const double ec = this->band_edge_energy.at(Component::p);
 
     double thermodynamic_equilibrium_der = 0.;
+
+    const double Q =
+      this->adimensionalizer->get_poisson_equation_density_constant();
 
     for (unsigned int q = 0; q < n_q_points; ++q)
       {
@@ -1638,7 +1783,7 @@ namespace Ddhdg
                         -thermodynamic_equilibrium_der * V[jj] * z1[ii] * JxW;
                     else
                       scratch.cc_matrix(i, j) +=
-                        Constants::Q * (n[jj] - p[jj]) * z1[ii] * JxW;
+                        Q * (n[jj] - p[jj]) * z1[ii] * JxW;
                   }
                 if (prm::is_n_enabled)
                   scratch.cc_matrix(i, j) +=
@@ -1646,8 +1791,7 @@ namespace Ddhdg
                      n[jj] * (mu_n_times_previous_E * z2_grad[ii]) +
                      n0[q] * ((scratch.mu_n_cell[q] * E[jj]) * z2_grad[ii]) +
                      (n_einstein_diffusion_coefficient * Wn[jj]) * z2_grad[ii] -
-                     (dr_n_n[q] * n[jj] + dr_n_p[q] * p[jj]) * z2[ii] /
-                       Constants::Q) *
+                     (dr_n_n[q] * n[jj] + dr_n_p[q] * p[jj]) * z2[ii]) *
                     JxW;
                 if (prm::is_p_enabled)
                   scratch.cc_matrix(i, j) +=
@@ -1655,8 +1799,7 @@ namespace Ddhdg
                      p[jj] * (mu_p_times_previous_E * z3_grad[ii]) -
                      p0[q] * ((scratch.mu_p_cell[q] * E[jj]) * z3_grad[ii]) +
                      (p_einstein_diffusion_coefficient * Wp[jj]) * z3_grad[ii] -
-                     (dr_p_n[q] * n[jj] + dr_p_p[q] * p[jj]) * z3[ii] /
-                       Constants::Q) *
+                     (dr_p_n[q] * n[jj] + dr_p_p[q] * p[jj]) * z3[ii]) *
                     JxW;
               }
           }
@@ -1711,6 +1854,9 @@ namespace Ddhdg
 
     double thermodynamic_equilibrium_rhs = 0.;
 
+    const double Q =
+      this->adimensionalizer->get_poisson_equation_density_constant();
+
     for (unsigned int q = 0; q < n_q_points; ++q)
       {
         const double JxW = scratch.fe_values_cell.JxW(q);
@@ -1758,14 +1904,13 @@ namespace Ddhdg
                 scratch.cc_rhs[i] +=
                   (V0[q] * q1_div - E0[q] * q1 +
                    (scratch.epsilon_cell[q] * E0[q]) * z1_grad +
-                   Constants::Q * c0[q] * z1) *
+                   Q * c0[q] * z1) *
                   JxW;
 
                 if (prm::thermodyn_eq)
                   scratch.cc_rhs[i] += thermodynamic_equilibrium_rhs * z1;
                 else
-                  scratch.cc_rhs[i] +=
-                    Constants::Q * (-n0[q] + p0[q]) * z1 * JxW;
+                  scratch.cc_rhs[i] += Q * (-n0[q] + p0[q]) * z1 * JxW;
               }
 
             if (prm::is_n_enabled)
@@ -1780,10 +1925,9 @@ namespace Ddhdg
                 const dealii::Tensor<1, dim> z2_grad =
                   scratch.fe_values_cell[electron_density].gradient(ii, q);
 
-                scratch.cc_rhs[i] +=
-                  (n0[q] * q2_div - Wn0[q] * q2 +
-                   scratch.r_n_cell[q] / Constants::Q * z2 + Jn * z2_grad) *
-                  JxW;
+                scratch.cc_rhs[i] += (n0[q] * q2_div - Wn0[q] * q2 +
+                                      scratch.r_n_cell[q] * z2 + Jn * z2_grad) *
+                                     JxW;
               }
 
             if (prm::is_p_enabled)
@@ -1798,8 +1942,8 @@ namespace Ddhdg
                   scratch.fe_values_cell[hole_density].gradient(ii, q);
 
                 scratch.cc_rhs[i] +=
-                  (p0[q] * q3_div - Wp0[q] * q3 +
-                   +scratch.r_p_cell[q] / Constants::Q * z3 + Jp * z3_grad) *
+                  (p0[q] * q3_div - Wp0[q] * q3 + +scratch.r_p_cell[q] * z3 +
+                   Jp * z3_grad) *
                   JxW;
               }
           }
@@ -1839,23 +1983,35 @@ namespace Ddhdg
           current_solution_trace, scratch.previous_tr_c_face[c]);
       }
 
-    if (this->is_enabled(Component::V))
-      this->permittivity->compute_absolute_permittivity(
-        scratch.face_quadrature_points, scratch.epsilon_face);
+    this->permittivity->compute_absolute_permittivity(
+      scratch.face_quadrature_points, scratch.epsilon_face);
+    this->adimensionalizer->template adimensionalize_permittivity<dim>(
+      scratch.epsilon_face);
 
     if (this->is_enabled(Component::n))
-      this->n_electron_mobility->compute_electron_mobility(
-        scratch.face_quadrature_points, scratch.mu_n_face);
+      {
+        this->n_electron_mobility->compute_electron_mobility(
+          scratch.face_quadrature_points, scratch.mu_n_face);
+        this->adimensionalizer->template adimensionalize_electron_mobility<dim>(
+          scratch.mu_n_face);
+      }
 
     if (this->is_enabled(Component::p))
-      this->p_electron_mobility->compute_electron_mobility(
-        scratch.face_quadrature_points, scratch.mu_p_face);
+      {
+        this->p_electron_mobility->compute_electron_mobility(
+          scratch.face_quadrature_points, scratch.mu_p_face);
+        this->adimensionalizer->template adimensionalize_electron_mobility<dim>(
+          scratch.mu_p_face);
+      }
 
     this->temperature->value_list(scratch.face_quadrature_points,
                                   scratch.T_face);
 
+    const double thermal_voltage_rescaling_factor =
+      this->adimensionalizer->get_thermal_voltage_rescaling_factor();
     for (unsigned int q = 0; q < n_face_q_points; ++q)
-      scratch.U_T_face[q] = Constants::KB / Constants::Q * scratch.T_face[q];
+      scratch.U_T_face[q] = (Constants::KB * scratch.T_face[q] / Constants::Q) /
+                            thermal_voltage_rescaling_factor;
   }
 
 
@@ -2125,7 +2281,7 @@ namespace Ddhdg
   NPSolver<dim>::assemble_tc_matrix(Ddhdg::NPSolver<dim>::ScratchData &scratch,
                                     const unsigned int                 face)
   {
-    if (c != V and c != n and c != p)
+    if (c != V && c != n && c != p)
       AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
@@ -2241,7 +2397,7 @@ namespace Ddhdg
     Ddhdg::NPSolver<dim>::PerTaskData &task_data,
     const unsigned int                 face)
   {
-    if (c != V and c != n and c != p)
+    if (c != V && c != n && c != p)
       AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
@@ -2342,7 +2498,7 @@ namespace Ddhdg
     Ddhdg::NPSolver<dim>::PerTaskData &task_data,
     const unsigned int                 face)
   {
-    if (c != V and c != n and c != p)
+    if (c != V && c != n && c != p)
       AssertThrow(false, InvalidComponent());
 
     auto &tr_c = scratch.tr_c.at(c);
@@ -2393,7 +2549,7 @@ namespace Ddhdg
     Ddhdg::NPSolver<dim>::PerTaskData &task_data,
     const unsigned int                 face)
   {
-    if (c != V and c != n and c != p)
+    if (c != V && c != n && c != p)
       AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
@@ -2441,7 +2597,7 @@ namespace Ddhdg
     const Ddhdg::DirichletBoundaryCondition<dim> &dbc,
     unsigned int                                  face)
   {
-    if (c != V and c != n and c != p)
+    if (c != V && c != n && c != p)
       Assert(false, InvalidComponent());
 
     auto &tr_c  = scratch.tr_c.at(c);
@@ -2452,6 +2608,9 @@ namespace Ddhdg
     const unsigned int trace_dofs_per_face =
       scratch.fe_trace_support_on_face[face].size();
 
+    const double rescaling_factor =
+      this->adimensionalizer->template get_component_rescaling_factor<c>();
+
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
         copy_fe_values_for_trace(scratch, face, q);
@@ -2460,7 +2619,8 @@ namespace Ddhdg
 
         const Point<dim> quadrature_point =
           scratch.fe_face_values_trace_restricted.quadrature_point(q);
-        const double dbc_value = dbc.evaluate(quadrature_point) - tr_c0[q];
+        const double dbc_value =
+          dbc.evaluate(quadrature_point) / rescaling_factor - tr_c0[q];
 
         for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
           {
@@ -2488,7 +2648,7 @@ namespace Ddhdg
     const Ddhdg::NeumannBoundaryCondition<dim> &nbc,
     unsigned int                                face)
   {
-    if (c != V and c != n and c != p)
+    if (c != Component::V && c != Component::n && c != Component::p)
       Assert(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
@@ -2498,6 +2658,10 @@ namespace Ddhdg
 
     auto &tr_c = scratch.tr_c.at(c);
 
+    const double rescaling_factor =
+      this->adimensionalizer
+        ->template get_neumann_boundary_condition_rescaling_factor<c>();
+
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
         copy_fe_values_for_trace(scratch, face, q);
@@ -2506,8 +2670,7 @@ namespace Ddhdg
         const Point<dim> quadrature_point =
           scratch.fe_face_values_trace_restricted.quadrature_point(q);
         const double nbc_value =
-          (c == V ? nbc.evaluate(quadrature_point) :
-                    nbc.evaluate(quadrature_point) / Constants::Q);
+          nbc.evaluate(quadrature_point) / rescaling_factor;
 
         for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
           {
@@ -3384,6 +3547,10 @@ namespace Ddhdg
     Assert(expected_solution->n_components == 1, FunctionMustBeScalar());
     Vector<double> difference_per_cell(triangulation->n_active_cells());
 
+    std::shared_ptr<dealii::Function<dim>> expected_solution_rescaled =
+      this->adimensionalizer->template adimensionalize_component_function<dim>(
+        expected_solution, c);
+
     unsigned int component_index = get_component_index(c) * (1 + dim) + dim;
 
     const unsigned int n_of_components = (dim + 1) * all_components().size();
@@ -3392,7 +3559,7 @@ namespace Ddhdg
 
     std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
       c_map;
-    c_map.insert({component_index, expected_solution});
+    c_map.insert({component_index, expected_solution_rescaled});
     FunctionByComponents<dim> expected_solution_multidim =
       FunctionByComponents<dim>(n_of_components, c_map);
 
@@ -3428,6 +3595,10 @@ namespace Ddhdg
 
     Component c = displacement2component(d);
 
+    std::shared_ptr<dealii::Function<dim>> expected_solution_rescaled =
+      this->adimensionalizer->template adimensionalize_component_function<dim>(
+        expected_solution, c);
+
     unsigned int       component_index = get_component_index(c);
     const unsigned int n_of_components = (dim + 1) * all_components().size();
 
@@ -3442,7 +3613,8 @@ namespace Ddhdg
       {
         c_map.insert(
           {component_index * (dim + 1) + i,
-           std::make_shared<ComponentFunction<dim>>(expected_solution, i)});
+           std::make_shared<ComponentFunction<dim>>(expected_solution_rescaled,
+                                                    i)});
       }
     FunctionByComponents<dim> expected_solution_multidim =
       FunctionByComponents<dim>(n_of_components, c_map);
@@ -3479,6 +3651,10 @@ namespace Ddhdg
 
       const unsigned int           c_index = get_component_index(c);
     std::map<unsigned int, double> difference_per_face;
+
+    std::shared_ptr<dealii::Function<dim>> expected_solution_rescaled =
+      this->adimensionalizer->template adimensionalize_component_function<dim>(
+        expected_solution, c);
 
     const QGauss<dim - 1> face_quadrature_formula(
       this->get_number_of_quadrature_points());
@@ -3566,8 +3742,8 @@ namespace Ddhdg
 
             // Compute the value of the expected solution on the quadrature
             // points
-            expected_solution->value_list(face_quadrature_points,
-                                          expected_solution_on_q);
+            expected_solution_rescaled->value_list(face_quadrature_points,
+                                                   expected_solution_on_q);
 
             // Now it's time to perform the integration
             double difference_norm = 0;
@@ -3770,6 +3946,20 @@ namespace Ddhdg
     for (const auto &n : names)
       update_names.push_back(n + "_updates");
 
+    std::vector<Component> dof_to_component_map(
+      this->dof_handler_cell.n_dofs());
+    std::vector<DofType> dof_to_dof_type_map(this->dof_handler_cell.n_dofs());
+    this->generate_dof_to_component_map(dof_to_component_map,
+                                        dof_to_dof_type_map,
+                                        false);
+
+    Vector<double> rescaled_solution(this->current_solution_cell.size());
+    this->adimensionalizer->redimensionalize_dof_vector(
+      this->current_solution_cell,
+      dof_to_component_map,
+      dof_to_dof_type_map,
+      rescaled_solution);
+
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       component_interpretation(
         n_of_components * (dim + 1),
@@ -3779,15 +3969,25 @@ namespace Ddhdg
         DataComponentInterpretation::component_is_scalar;
 
     data_out.add_data_vector(this->dof_handler_cell,
-                             this->current_solution_cell,
+                             rescaled_solution,
+                             // rescaled_solution,
                              names,
                              component_interpretation);
 
+    Vector<double> rescaled_update;
     if (save_update)
-      data_out.add_data_vector(this->dof_handler_cell,
-                               this->update_cell,
-                               update_names,
-                               component_interpretation);
+      {
+        rescaled_update.reinit(this->dof_handler_cell.n_dofs());
+        this->adimensionalizer->redimensionalize_dof_vector(
+          this->update_cell,
+          dof_to_component_map,
+          dof_to_dof_type_map,
+          rescaled_update);
+        data_out.add_data_vector(this->dof_handler_cell,
+                                 rescaled_update,
+                                 update_names,
+                                 component_interpretation);
+      }
 
     data_out.build_patches(StaticMappingQ1<dim>::mapping,
                            fe_trace_restricted->degree,
@@ -3817,7 +4017,7 @@ namespace Ddhdg
                                 const std::string &trace_filename,
                                 const bool         save_update) const
   {
-    output_results(solution_filename, save_update);
+    this->output_results(solution_filename, save_update);
 
     std::ofstream     face_output(trace_filename);
     DataOutFaces<dim> data_out_face(false);
@@ -3833,19 +4033,42 @@ namespace Ddhdg
     for (const auto &n : face_names)
       update_face_names.push_back(n + "_updates");
 
+    std::vector<Component> dof_to_component_map(
+      this->dof_handler_trace.n_dofs());
+    std::vector<DofType> dof_to_dof_type_map(this->dof_handler_trace.n_dofs());
+    this->generate_dof_to_component_map(dof_to_component_map,
+                                        dof_to_dof_type_map,
+                                        true);
+
+    Vector<double> rescaled_solution(this->current_solution_trace.size());
+    this->adimensionalizer->redimensionalize_dof_vector(
+      this->current_solution_trace,
+      dof_to_component_map,
+      dof_to_dof_type_map,
+      rescaled_solution);
+
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       face_component_type(n_of_components,
                           DataComponentInterpretation::component_is_scalar);
     data_out_face.add_data_vector(this->dof_handler_trace,
-                                  this->current_solution_trace,
+                                  rescaled_solution,
                                   face_names,
                                   face_component_type);
 
+    Vector<double> rescaled_update(0);
     if (save_update)
-      data_out_face.add_data_vector(this->dof_handler_trace,
-                                    this->update_trace,
-                                    update_face_names,
-                                    face_component_type);
+      {
+        rescaled_update.reinit(this->update_trace.size());
+        this->adimensionalizer->redimensionalize_dof_vector(
+          this->update_trace,
+          dof_to_component_map,
+          dof_to_dof_type_map,
+          rescaled_update);
+        data_out_face.add_data_vector(this->dof_handler_trace,
+                                      rescaled_update,
+                                      update_face_names,
+                                      face_component_type);
+      }
 
     data_out_face.build_patches(fe_trace_restricted->degree);
     data_out_face.write_vtk(face_output);
@@ -3898,11 +4121,21 @@ namespace Ddhdg
   {
     this->refine_grid(initial_refinements);
 
+    std::shared_ptr<dealii::Function<dim>> expected_V_solution_rescaled =
+      this->adimensionalizer->template adimensionalize_component_function<dim>(
+        expected_V_solution, Component::V);
+    std::shared_ptr<dealii::Function<dim>> expected_n_solution_rescaled =
+      this->adimensionalizer->template adimensionalize_component_function<dim>(
+        expected_n_solution, Component::n);
+    std::shared_ptr<dealii::Function<dim>> expected_p_solution_rescaled =
+      this->adimensionalizer->template adimensionalize_component_function<dim>(
+        expected_p_solution, Component::p);
+
     std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
       components;
-    components.insert({dim, expected_V_solution});
-    components.insert({2 * dim + 1, expected_n_solution});
-    components.insert({3 * dim + 2, expected_p_solution});
+    components.insert({dim, expected_V_solution_rescaled});
+    components.insert({2 * dim + 1, expected_n_solution_rescaled});
+    components.insert({3 * dim + 2, expected_p_solution_rescaled});
     FunctionByComponents expected_solution(3 * (dim + 1), components);
 
     bool         converged;

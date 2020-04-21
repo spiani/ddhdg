@@ -11,7 +11,12 @@ public:
   LogPotentialTest()
     : Ddhdg::NPSolver<D::value>(
         get_problem(),
-        std::make_shared<Ddhdg::NPSolverParameters>(1, 2, 1)){};
+        std::make_shared<Ddhdg::NPSolverParameters>(1, 2, 1),
+        std::make_shared<Ddhdg::Adimensionalizer>(1,
+                                                  Ddhdg::Constants::Q /
+                                                    Ddhdg::Constants::KB,
+                                                  1 / Ddhdg::Constants::Q,
+                                                  1)){};
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<D::value>>
@@ -38,12 +43,12 @@ protected:
     if (c == Ddhdg::Component::V)
       expected_solution->initialize(
         dealii::FunctionParser<dim>::default_variable_names(),
-        "-2 * log(x) * q",
+        "-2 * log(x)",
         Ddhdg::Constants::constants);
     if (c == Ddhdg::Component::n)
       expected_solution->initialize(
         dealii::FunctionParser<dim>::default_variable_names(),
-        "2 / x^2",
+        "2 / (x^2 * q)",
         Ddhdg::Constants::constants);
     return expected_solution;
   }
@@ -157,6 +162,9 @@ TYPED_TEST(LogPotentialTest, LogPotentialTest) // NOLINT
 {
   const unsigned int dim = TypeParam::value;
 
+  const double V_tolerance = (dim == 3) ? 2e-2 : 1e-2;
+  const double n_tolerance = 1e-2;
+
   const auto zero_function       = TestFixture::get_zero_function();
   const auto V_expected_solution = TestFixture::get_expected_solution(Ddhdg::V);
   const auto n_expected_solution = TestFixture::get_expected_solution(Ddhdg::n);
@@ -179,6 +187,6 @@ TYPED_TEST(LogPotentialTest, LogPotentialTest) // NOLINT
   const double n_l2_error =
     this->estimate_l2_error(n_expected_solution, Ddhdg::Component::n);
 
-  EXPECT_LT(V_l2_error, 1e-2);
-  EXPECT_LT(n_l2_error, 1e-2);
+  EXPECT_LT(V_l2_error, V_tolerance);
+  EXPECT_LT(n_l2_error, n_tolerance);
 }

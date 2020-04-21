@@ -28,6 +28,12 @@ subsection physical quantities
   set valence band edge energy      = 0.
 end
 
+subsection dimensionality
+  set length scale                  = 1e-9
+  set doping magnitude              = 10e23
+  set electron mobility magnitude   = 1
+end
+
 subsection nonlinear solver
   set max number of iterations      = 100
   set absolute tolerance            = 1e-12

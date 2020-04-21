@@ -235,6 +235,28 @@ class ExpectedSolutionsParameters(ParameterSubsection):
         return self._p
 
 
+class Dimensionality(ParameterSubsection):
+    subsection_name = "dimensionality"
+
+    def __init__(self, length_scale=1, doping_magnitude=1,
+                 electron_mobility_magnitude=1):
+        self._length_scale = float(length_scale)
+        self._doping_magnitude = float(doping_magnitude)
+        self._electron_mobility_magnitude = float(electron_mobility_magnitude)
+
+    @property
+    def length_scale(self):
+        return self._length_scale
+
+    @property
+    def doping_magnitude(self):
+        return self._doping_magnitude
+
+    @property
+    def electron_mobility_magnitude(self):
+        return self._electron_mobility_magnitude
+
+
 class ExecutionParameters:
     def __init__(self, V_degree=1, n_degree=1, p_degree=1,
                  initial_refinements=0, refinements=2,
@@ -245,7 +267,8 @@ class ExecutionParameters:
                  domain_parameters=DomainParameters(),
                  boundary_conditions_parameters=BoundaryConditionsParameters(),
                  starting_point_parameters=StartingPointParameters(),
-                 expected_solutions_parameters=ExpectedSolutionsParameters()
+                 expected_solutions_parameters=ExpectedSolutionsParameters(),
+                 dimensionality=Dimensionality()
                  ):
         self._V_degree = int(V_degree)
         self._n_degree = int(n_degree)
@@ -294,6 +317,9 @@ class ExecutionParameters:
 
         self._expected_solutions_parameters = expected_solutions_parameters
         self._subsections.append(expected_solutions_parameters)
+
+        self._dimensionality = dimensionality
+        self._subsections.append(dimensionality)
 
     @property
     def V_degree(self):
@@ -396,3 +422,7 @@ class ExecutionParameters:
         if not hasattr(other, "to_dict"):
             return False
         return self.to_dict() == other.to_dict()
+
+
+if __name__ == '__main__':
+    print(ExecutionParameters().to_prm_file())

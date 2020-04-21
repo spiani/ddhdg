@@ -181,4 +181,43 @@ namespace Ddhdg
     const std::shared_ptr<const dealii::Function<dim>> f1;
     const std::shared_ptr<const dealii::Function<dim>> f2;
   };
+
+  template <int dim>
+  class FunctionTimesScalar : public dealii::Function<dim>
+  {
+  public:
+    FunctionTimesScalar(std::shared_ptr<const dealii::Function<dim>> f,
+                        double                                       s);
+
+    double
+    value(const dealii::Point<dim> &p,
+          unsigned int              component = 0) const override;
+
+    void
+    vector_value(const dealii::Point<dim> &p,
+                 dealii::Vector<double> &  values) const override;
+
+    void
+    value_list(const std::vector<dealii::Point<dim>> &p,
+               std::vector<double> &                  values,
+               unsigned int component = 0) const override;
+
+    dealii::Tensor<1, dim>
+    gradient(const dealii::Point<dim> &p,
+             unsigned int              component = 0) const override;
+
+    void
+    vector_gradient(const dealii::Point<dim> &           p,
+                    std::vector<dealii::Tensor<1, dim>> &values) const override;
+
+    void
+    gradient_list(const std::vector<dealii::Point<dim>> &p,
+                  std::vector<dealii::Tensor<1, dim>> &  values,
+                  unsigned int component = 0) const override;
+
+  private:
+    const std::shared_ptr<const dealii::Function<dim>> f;
+    const double                                       s;
+  };
+
 } // namespace Ddhdg

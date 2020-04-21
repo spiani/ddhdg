@@ -1,4 +1,5 @@
 add_library(DDHDG SHARED
+        adimensionalizer.cpp
         boundary_conditions.cpp
         electron_mobility.cpp
         function_tools.cpp

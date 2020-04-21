@@ -202,7 +202,8 @@ namespace pyddhdg
   {
   public:
     NPSolver(const Problem<dim> &             problem,
-             const Ddhdg::NPSolverParameters &parameters);
+             const Ddhdg::NPSolverParameters &parameters,
+             const Ddhdg::Adimensionalizer &  adimensionalizer);
 
     void
     refine_grid(unsigned int i = 1);

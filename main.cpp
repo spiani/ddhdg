@@ -138,6 +138,30 @@ public:
     leave_subsection();
     leave_subsection();
 
+    enter_subsection("dimensionality");
+    add_parameter("length scale",
+                  length_scale,
+                  "If length scale is l, two points that on the mesh have "
+                  "distance 1 will represent two points that have distance "
+                  "l in reality. In this way, it is possible to create "
+                  "grids with reasonable size (so, for example, a square with "
+                  "side 1) even if we are modelling an object with microscopic "
+                  "size (like 10^(-9) meters).",
+                  dealii::Patterns::Double());
+    add_parameter("doping magnitude",
+                  doping_magnitude,
+                  "A number with is approximately maximum value that the "
+                  "doping function will reach. This is used internally to "
+                  "normalize vectors and improve the quality of the results",
+                  dealii::Patterns::Double());
+    add_parameter("electron mobility magnitude",
+                  electron_mobility_magnitude,
+                  "A number with is approximately maximum eigenvalue that the "
+                  "electron mobility matrix will have. This is used internally "
+                  "to normalize vectors and improve the quality of the results",
+                  dealii::Patterns::Double());
+    leave_subsection();
+
     enter_subsection("boundary conditions");
     {
       add_parameter(
@@ -263,6 +287,10 @@ public:
   double valence_band_density        = 9.0e24;
   double conduction_band_edge_energy = 1.424;
   double valence_band_edge_energy    = 0.;
+
+  double length_scale                = 1.;
+  double doping_magnitude            = 1.;
+  double electron_mobility_magnitude = 1.;
 
   std::shared_ptr<Ddhdg::ConvergenceTable> error_table;
 
@@ -468,8 +496,12 @@ main(int argc, char **argv)
       prm.iterative_linear_solver,
       prm.multithreading);
 
+  std::shared_ptr<const Ddhdg::Adimensionalizer> adimensionalizer =
+    std::make_shared<const Ddhdg::Adimensionalizer>(
+      prm.length_scale, prm.doping_magnitude, prm.electron_mobility_magnitude);
+
   // Create a solver for the problem
-  Ddhdg::NPSolver<dim> solver(problem, parameters);
+  Ddhdg::NPSolver<dim> solver(problem, parameters, adimensionalizer);
 
   std::cout << std::endl
             << std::endl
