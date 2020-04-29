@@ -665,5 +665,4 @@ namespace Ddhdg
   template class FunctionTimesScalar<1>;
   template class FunctionTimesScalar<2>;
   template class FunctionTimesScalar<3>;
-
 } // namespace Ddhdg

@@ -17,6 +17,7 @@
 
 #include <iostream>
 
+#include "adimensionalizer.h"
 #include "convergence_table.h"
 #include "nonlinear_iteration_results.h"
 #include "problem.h"
@@ -31,6 +32,10 @@ namespace Ddhdg
   class Solver
   {
   public:
+    Solver(std::shared_ptr<const Problem<dim>>     problem,
+           std::shared_ptr<const Adimensionalizer> adimensionalizer =
+             std::make_shared<Adimensionalizer>());
+
     virtual void
     refine_grid(unsigned int i) = 0;
 
@@ -189,6 +194,111 @@ namespace Ddhdg
       unsigned int                                 initial_refinements) = 0;
 
     virtual ~Solver() = default;
+
+  protected:
+    template <Component c>
+    inline double
+    compute_quasi_fermi_potential(const double density,
+                                  const double potential,
+                                  const double temperature)
+    {
+      const double q   = Constants::Q;
+      const double U_T = temperature * Constants::KB / Constants::Q;
+
+      switch (c)
+        {
+            case Component::n: {
+              const double band_density =
+                this->problem->band_density.at(Component::n);
+              const double band_edge_energy =
+                this->problem->band_edge_energy.at(Component::n);
+              return potential - band_edge_energy / q -
+                     U_T * log(density / band_density);
+            }
+            case Component::p: {
+              const double band_density =
+                this->problem->band_density.at(Component::p);
+              const double band_edge_energy =
+                this->problem->band_edge_energy.at(Component::p);
+              return potential - band_edge_energy / q +
+                     U_T * log(density / band_density);
+            }
+          default:
+            Assert(false, InvalidComponent());
+        }
+      return 9e99;
+    }
+
+    template <Component c>
+    inline double
+    compute_density(const double qf_potential,
+                    const double potential,
+                    const double temperature)
+    {
+      const double q   = Constants::Q;
+      const double KbT = temperature * Constants::KB;
+
+      switch (c)
+        {
+            case Component::n: {
+              const double band_density =
+                this->problem->band_density.at(Component::n);
+              const double band_edge_energy =
+                this->problem->band_edge_energy.at(Component::n);
+              const double exponent =
+                (q * (potential - qf_potential) - band_edge_energy) / KbT;
+              return band_density * exp(exponent);
+            }
+            case Component::p: {
+              const double band_density =
+                this->problem->band_density.at(Component::p);
+              const double band_edge_energy =
+                this->problem->band_edge_energy.at(Component::p);
+              const double exponent =
+                (q * (qf_potential - potential) + band_edge_energy) / KbT;
+              return band_density * exp(exponent);
+            }
+          default:
+            Assert(false, InvalidComponent());
+        }
+      return 9e99;
+    }
+
+    template <Component c>
+    inline double
+    compute_potential(const double density,
+                      const double qf_potential,
+                      const double temperature)
+    {
+      const double q   = Constants::Q;
+      const double U_T = temperature * Constants::KB / Constants::Q;
+
+      switch (c)
+        {
+            case Component::n: {
+              const double band_density =
+                this->problem->band_density.at(Component::n);
+              const double band_edge_energy =
+                this->problem->band_edge_energy.at(Component::n);
+              return qf_potential + band_edge_energy / q +
+                     U_T * log(density / band_density);
+            }
+            case Component::p: {
+              const double band_density =
+                this->problem->band_density.at(Component::p);
+              const double band_edge_energy =
+                this->problem->band_edge_energy.at(Component::p);
+              return qf_potential + band_edge_energy / q -
+                     U_T * log(density / band_density);
+            }
+          default:
+            Assert(false, InvalidComponent());
+        }
+      return 9e99;
+    }
+
+    const std::shared_ptr<const Problem<dim>>     problem;
+    const std::shared_ptr<const Adimensionalizer> adimensionalizer;
   };
 
 } // namespace Ddhdg

@@ -1,4 +1,3 @@
-#include "adimensionalizer.h"
 #include "dof_types.h"
 #include "solver.h"
 
@@ -199,7 +198,7 @@ namespace Ddhdg
       unsigned int                                 n_cycles,
       unsigned int initial_refinements) override;
 
-  private:
+  protected:
     static std::unique_ptr<dealii::Triangulation<dim>>
     copy_triangulation(
       std::shared_ptr<const dealii::Triangulation<dim>> triangulation);
@@ -406,21 +405,17 @@ namespace Ddhdg
                 int    max_number_of_iterations,
                 bool   compute_thermodynamic_equilibrium);
 
-    const std::unique_ptr<Triangulation<dim>>           triangulation;
-    const std::shared_ptr<const Permittivity<dim>>      permittivity;
-    const std::shared_ptr<const ElectronMobility<dim>>  n_electron_mobility;
-    const std::shared_ptr<const RecombinationTerm<dim>> n_recombination_term;
-    const std::shared_ptr<const ElectronMobility<dim>>  p_electron_mobility;
-    const std::shared_ptr<const RecombinationTerm<dim>> p_recombination_term;
-    const std::shared_ptr<const dealii::Function<dim>>  temperature;
-    const std::shared_ptr<const dealii::Function<dim>>  doping;
-    const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
+    inline void
+    compute_local_charge_neutrality_first_guess(
+      const std::vector<double> &evaluated_doping,
+      const std::vector<double> &evaluated_temperature,
+      std::vector<double> &      evaluated_potentials);
 
-    const std::map<Component, double> band_density;
-    const std::map<Component, double> band_edge_energy;
+    void
+    set_local_charge_neutrality_first_guess();
 
-    const std::unique_ptr<NPSolverParameters>     parameters;
-    const std::shared_ptr<const Adimensionalizer> adimensionalizer;
+    const std::unique_ptr<Triangulation<dim>> triangulation;
+    const std::unique_ptr<NPSolverParameters> parameters;
 
     const std::shared_ptr<const dealii::Function<dim>> rescaled_doping;
 

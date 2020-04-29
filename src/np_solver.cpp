@@ -19,6 +19,7 @@
 #include <deal.II/numerics/matrix_tools.h>
 #include <deal.II/numerics/vector_tools.h>
 
+#include <cmath>
 #include <fstream>
 
 #include "constants.h"
@@ -349,22 +350,12 @@ namespace Ddhdg
     const std::shared_ptr<const Problem<dim>>       problem,
     const std::shared_ptr<const NPSolverParameters> parameters,
     const std::shared_ptr<const Adimensionalizer>   adimensionalizer)
-    : triangulation(copy_triangulation(problem->triangulation))
-    , permittivity(problem->permittivity)
-    , n_electron_mobility(problem->n_electron_mobility)
-    , n_recombination_term(problem->n_recombination_term)
-    , p_electron_mobility(problem->p_electron_mobility)
-    , p_recombination_term(problem->p_recombination_term)
-    , temperature(problem->temperature)
-    , doping(problem->doping)
-    , boundary_handler(problem->boundary_handler)
-    , band_density(problem->band_density)
-    , band_edge_energy(problem->band_edge_energy)
+    : Solver<dim>(problem, adimensionalizer)
+    , triangulation(copy_triangulation(problem->triangulation))
     , parameters(std::make_unique<NPSolverParameters>(*parameters))
-    , adimensionalizer(adimensionalizer)
     , rescaled_doping(
         this->adimensionalizer->template adimensionalize_doping_function<dim>(
-          this->doping))
+          this->problem->doping))
     , fe_cell(std::make_unique<dealii::FESystem<dim>>(
         generate_fe_system(parameters->degree, false)))
     , dof_handler_cell(*triangulation)
@@ -1516,7 +1507,7 @@ namespace Ddhdg
         scratch.fe_values_cell.quadrature_point(q);
 
     // Compute the value of epsilon
-    this->permittivity->compute_absolute_permittivity(
+    this->problem->permittivity->compute_absolute_permittivity(
       scratch.cell_quadrature_points, scratch.epsilon_cell);
     // Rescale the permittivity to get adimensionality
     this->adimensionalizer->template adimensionalize_permittivity<dim>(
@@ -1525,7 +1516,7 @@ namespace Ddhdg
     // Compute the value of mu
     if (this->is_enabled(Component::n))
       {
-        this->n_electron_mobility->compute_electron_mobility(
+        this->problem->n_electron_mobility->compute_electron_mobility(
           scratch.cell_quadrature_points, scratch.mu_n_cell);
         this->adimensionalizer->template adimensionalize_electron_mobility<dim>(
           scratch.mu_n_cell);
@@ -1533,15 +1524,15 @@ namespace Ddhdg
 
     if (this->is_enabled(Component::p))
       {
-        this->p_electron_mobility->compute_electron_mobility(
+        this->problem->p_electron_mobility->compute_electron_mobility(
           scratch.cell_quadrature_points, scratch.mu_p_cell);
         this->adimensionalizer->template adimensionalize_hole_mobility<dim>(
           scratch.mu_p_cell);
       }
 
     // Compute the value of T
-    this->temperature->value_list(scratch.cell_quadrature_points,
-                                  scratch.T_cell);
+    this->problem->temperature->value_list(scratch.cell_quadrature_points,
+                                           scratch.T_cell);
 
     // Compute the thermal voltage
     const double thermal_voltage_rescaling_factor =
@@ -1563,19 +1554,20 @@ namespace Ddhdg
         auto &dr_n_n = scratch.dr_n_cell.at(Component::n);
         auto &dr_n_p = scratch.dr_n_cell.at(Component::p);
 
-        this->n_recombination_term->compute_multiple_recombination_terms(
-          scratch.previous_c_cell.at(Component::n),
-          scratch.previous_c_cell.at(Component::p),
-          scratch.cell_quadrature_points,
-          scratch.r_n_cell);
-        this->n_recombination_term
+        this->problem->n_recombination_term
+          ->compute_multiple_recombination_terms(
+            scratch.previous_c_cell.at(Component::n),
+            scratch.previous_c_cell.at(Component::p),
+            scratch.cell_quadrature_points,
+            scratch.r_n_cell);
+        this->problem->n_recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
             Component::n,
             dr_n_n);
-        this->n_recombination_term
+        this->problem->n_recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
@@ -1592,19 +1584,20 @@ namespace Ddhdg
         auto &dr_p_n = scratch.dr_p_cell.at(Component::n);
         auto &dr_p_p = scratch.dr_p_cell.at(Component::p);
 
-        this->p_recombination_term->compute_multiple_recombination_terms(
-          scratch.previous_c_cell.at(Component::n),
-          scratch.previous_c_cell.at(Component::p),
-          scratch.cell_quadrature_points,
-          scratch.r_p_cell);
-        this->p_recombination_term
+        this->problem->p_recombination_term
+          ->compute_multiple_recombination_terms(
+            scratch.previous_c_cell.at(Component::n),
+            scratch.previous_c_cell.at(Component::p),
+            scratch.cell_quadrature_points,
+            scratch.r_p_cell);
+        this->problem->p_recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
             Component::n,
             dr_p_n);
-        this->p_recombination_term
+        this->problem->p_recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
@@ -1690,10 +1683,10 @@ namespace Ddhdg
     const std::vector<double> &dr_p_n = scratch.dr_p_cell.at(Component::n);
     const std::vector<double> &dr_p_p = scratch.dr_p_cell.at(Component::p);
 
-    const double nv = this->band_density.at(Component::n);
-    const double nc = this->band_density.at(Component::p);
-    const double ev = this->band_edge_energy.at(Component::n);
-    const double ec = this->band_edge_energy.at(Component::p);
+    const double nv = this->problem->band_density.at(Component::n);
+    const double nc = this->problem->band_density.at(Component::p);
+    const double ev = this->problem->band_edge_energy.at(Component::n);
+    const double ec = this->problem->band_edge_energy.at(Component::p);
 
     double thermodynamic_equilibrium_der = 0.;
 
@@ -1847,10 +1840,10 @@ namespace Ddhdg
     dealii::Tensor<1, dim> Jn;
     dealii::Tensor<1, dim> Jp;
 
-    const double nv = this->band_density.at(Component::n);
-    const double nc = this->band_density.at(Component::p);
-    const double ev = this->band_edge_energy.at(Component::n);
-    const double ec = this->band_edge_energy.at(Component::p);
+    const double nv = this->problem->band_density.at(Component::n);
+    const double nc = this->problem->band_density.at(Component::p);
+    const double ev = this->problem->band_edge_energy.at(Component::n);
+    const double ec = this->problem->band_edge_energy.at(Component::p);
 
     double thermodynamic_equilibrium_rhs = 0.;
 
@@ -1983,14 +1976,14 @@ namespace Ddhdg
           current_solution_trace, scratch.previous_tr_c_face[c]);
       }
 
-    this->permittivity->compute_absolute_permittivity(
+    this->problem->permittivity->compute_absolute_permittivity(
       scratch.face_quadrature_points, scratch.epsilon_face);
     this->adimensionalizer->template adimensionalize_permittivity<dim>(
       scratch.epsilon_face);
 
     if (this->is_enabled(Component::n))
       {
-        this->n_electron_mobility->compute_electron_mobility(
+        this->problem->n_electron_mobility->compute_electron_mobility(
           scratch.face_quadrature_points, scratch.mu_n_face);
         this->adimensionalizer->template adimensionalize_electron_mobility<dim>(
           scratch.mu_n_face);
@@ -1998,14 +1991,14 @@ namespace Ddhdg
 
     if (this->is_enabled(Component::p))
       {
-        this->p_electron_mobility->compute_electron_mobility(
+        this->problem->p_electron_mobility->compute_electron_mobility(
           scratch.face_quadrature_points, scratch.mu_p_face);
         this->adimensionalizer->template adimensionalize_electron_mobility<dim>(
           scratch.mu_p_face);
       }
 
-    this->temperature->value_list(scratch.face_quadrature_points,
-                                  scratch.T_face);
+    this->problem->temperature->value_list(scratch.face_quadrature_points,
+                                           scratch.T_face);
 
     const double thermal_voltage_rescaling_factor =
       this->adimensionalizer->get_thermal_voltage_rescaling_factor();
@@ -3005,7 +2998,7 @@ namespace Ddhdg
             DirichletBoundaryCondition<dim>(
               std::make_shared<dealii::Functions::ZeroFunction<dim>>(),
               Component::V) :
-            this->boundary_handler->get_dirichlet_conditions_for_id(
+            this->problem->boundary_handler->get_dirichlet_conditions_for_id(
               face_boundary_id, c);
         this->apply_dbc_on_face<c>(scratch, task_data, dbc, face);
       }
@@ -3021,7 +3014,7 @@ namespace Ddhdg
               (prm::thermodyn_eq) ?
                 NeumannBoundaryCondition<dim>(
                   std::make_shared<dealii::Functions::ZeroFunction<dim>>(), c) :
-                this->boundary_handler->get_neumann_conditions_for_id(
+                this->problem->boundary_handler->get_neumann_conditions_for_id(
                   face_boundary_id, c);
             this->apply_nbc_on_face<c>(scratch, task_data, nbc, face);
           }
@@ -3177,12 +3170,12 @@ namespace Ddhdg
               {
                 has_dirichlet_conditions.insert(
                   {c,
-                   this->boundary_handler->has_dirichlet_boundary_conditions(
-                     face_boundary_id, c)});
+                   this->problem->boundary_handler
+                     ->has_dirichlet_boundary_conditions(face_boundary_id, c)});
                 has_neumann_conditions.insert(
                   {c,
-                   this->boundary_handler->has_neumann_boundary_conditions(
-                     face_boundary_id, c)});
+                   this->problem->boundary_handler
+                     ->has_neumann_boundary_conditions(face_boundary_id, c)});
               }
           }
 
@@ -3497,6 +3490,352 @@ namespace Ddhdg
   }
 
 
+
+  template <int dim>
+  void
+  NPSolver<dim>::compute_local_charge_neutrality_first_guess(
+    const std::vector<double> &evaluated_doping,
+    const std::vector<double> &evaluated_temperature,
+    std::vector<double> &      evaluated_potentials)
+  {
+    AssertDimension(evaluated_doping.size(), evaluated_temperature.size());
+    AssertDimension(evaluated_doping.size(), evaluated_potentials.size());
+
+    const unsigned int n_of_points = evaluated_doping.size();
+
+    const double rescale_factor =
+      this->adimensionalizer
+        ->template get_component_rescaling_factor<Component::V>();
+
+    const double doping_threshold =
+      this->adimensionalizer->doping_magnitude * 1e-5;
+
+    const double Nc = this->problem->band_density.at(Component::n);
+    const double Ec = this->problem->band_edge_energy.at(Component::n);
+    const double Nv = this->problem->band_density.at(Component::p);
+    const double Ev = this->problem->band_edge_energy.at(Component::p);
+
+    for (unsigned int i = 0; i < n_of_points; i++)
+      {
+        if (evaluated_doping[i] * evaluated_doping[i] <
+            doping_threshold * doping_threshold)
+          {
+            const double U_T =
+              evaluated_temperature[i] * Constants::KB / Constants::Q;
+            evaluated_potentials[i] =
+              (Ec + Ev) / (2 * Constants::Q) + U_T / 2 * log(Nv / Nc);
+          }
+        else
+          {
+            if (evaluated_doping[i] > 0)
+              evaluated_potentials[i] =
+                this->template compute_potential<Component::n>(
+                  evaluated_doping[i], 0, evaluated_temperature[i]) /
+                rescale_factor;
+            else
+              evaluated_potentials[i] =
+                this->template compute_potential<Component::p>(
+                  -evaluated_doping[i], 0, evaluated_temperature[i]) /
+                rescale_factor;
+          }
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::set_local_charge_neutrality_first_guess()
+  {
+    const QGauss<dim> quadrature_formula(
+      this->get_number_of_quadrature_points());
+    const QGauss<dim - 1> face_quadrature_formula(
+      this->get_number_of_quadrature_points());
+
+    const unsigned int V_index = get_component_index(Component::V);
+
+    // This is for the cell
+    {
+      const UpdateFlags flags_cell(update_values | update_gradients |
+                                   update_JxW_values |
+                                   update_quadrature_points);
+      const UpdateFlags flags_trace(update_values | update_normal_vectors |
+                                    update_quadrature_points |
+                                    update_JxW_values);
+
+      FEValues<dim>     fe_values_cell(*(this->fe_cell),
+                                   quadrature_formula,
+                                   flags_cell);
+      FEFaceValues<dim> fe_face_values(*(this->fe_cell),
+                                       face_quadrature_formula,
+                                       flags_trace);
+
+      const unsigned int n_q_points = fe_values_cell.get_quadrature().size();
+      const unsigned int n_face_q_points =
+        fe_face_values.get_quadrature().size();
+
+      // Now we need to map the dofs that are related to the current component
+      std::vector<unsigned int> on_current_component;
+      for (unsigned int i = 0; i < this->fe_cell->dofs_per_cell; ++i)
+        {
+          const unsigned int current_index =
+            this->fe_cell->system_to_block_index(i).first;
+          if (current_index == V_index)
+            on_current_component.push_back(i);
+        }
+      const unsigned int dofs_per_component = on_current_component.size();
+
+      std::vector<std::vector<unsigned int>> component_support_on_face(
+        GeometryInfo<dim>::faces_per_cell);
+      for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
+           ++face)
+        for (unsigned int i = 0; i < dofs_per_component; ++i)
+          {
+            const unsigned int dof_index = on_current_component[i];
+            if (this->fe_cell->has_support_on_face(dof_index, face))
+              component_support_on_face[face].push_back(i);
+          }
+      const unsigned int dofs_per_face_on_component =
+        component_support_on_face[0].size();
+
+      const FEValuesExtractors::Vector E_extractor =
+        this->get_displacement_extractor(Displacement::E);
+      const FEValuesExtractors::Scalar V_extractor =
+        this->get_component_extractor(Component::V);
+
+      LAPACKFullMatrix<double> local_matrix(dofs_per_component,
+                                            dofs_per_component);
+      Vector<double>           local_residual(dofs_per_component);
+      Vector<double>           local_values(fe_values_cell.dofs_per_cell);
+
+      // Temporary buffer for the values of the local base function on a
+      // quadrature point
+      std::vector<double>         c_bf(dofs_per_component);
+      std::vector<Tensor<1, dim>> d_bf(dofs_per_component);
+      std::vector<double>         d_div_bf(dofs_per_component);
+
+      std::vector<Point<dim>> cell_quadrature_points(n_q_points);
+      std::vector<Point<dim>> face_quadrature_points(n_face_q_points);
+
+      std::vector<double> evaluated_doping(n_q_points);
+      std::vector<double> evaluated_temperature(n_q_points);
+      std::vector<double> evaluated_potentials(n_q_points);
+
+      std::vector<double> evaluated_doping_face(n_face_q_points);
+      std::vector<double> evaluated_temperature_face(n_face_q_points);
+      std::vector<double> evaluated_potentials_face(n_face_q_points);
+
+      for (const auto &cell : this->dof_handler_cell.active_cell_iterators())
+        {
+          local_matrix   = 0.;
+          local_residual = 0.;
+
+          fe_values_cell.reinit(cell);
+
+          // Get the position of the quadrature points
+          for (unsigned int q = 0; q < n_q_points; ++q)
+            cell_quadrature_points[q] = fe_values_cell.quadrature_point(q);
+
+          // Evaluated the analytic functions over the quadrature points
+          this->problem->doping->value_list(cell_quadrature_points,
+                                            evaluated_doping);
+          this->problem->temperature->value_list(cell_quadrature_points,
+                                                 evaluated_temperature);
+
+          this->compute_local_charge_neutrality_first_guess(
+            evaluated_doping, evaluated_temperature, evaluated_potentials);
+
+          for (unsigned int q = 0; q < n_q_points; ++q)
+            {
+              // Copy data of the shape function
+              for (unsigned int k = 0; k < dofs_per_component; ++k)
+                {
+                  const unsigned int i = on_current_component[k];
+                  c_bf[k]     = fe_values_cell[V_extractor].value(i, q);
+                  d_bf[k]     = fe_values_cell[E_extractor].value(i, q);
+                  d_div_bf[k] = fe_values_cell[E_extractor].divergence(i, q);
+                }
+
+              const double JxW = fe_values_cell.JxW(q);
+
+              for (unsigned int i = 0; i < dofs_per_component; ++i)
+                {
+                  for (unsigned int j = 0; j < dofs_per_component; ++j)
+                    {
+                      local_matrix(i, j) +=
+                        (c_bf[j] * c_bf[i] + d_bf[i] * d_bf[j]) * JxW;
+                    }
+                  local_residual[i] +=
+                    (evaluated_potentials[q] * (c_bf[i] + d_div_bf[i])) * JxW;
+                }
+            }
+          for (unsigned int face_number = 0;
+               face_number < GeometryInfo<dim>::faces_per_cell;
+               ++face_number)
+            {
+              fe_face_values.reinit(cell, face_number);
+
+              for (unsigned int q = 0; q < n_face_q_points; ++q)
+                face_quadrature_points[q] = fe_face_values.quadrature_point(q);
+
+              this->problem->doping->value_list(face_quadrature_points,
+                                                evaluated_doping_face);
+              this->problem->temperature->value_list(
+                face_quadrature_points, evaluated_temperature_face);
+
+              this->compute_local_charge_neutrality_first_guess(
+                evaluated_doping_face,
+                evaluated_temperature_face,
+                evaluated_potentials_face);
+
+              for (unsigned int q = 0; q < n_face_q_points; ++q)
+                {
+                  const double JxW    = fe_face_values.JxW(q);
+                  const auto   normal = fe_face_values.normal_vector(q);
+
+                  for (unsigned int k = 0; k < dofs_per_face_on_component; ++k)
+                    {
+                      const auto kk = component_support_on_face[face_number][k];
+                      const auto kkk = on_current_component[kk];
+                      const auto f_bf_face =
+                        fe_face_values[E_extractor].value(kkk, q);
+                      local_residual[kk] +=
+                        (-evaluated_potentials_face[q] * (f_bf_face * normal)) *
+                        JxW;
+                    }
+                }
+            }
+          local_matrix.compute_lu_factorization();
+          local_matrix.solve(local_residual);
+
+          cell->get_dof_values(this->current_solution_cell, local_values);
+          for (unsigned int i = 0; i < dofs_per_component; i++)
+            local_values[on_current_component[i]] = local_residual[i];
+          cell->set_dof_values(local_values, this->current_solution_cell);
+        }
+    }
+
+    // This is the part for the trace
+    {
+      const UpdateFlags flags(update_values | update_normal_vectors |
+                              update_quadrature_points | update_JxW_values);
+
+      FEFaceValues<dim>  fe_face_trace_values(*(this->fe_trace),
+                                             face_quadrature_formula,
+                                             flags);
+      const unsigned int n_face_q_points =
+        fe_face_trace_values.get_quadrature().size();
+
+      const unsigned int dofs_per_cell = this->fe_trace->dofs_per_cell;
+
+      const FEValuesExtractors::Scalar V_extractor =
+        this->get_trace_component_extractor(Component::V);
+
+      // Again, we map the dofs that are related to the current component
+      std::vector<unsigned int> on_current_component;
+      for (unsigned int i = 0; i < dofs_per_cell; ++i)
+        {
+          const unsigned int current_index =
+            this->fe_trace->system_to_block_index(i).first;
+          if (current_index == V_index)
+            on_current_component.push_back(i);
+        }
+      const unsigned int dofs_per_component = on_current_component.size();
+
+      std::vector<std::vector<unsigned int>> component_support_on_face(
+        GeometryInfo<dim>::faces_per_cell);
+      for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
+           ++face)
+        for (unsigned int i = 0; i < dofs_per_component; ++i)
+          {
+            const unsigned int dof_index = on_current_component[i];
+            if (this->fe_trace->has_support_on_face(dof_index, face))
+              component_support_on_face[face].push_back(i);
+          }
+      const unsigned int dofs_per_face_on_component =
+        component_support_on_face[0].size();
+
+      std::vector<double> c_bf(dofs_per_face_on_component);
+
+      std::vector<Point<dim>> face_quadrature_points(n_face_q_points);
+
+      std::vector<double> evaluated_doping(n_face_q_points);
+      std::vector<double> evaluated_temperature(n_face_q_points);
+      std::vector<double> evaluated_potentials(n_face_q_points);
+
+      LAPACKFullMatrix<double> local_trace_matrix(dofs_per_component,
+                                                  dofs_per_component);
+      Vector<double>           local_trace_residual(dofs_per_component);
+      Vector<double>           local_trace_values(dofs_per_cell);
+
+      for (const auto &cell : dof_handler_trace.active_cell_iterators())
+        {
+          local_trace_matrix   = 0;
+          local_trace_residual = 0;
+          for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
+               ++face)
+            {
+              fe_face_trace_values.reinit(cell, face);
+              for (unsigned int q = 0; q < n_face_q_points; ++q)
+                face_quadrature_points[q] =
+                  fe_face_trace_values.quadrature_point(q);
+
+              this->problem->doping->value_list(face_quadrature_points,
+                                                evaluated_doping);
+              this->problem->temperature->value_list(face_quadrature_points,
+                                                     evaluated_temperature);
+
+              this->compute_local_charge_neutrality_first_guess(
+                evaluated_doping, evaluated_temperature, evaluated_potentials);
+
+              for (unsigned int q = 0; q < n_face_q_points; ++q)
+                {
+                  // Copy data of the shape function
+                  for (unsigned int k = 0; k < dofs_per_face_on_component; ++k)
+                    {
+                      const unsigned int component_index =
+                        component_support_on_face[face][k];
+                      const unsigned int local_index =
+                        on_current_component[component_index];
+                      c_bf[k] =
+                        fe_face_trace_values[V_extractor].value(local_index, q);
+                    }
+
+                  const double JxW = fe_face_trace_values.JxW(q);
+
+                  for (unsigned int i = 0; i < dofs_per_face_on_component; ++i)
+                    {
+                      const unsigned int ii =
+                        component_support_on_face[face][i];
+                      for (unsigned int j = 0; j < dofs_per_face_on_component;
+                           ++j)
+                        {
+                          const unsigned int jj =
+                            component_support_on_face[face][j];
+                          local_trace_matrix(ii, jj) +=
+                            (c_bf[j] * c_bf[i]) * JxW;
+                        }
+                      local_trace_residual[ii] +=
+                        (evaluated_potentials[q] * c_bf[i]) * JxW;
+                    }
+                }
+            }
+          local_trace_matrix.compute_lu_factorization();
+          local_trace_matrix.solve(local_trace_residual);
+
+          cell->get_dof_values(this->current_solution_trace,
+                               local_trace_values);
+          for (unsigned int i = 0; i < dofs_per_component; i++)
+            local_trace_values[on_current_component[i]] =
+              local_trace_residual[i];
+          cell->set_dof_values(local_trace_values,
+                               this->current_solution_trace);
+        }
+    }
+  }
+
+
+
   template <int dim>
   NonlinearIterationResults
   NPSolver<dim>::compute_thermodynamic_equilibrium(
@@ -3512,6 +3851,11 @@ namespace Ddhdg
 
     this->set_enabled_components(true, false, false);
 
+    if (!this->initialized)
+      this->setup_overall_system();
+
+    this->set_local_charge_neutrality_first_guess();
+
     NonlinearIterationResults iterations = this->private_run(
       absolute_tol, relative_tol, max_number_of_iterations, true);
 
@@ -3519,7 +3863,7 @@ namespace Ddhdg
                                  current_active_components[Component::n],
                                  current_active_components[Component::p]);
 
-    return iterations;
+      return iterations;
   }
 
 

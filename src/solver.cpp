@@ -1,7 +1,18 @@
 #include "solver.h"
 
+#include <adimensionalizer.h>
+
 namespace Ddhdg
 {
+  template <int dim>
+  Solver<dim>::Solver(std::shared_ptr<const Problem<dim>>     problem,
+                      std::shared_ptr<const Adimensionalizer> adimensionalizer)
+    : problem(problem)
+    , adimensionalizer(adimensionalizer)
+  {}
+
+
+
   template <int dim>
   void
   Solver<dim>::refine_grid_once()
