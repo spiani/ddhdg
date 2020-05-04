@@ -202,8 +202,10 @@ namespace Ddhdg
                                   const double potential,
                                   const double temperature)
     {
-      const double q   = Constants::Q;
-      const double U_T = temperature * Constants::KB / Constants::Q;
+      constexpr double q         = Constants::Q;
+      constexpr double Kb_over_q = Constants::KB / Constants::Q;
+      constexpr double eV        = Constants::EV;
+      const double     U_T       = temperature * Kb_over_q;
 
       switch (c)
         {
@@ -211,7 +213,7 @@ namespace Ddhdg
               const double band_density =
                 this->problem->band_density.at(Component::n);
               const double band_edge_energy =
-                this->problem->band_edge_energy.at(Component::n);
+                this->problem->band_edge_energy.at(Component::n) * eV;
               return potential - band_edge_energy / q -
                      U_T * log(density / band_density);
             }
@@ -219,7 +221,7 @@ namespace Ddhdg
               const double band_density =
                 this->problem->band_density.at(Component::p);
               const double band_edge_energy =
-                this->problem->band_edge_energy.at(Component::p);
+                this->problem->band_edge_energy.at(Component::p) * eV;
               return potential - band_edge_energy / q +
                      U_T * log(density / band_density);
             }
@@ -235,8 +237,9 @@ namespace Ddhdg
                     const double potential,
                     const double temperature)
     {
-      const double q   = Constants::Q;
-      const double KbT = temperature * Constants::KB;
+      constexpr double q   = Constants::Q;
+      constexpr double eV  = Constants::EV;
+      const double     KbT = Constants::KB * temperature;
 
       switch (c)
         {
@@ -244,7 +247,7 @@ namespace Ddhdg
               const double band_density =
                 this->problem->band_density.at(Component::n);
               const double band_edge_energy =
-                this->problem->band_edge_energy.at(Component::n);
+                this->problem->band_edge_energy.at(Component::n) * eV;
               const double exponent =
                 (q * (potential - qf_potential) - band_edge_energy) / KbT;
               return band_density * exp(exponent);
@@ -253,7 +256,7 @@ namespace Ddhdg
               const double band_density =
                 this->problem->band_density.at(Component::p);
               const double band_edge_energy =
-                this->problem->band_edge_energy.at(Component::p);
+                this->problem->band_edge_energy.at(Component::p) * eV;
               const double exponent =
                 (q * (qf_potential - potential) + band_edge_energy) / KbT;
               return band_density * exp(exponent);
@@ -270,8 +273,10 @@ namespace Ddhdg
                       const double qf_potential,
                       const double temperature)
     {
-      const double q   = Constants::Q;
-      const double U_T = temperature * Constants::KB / Constants::Q;
+      constexpr double q         = Constants::Q;
+      constexpr double Kb_over_q = Constants::KB / Constants::Q;
+      constexpr double eV        = Constants::EV;
+      const double     U_T       = temperature * Kb_over_q;
 
       switch (c)
         {
@@ -279,7 +284,7 @@ namespace Ddhdg
               const double band_density =
                 this->problem->band_density.at(Component::n);
               const double band_edge_energy =
-                this->problem->band_edge_energy.at(Component::n);
+                this->problem->band_edge_energy.at(Component::n) * eV;
               return qf_potential + band_edge_energy / q +
                      U_T * log(density / band_density);
             }
@@ -287,7 +292,7 @@ namespace Ddhdg
               const double band_density =
                 this->problem->band_density.at(Component::p);
               const double band_edge_energy =
-                this->problem->band_edge_energy.at(Component::p);
+                this->problem->band_edge_energy.at(Component::p) * eV;
               return qf_potential + band_edge_energy / q -
                      U_T * log(density / band_density);
             }

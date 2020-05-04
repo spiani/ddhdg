@@ -7,6 +7,8 @@ set(_test_files
         local_charge_neutrality.cpp
         log_potential.cpp
         neumann_boundary_conditions.cpp
+        project_on_trace.cpp
+        thermodynamic_equilibrium.cpp
         )
 
 add_executable(${_target} main.cpp ${_test_files})

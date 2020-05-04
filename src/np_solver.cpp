@@ -1053,6 +1053,227 @@ namespace Ddhdg
 
   template <int dim>
   void
+  NPSolver<dim>::project_cell_function_on_trace()
+  {
+    Assert(this->initialized, dealii::ExcNotInitialized());
+
+    const UpdateFlags flags_cell(update_values | update_JxW_values |
+                                 update_quadrature_points);
+    const UpdateFlags flags_trace(update_values | update_quadrature_points |
+                                  update_JxW_values);
+
+    const QGauss<dim - 1> face_quadrature_formula(
+      this->get_number_of_quadrature_points());
+
+    FEFaceValues<dim> fe_face_values_cell(*(this->fe_cell),
+                                          face_quadrature_formula,
+                                          flags_cell);
+    FEFaceValues<dim> fe_face_values_trace(*(this->fe_trace),
+                                           face_quadrature_formula,
+                                           flags_trace);
+
+    const unsigned int n_q_points      = face_quadrature_formula.size();
+    const unsigned int n_dofs_per_cell = this->fe_trace->dofs_per_cell;
+    const unsigned int faces_per_cell  = GeometryInfo<dim>::faces_per_cell;
+
+    // We want to create a map that associates each face with the cells that own
+    // it. To do that, we save for each cell a description that allow us to
+    // initialize a FeFaceValues object on the face as a child of the cell
+    typedef std::tuple<unsigned int, unsigned int, unsigned int>
+      cell_descriptor;
+
+    std::unordered_map<unsigned int, std::vector<cell_descriptor>> face_owners;
+
+    for (const auto &cell : dof_handler_cell.active_cell_iterators())
+      for (unsigned int face = 0; face < faces_per_cell; ++face)
+        {
+          const unsigned int            face_uid = cell->face_index(face);
+          std::vector<cell_descriptor> *v;
+          auto face_uid_find = face_owners.find(face_uid);
+          if (face_uid_find == face_owners.end())
+            {
+              v = &(face_owners[face_uid]);
+              v->reserve(2);
+            }
+          else
+            {
+              v = &(face_uid_find->second);
+            }
+          v->emplace_back(cell->level(), cell->index(), face);
+        }
+
+    // Now that we know which cells are attached to which face we can start to
+    // work component by component
+    for (const Component c : all_components())
+      {
+        const unsigned int c_index = get_component_index(c);
+
+        const FEValuesExtractors::Scalar c_trace_extractor =
+          this->get_trace_component_extractor(c);
+
+        const FEValuesExtractors::Scalar c_cell_extractor =
+          this->get_component_extractor(c);
+
+        // We map the dofs that are related to the current component c
+        std::vector<unsigned int> on_current_component;
+        for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
+          {
+            const unsigned int current_index =
+              this->fe_trace->system_to_block_index(i).first;
+            if (current_index == c_index)
+              on_current_component.push_back(i);
+          }
+        const unsigned int dofs_per_component = on_current_component.size();
+
+        // Again, but for the cell dof handler. Now we need to divide, for
+        // example, the dofs related to V from the ones related to E, so we need
+        // a sub dof handler
+        const Displacement                d      = component2displacement(c);
+        const dealii::ComponentMask       c_mask = this->get_component_mask(c);
+        const dealii::ComponentMask       d_mask = this->get_component_mask(d);
+        const dealii::ComponentMask       total_mask = c_mask | d_mask;
+        const dealii::FiniteElement<dim> &sub_fe =
+          this->fe_cell->get_sub_fe(total_mask.first_selected_component(),
+                                    total_mask.n_selected_components());
+
+        std::vector<unsigned int> on_current_component_cell;
+        for (unsigned int i = 0; i < this->fe_cell->dofs_per_cell; ++i)
+          {
+            const auto position = this->fe_cell->system_to_block_index(i);
+            if (position.first == c_index)
+              {
+                // We are on the component, but we have no idea if we have the
+                // component or its displacement. We need to subdivide more: 0
+                // is the displacement, 1 is the component
+                if (sub_fe.system_to_block_index(position.second).first == 1)
+                  on_current_component_cell.push_back(i);
+              }
+          }
+        const unsigned int dofs_per_component_cell =
+          on_current_component_cell.size();
+
+        // And now we check which trace dofs are on a specific face. In
+        // principle, this would be useful also for the cell, but (for the cell)
+        // we will simply loop on all the dofs (adding a lot of zeros)
+        std::vector<std::vector<unsigned int>> component_support_on_face(
+          faces_per_cell);
+        for (unsigned int face = 0; face < faces_per_cell; ++face)
+          for (unsigned int i = 0; i < dofs_per_component; ++i)
+            {
+              const unsigned int dof_index = on_current_component[i];
+              if (this->fe_trace->has_support_on_face(dof_index, face))
+                component_support_on_face[face].push_back(i);
+            }
+        const unsigned int dofs_per_face_on_component =
+          component_support_on_face[0].size();
+
+        std::vector<double>                          cell_values(n_q_points);
+        std::vector<dealii::types::global_dof_index> cell_dof_indices(
+          this->fe_cell->dofs_per_cell);
+
+        std::vector<double> base_f(dofs_per_face_on_component);
+        std::vector<dealii::types::global_dof_index> trace_dof_indices(
+          this->fe_trace->dofs_per_cell);
+
+        LAPACKFullMatrix<double> local_trace_matrix(dofs_per_face_on_component,
+                                                    dofs_per_face_on_component);
+        Vector<double> local_trace_residual(dofs_per_face_on_component);
+
+        for (const auto &element : face_owners)
+          {
+            const auto &cell_descriptors = element.second;
+
+            // Now we get the value of the cell function on the quadrature point
+            // of the current face. If there are two cells, we will compute the
+            // average
+            std::fill(cell_values.begin(), cell_values.end(), 0);
+
+            for (const auto &cell_desc : cell_descriptors)
+              {
+                unsigned int cell_level = std::get<0>(cell_desc);
+                unsigned int cell_index = std::get<1>(cell_desc);
+                unsigned int face       = std::get<2>(cell_desc);
+
+                typename DoFHandler<dim>::active_cell_iterator cell(
+                  &(*triangulation),
+                  cell_level,
+                  cell_index,
+                  &this->dof_handler_cell);
+                fe_face_values_cell.reinit(cell, face);
+
+                cell->get_dof_indices(cell_dof_indices);
+                for (unsigned int q = 0; q < n_q_points; q++)
+                  for (unsigned int i = 0; i < dofs_per_component_cell; i++)
+                    cell_values[q] +=
+                      this->current_solution_cell
+                        [cell_dof_indices[on_current_component_cell[i]]] *
+                      fe_face_values_cell[c_cell_extractor].value(
+                        on_current_component_cell[i], q);
+              }
+
+            for (unsigned int i = 0; i < n_q_points; i++)
+              cell_values[i] /= cell_descriptors.size();
+
+
+            // Now we have the value of the cell function on the quadrature
+            // points. Now we only work with the trace. We find a cell that
+            // contains the face and we compute the value of the dofs for that
+            // face
+            typename DoFHandler<dim>::active_cell_iterator cell(
+              &(*triangulation),
+              std::get<0>(cell_descriptors[0]),
+              std::get<1>(cell_descriptors[0]),
+              &this->dof_handler_trace);
+
+            const unsigned int face = std::get<2>(cell_descriptors[0]);
+            fe_face_values_trace.reinit(cell, face);
+
+            local_trace_matrix   = 0;
+            local_trace_residual = 0;
+            for (unsigned int q = 0; q < n_q_points; q++)
+              {
+                const double JxW = fe_face_values_trace.JxW(q);
+
+                // We buffer the value of the shape functions
+                for (unsigned int i = 0; i < dofs_per_face_on_component; i++)
+                  {
+                    const unsigned int local_i =
+                      on_current_component[component_support_on_face[face][i]];
+                    base_f[i] =
+                      fe_face_values_trace[c_trace_extractor].value(local_i, q);
+                  }
+
+                for (unsigned int i = 0; i < dofs_per_face_on_component; i++)
+                  {
+                    for (unsigned int j = 0; j < dofs_per_face_on_component;
+                         j++)
+                      local_trace_matrix(i, j) += base_f[i] * base_f[j] * JxW;
+                    local_trace_residual[i] += base_f[i] * cell_values[q] * JxW;
+                  }
+              }
+            local_trace_matrix.compute_lu_factorization();
+            local_trace_matrix.solve(local_trace_residual);
+
+            // Now, in the local_trace_residual we have the right values for the
+            // dofs associated to the current face. As soon as we put them in
+            // the global vector, we are done
+            cell->get_dof_indices(trace_dof_indices);
+            for (unsigned int i = 0; i < dofs_per_face_on_component; i++)
+              {
+                const unsigned int local_i =
+                  on_current_component[component_support_on_face[face][i]];
+                const unsigned int global_i = trace_dof_indices[local_i];
+                this->current_solution_trace[global_i] =
+                  local_trace_residual[i];
+              }
+          }
+      }
+  }
+
+
+
+  template <int dim>
+  void
   NPSolver<dim>::set_multithreading(const bool multithreading)
   {
     this->parameters->multithreading = multithreading;
@@ -1683,10 +1904,19 @@ namespace Ddhdg
     const std::vector<double> &dr_p_n = scratch.dr_p_cell.at(Component::n);
     const std::vector<double> &dr_p_p = scratch.dr_p_cell.at(Component::p);
 
-    const double nv = this->problem->band_density.at(Component::n);
-    const double nc = this->problem->band_density.at(Component::p);
-    const double ev = this->problem->band_edge_energy.at(Component::n);
-    const double ec = this->problem->band_edge_energy.at(Component::p);
+    const double nc = this->problem->band_density.at(Component::n);
+    const double nv = this->problem->band_density.at(Component::p);
+    const double ec =
+      this->problem->band_edge_energy.at(Component::n) * Constants::EV;
+    const double ev =
+      this->problem->band_edge_energy.at(Component::p) * Constants::EV;
+
+    const double V_rescale =
+      this->adimensionalizer
+        ->template get_component_rescaling_factor<Component::V>();
+    const double n_rescale =
+      this->adimensionalizer
+        ->template get_component_rescaling_factor<Component::n>();
 
     double thermodynamic_equilibrium_der = 0.;
 
@@ -1753,9 +1983,11 @@ namespace Ddhdg
             const double KbT        = Constants::KB * scratch.T_cell[q];
             const double q_over_KbT = Constants::Q / KbT;
             thermodynamic_equilibrium_der =
-              -Constants::Q *
-              (nv * q_over_KbT * exp((ev - Constants::Q * V0[q]) / KbT) +
-               nc * q_over_KbT * exp((Constants::Q * V0[q] - ec) / KbT));
+              -Q / n_rescale *
+              (nv * q_over_KbT * V_rescale *
+                 exp((ev - Constants::Q * V0[q] * V_rescale) / KbT) +
+               nc * q_over_KbT * V_rescale *
+                 exp((Constants::Q * V0[q] * V_rescale - ec) / KbT));
           }
 
         for (unsigned int i = 0; i < dofs_per_component; ++i)
@@ -1840,13 +2072,21 @@ namespace Ddhdg
     dealii::Tensor<1, dim> Jn;
     dealii::Tensor<1, dim> Jp;
 
-    const double nv = this->problem->band_density.at(Component::n);
-    const double nc = this->problem->band_density.at(Component::p);
-    const double ev = this->problem->band_edge_energy.at(Component::n);
-    const double ec = this->problem->band_edge_energy.at(Component::p);
+    const double nc = this->problem->band_density.at(Component::n);
+    const double nv = this->problem->band_density.at(Component::p);
+    const double ec =
+      this->problem->band_edge_energy.at(Component::n) * Constants::EV;
+    const double ev =
+      this->problem->band_edge_energy.at(Component::p) * Constants::EV;
 
     double thermodynamic_equilibrium_rhs = 0.;
 
+    const double V_rescale =
+      this->adimensionalizer
+        ->template get_component_rescaling_factor<Component::V>();
+    const double n_rescale =
+      this->adimensionalizer
+        ->template get_component_rescaling_factor<Component::n>();
     const double Q =
       this->adimensionalizer->get_poisson_equation_density_constant();
 
@@ -1876,8 +2116,9 @@ namespace Ddhdg
           {
             const double KbT = Constants::KB * scratch.T_cell[q];
             thermodynamic_equilibrium_rhs =
-              Constants::Q * (nv * exp((ev - Constants::Q * V0[q]) / KbT) -
-                              nc * exp((Constants::Q * V0[q] - ec) / KbT));
+              Q / n_rescale *
+              (nv * exp((ev - Constants::Q * V0[q] * V_rescale) / KbT) -
+               nc * exp((Constants::Q * V0[q] * V_rescale - ec) / KbT));
           }
 
         for (unsigned int i = 0; i < dofs_per_component; ++i)
@@ -1901,7 +2142,7 @@ namespace Ddhdg
                   JxW;
 
                 if (prm::thermodyn_eq)
-                  scratch.cc_rhs[i] += thermodynamic_equilibrium_rhs * z1;
+                  scratch.cc_rhs[i] += thermodynamic_equilibrium_rhs * z1 * JxW;
                 else
                   scratch.cc_rhs[i] += Q * (-n0[q] + p0[q]) * z1 * JxW;
               }
@@ -2582,7 +2823,7 @@ namespace Ddhdg
 
 
   template <int dim>
-  template <Ddhdg::Component c>
+  template <typename prm, Ddhdg::Component c>
   inline void
   NPSolver<dim>::apply_dbc_on_face(
     Ddhdg::NPSolver<dim>::ScratchData &           scratch,
@@ -2613,7 +2854,9 @@ namespace Ddhdg
         const Point<dim> quadrature_point =
           scratch.fe_face_values_trace_restricted.quadrature_point(q);
         const double dbc_value =
-          dbc.evaluate(quadrature_point) / rescaling_factor - tr_c0[q];
+          (prm::thermodyn_eq) ?
+            0 :
+            dbc.evaluate(quadrature_point) / rescaling_factor - tr_c0[q];
 
         for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
           {
@@ -3000,7 +3243,7 @@ namespace Ddhdg
               Component::V) :
             this->problem->boundary_handler->get_dirichlet_conditions_for_id(
               face_boundary_id, c);
-        this->apply_dbc_on_face<c>(scratch, task_data, dbc, face);
+        this->apply_dbc_on_face<prm, c>(scratch, task_data, dbc, face);
       }
     else
       {
@@ -3509,21 +3752,23 @@ namespace Ddhdg
 
     const double doping_threshold =
       this->adimensionalizer->doping_magnitude * 1e-5;
+    const double doping_threshold_square = doping_threshold * doping_threshold;
 
-    const double Nc = this->problem->band_density.at(Component::n);
-    const double Ec = this->problem->band_edge_energy.at(Component::n);
-    const double Nv = this->problem->band_density.at(Component::p);
-    const double Ev = this->problem->band_edge_energy.at(Component::p);
+    constexpr double ev = Ddhdg::Constants::EV;
+    const double     Nc = this->problem->band_density.at(Component::n);
+    const double     Ec = this->problem->band_edge_energy.at(Component::n) * ev;
+    const double     Nv = this->problem->band_density.at(Component::p);
+    const double     Ev = this->problem->band_edge_energy.at(Component::p) * ev;
 
     for (unsigned int i = 0; i < n_of_points; i++)
       {
-        if (evaluated_doping[i] * evaluated_doping[i] <
-            doping_threshold * doping_threshold)
+        if (evaluated_doping[i] * evaluated_doping[i] < doping_threshold_square)
           {
             const double U_T =
               evaluated_temperature[i] * Constants::KB / Constants::Q;
             evaluated_potentials[i] =
-              (Ec + Ev) / (2 * Constants::Q) + U_T / 2 * log(Nv / Nc);
+              ((Ec + Ev) / (2 * Constants::Q) + U_T / 2 * log(Nv / Nc)) /
+              rescale_factor;
           }
         else
           {
@@ -3837,6 +4082,494 @@ namespace Ddhdg
 
 
   template <int dim>
+  void
+  NPSolver<dim>::compute_local_charge_neutrality_copy_solution(
+    const dealii::FiniteElement<dim> &V_fe,
+    const dealii::DoFHandler<dim> &   V_dof_handler,
+    Vector<double> &                  current_solution)
+  {
+    std::vector<dealii::types::global_dof_index> global_indices(
+      V_fe.n_dofs_per_cell());
+    std::vector<dealii::types::global_dof_index> all_system_global_indices(
+      this->fe_cell->n_dofs_per_cell());
+
+    const unsigned int V_index = get_component_index(Component::V);
+
+    const dealii::ComponentMask V_mask = this->get_component_mask(Component::V);
+    const dealii::ComponentMask E_mask =
+      this->get_component_mask(Displacement::E);
+    const dealii::ComponentMask       total_mask = V_mask | E_mask;
+    const dealii::FiniteElement<dim> &all_system_V_fe_system =
+      this->fe_cell->get_sub_fe(total_mask.first_selected_component(),
+                                total_mask.n_selected_components());
+
+    for (const auto &cell : V_dof_handler.active_cell_iterators())
+      {
+        typename DoFHandler<dim>::active_cell_iterator all_system_cell(
+          &(*triangulation), cell->level(), cell->index(), &dof_handler_cell);
+
+        cell->get_dof_indices(global_indices);
+        all_system_cell->get_dof_indices(all_system_global_indices);
+
+        for (unsigned int i = 0; i < this->fe_cell->n_dofs_per_cell(); i++)
+          {
+            const dealii::types::global_dof_index as_gi =
+              all_system_global_indices[i];
+
+            const auto block_position = this->fe_cell->system_to_block_index(i);
+
+            const unsigned int current_block       = block_position.first;
+            const unsigned int current_block_index = block_position.second;
+
+            if (current_block != V_index)
+              continue;
+
+            const auto V_block_position =
+              all_system_V_fe_system.system_to_block_index(current_block_index);
+
+            const unsigned int V_current_block       = V_block_position.first;
+            const unsigned int V_current_block_index = V_block_position.second;
+
+            if (V_current_block != 1)
+              continue;
+
+            current_solution[global_indices[V_current_block_index]] =
+              this->current_solution_cell[as_gi];
+          }
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::compute_local_charge_neutrality_single_cell_residual(
+    ChargeNeutralityScratchData &scratch,
+    const Vector<double> &       V0,
+    Vector<double> &             local_residual)
+  {
+    const unsigned int n_dofs_per_cell = scratch.V_fe.n_dofs_per_cell();
+    const unsigned int n_q_points      = scratch.quadrature_formula.size();
+
+    local_residual = 0.;
+
+    // Update V0_q
+    for (unsigned int q = 0; q < n_q_points; ++q)
+      {
+        scratch.V0_q[q] = 0;
+        for (unsigned int i = 0; i < scratch.V_fe.n_dofs_per_cell(); i++)
+          scratch.V0_q[q] += V0[i] * scratch.fe_values->shape_value(i, q);
+      }
+
+    for (unsigned int q = 0; q < n_q_points; q++)
+      {
+        const double JxW = scratch.fe_values->JxW(q);
+        // Compute the exponents that appears in the function
+        const double exp_n =
+          (scratch.V_rescale * scratch.V0_q[q] * Constants::Q - scratch.Ec) /
+          (Constants::KB * scratch.T[q]);
+
+        const double exp_p =
+          (scratch.Ev - scratch.V_rescale * scratch.V0_q[q] * Constants::Q) /
+          (Constants::KB * scratch.T[q]);
+
+        const double F0 =
+          (scratch.c[q] - scratch.Nc * exp(exp_n) + scratch.Nv * exp(exp_p)) /
+          scratch.c_rescale;
+
+        for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
+          local_residual[i] += -F0 * scratch.fe_values->shape_value(i, q) * JxW;
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::compute_local_charge_neutrality_single_cell_solve_jacobian(
+    ChargeNeutralityScratchData &scratch,
+    const Vector<double> &       V0,
+    const Vector<double> &       local_residual,
+    Vector<double> &             local_update)
+  {
+    const unsigned int n_dofs_per_cell = scratch.V_fe.n_dofs_per_cell();
+    const unsigned int n_q_points      = scratch.quadrature_formula.size();
+
+    AssertDimension(V0.size(), n_dofs_per_cell);
+    AssertDimension(local_residual.size(), n_dofs_per_cell);
+    AssertDimension(local_update.size(), n_dofs_per_cell);
+
+    std::vector<double> &delta_V = scratch.delta_V;
+    std::vector<double> &phi     = scratch.delta_V;
+
+    scratch.jacobian = 0.;
+
+    // Update V0_q
+    for (unsigned int q = 0; q < n_q_points; ++q)
+      {
+        scratch.V0_q[q] = 0;
+        for (unsigned int i = 0; i < scratch.V_fe.n_dofs_per_cell(); i++)
+          scratch.V0_q[q] += V0[i] * scratch.fe_values->shape_value(i, q);
+      }
+
+    for (unsigned int q = 0; q < n_q_points; q++)
+      {
+        const double JxW = scratch.fe_values->JxW(q);
+
+        // Compute the exponents that appears in the function and in the
+        // derivative
+        const double exp_n =
+          (scratch.V_rescale * scratch.V0_q[q] * Constants::Q - scratch.Ec) /
+          (Constants::KB * scratch.T[q]);
+
+        const double exp_p =
+          (scratch.Ev - scratch.V_rescale * scratch.V0_q[q] * Constants::Q) /
+          (Constants::KB * scratch.T[q]);
+
+        const double coeff = (scratch.V_rescale * Constants::Q) /
+                             (Constants::KB * scratch.T[q] * scratch.c_rescale);
+
+        const double dF =
+          -scratch.Nc * coeff * exp(exp_n) - scratch.Nv * coeff * exp(exp_p);
+
+        // Fill delta_V with the values of the shape functions (this also
+        // fills phi)
+        for (unsigned int k = 0; k < n_dofs_per_cell; ++k)
+          delta_V[k] = scratch.fe_values->shape_value(k, q);
+
+        for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
+          for (unsigned int j = 0; j < n_dofs_per_cell; ++j)
+            scratch.jacobian(i, j) += dF * delta_V[j] * phi[i] * JxW;
+      }
+
+    // Copy local residual into local_update, so that the solve method for the
+    // jacobian can work in place
+    for (unsigned int i = 0; i < n_dofs_per_cell; i++)
+      local_update[i] = local_residual[i];
+
+    scratch.jacobian.compute_lu_factorization();
+    scratch.jacobian.solve(local_update);
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::compute_local_charge_neutrality_for_single_cell(
+    const typename DoFHandler<dim>::active_cell_iterator &cell,
+    ChargeNeutralityScratchData &                         scratch,
+    Vector<double> &                                      current_solution)
+  {
+    const unsigned int n_dofs_per_cell = scratch.V_fe.n_dofs_per_cell();
+    const unsigned int n_q_points      = scratch.quadrature_formula.size();
+
+    scratch.jacobian       = 0.;
+    scratch.local_update   = 0.;
+    scratch.local_residual = 0.;
+
+    scratch.fe_values->reinit(cell);
+
+    // Get the global indices of the current cell
+    cell->get_dof_indices(scratch.dof_indices);
+
+    // Get the position of the quadrature points
+    for (unsigned int q = 0; q < n_q_points; ++q)
+      scratch.quadrature_points[q] = scratch.fe_values->quadrature_point(q);
+
+    // Fill V0 with the values of the current function
+    for (unsigned int i = 0; i < n_dofs_per_cell; i++)
+      scratch.V0[i] = current_solution[scratch.dof_indices[i]];
+
+    // The same for V0_q (that is like V0, but on the quadrature points)
+    for (unsigned int q = 0; q < n_q_points; ++q)
+      {
+        scratch.V0_q[q] = 0;
+        for (unsigned int i = 0; i < scratch.V_fe.n_dofs_per_cell(); i++)
+          scratch.V0_q[q] +=
+            scratch.V0[i] * scratch.fe_values->shape_value(i, q);
+      }
+
+    // Compute the temperature
+    this->problem->temperature->value_list(scratch.quadrature_points,
+                                           scratch.T);
+
+    // Compute the doping
+    this->problem->doping->value_list(scratch.quadrature_points, scratch.c);
+
+    this->compute_local_charge_neutrality_single_cell_residual(
+      scratch, scratch.V0, scratch.local_residual);
+
+    constexpr unsigned int MAX_ITERATIONS = 100;
+    constexpr double       TOLERANCE      = 1e-10;
+    unsigned int           iterations     = 0;
+    while (scratch.local_residual.linfty_norm() > TOLERANCE &&
+           iterations < MAX_ITERATIONS)
+      {
+        this->compute_local_charge_neutrality_single_cell_solve_jacobian(
+          scratch, scratch.V0, scratch.local_residual, scratch.local_update);
+        scratch.V0 += scratch.local_update;
+
+        this->compute_local_charge_neutrality_single_cell_residual(
+          scratch, scratch.V0, scratch.local_residual);
+        ++iterations;
+      }
+
+    if (scratch.local_residual.linfty_norm() <= TOLERANCE)
+      {
+        for (unsigned int i = 0; i < n_dofs_per_cell; i++)
+          current_solution[scratch.dof_indices[i]] = scratch.V0[i];
+      }
+    else
+      {
+        AssertThrow(false, MissingConvergenceForChargeNeutrality());
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::compute_local_charge_neutrality_nonlinear_solver(
+    const dealii::FiniteElement<dim> &V_fe,
+    const dealii::DoFHandler<dim> &   V_dof_handler,
+    Vector<double> &                  current_solution)
+  {
+    const QGauss<dim> quadrature_formula(
+      this->get_number_of_quadrature_points());
+
+    const double V_rescale =
+      this->adimensionalizer
+        ->template get_component_rescaling_factor<Component::V>();
+    const double c_rescale =
+      this->adimensionalizer
+        ->template get_component_rescaling_factor<Component::n>();
+
+    constexpr double eV = Constants::EV;
+
+    const double Nc = this->problem->band_density.at(Component::n);
+    const double Nv = this->problem->band_density.at(Component::p);
+    const double Ec = this->problem->band_edge_energy.at(Component::n);
+    const double Ev = this->problem->band_edge_energy.at(Component::p);
+
+    ChargeNeutralityScratchData scratch(V_fe,
+                                        V_dof_handler,
+                                        quadrature_formula,
+                                        V_rescale,
+                                        c_rescale,
+                                        Nc,
+                                        Nv,
+                                        Ec * eV,
+                                        Ev * eV);
+
+    for (const auto &cell : V_dof_handler.active_cell_iterators())
+      {
+        this->compute_local_charge_neutrality_for_single_cell(cell,
+                                                              scratch,
+                                                              current_solution);
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::compute_local_charge_neutrality_set_solution(
+    const dealii::FiniteElement<dim> &V_fe,
+    const dealii::DoFHandler<dim> &   V_dof_handler,
+    Vector<double> &                  current_solution)
+  {
+    const UpdateFlags flags_cell(update_values | update_gradients |
+                                 update_JxW_values | update_quadrature_points);
+    const UpdateFlags flags_face(update_values | update_normal_vectors |
+                                 update_quadrature_points | update_JxW_values);
+    const UpdateFlags V_flags_cell(update_values | update_quadrature_points);
+    const UpdateFlags V_flags_face(update_values | update_quadrature_points);
+
+    const QGauss<dim> quadrature_formula(
+      this->get_number_of_quadrature_points());
+    const QGauss<dim - 1> face_quadrature_formula(
+      this->get_number_of_quadrature_points());
+
+    FEValues<dim>     fe_values_cell(*(this->fe_cell),
+                                 quadrature_formula,
+                                 flags_cell);
+    FEFaceValues<dim> fe_face_values(*(this->fe_cell),
+                                     face_quadrature_formula,
+                                     flags_face);
+    FEValues<dim>     V_fe_values(V_fe, quadrature_formula, V_flags_cell);
+    FEFaceValues<dim> V_fe_face_values(V_fe,
+                                       face_quadrature_formula,
+                                       V_flags_face);
+
+    const unsigned int n_q_points      = fe_values_cell.get_quadrature().size();
+    const unsigned int n_face_q_points = fe_face_values.get_quadrature().size();
+
+    // Now we need to map the dofs that are related to the component V
+    const unsigned int        V_index = get_component_index(Component::V);
+    std::vector<unsigned int> on_current_component;
+    for (unsigned int i = 0; i < this->fe_cell->dofs_per_cell; ++i)
+      {
+        const unsigned int current_index =
+          this->fe_cell->system_to_block_index(i).first;
+        if (current_index == V_index)
+          on_current_component.push_back(i);
+      }
+    const unsigned int dofs_per_component = on_current_component.size();
+
+    std::vector<std::vector<unsigned int>> component_support_on_face(
+      GeometryInfo<dim>::faces_per_cell);
+    for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
+         ++face)
+      for (unsigned int i = 0; i < dofs_per_component; ++i)
+        {
+          const unsigned int dof_index = on_current_component[i];
+          if (this->fe_cell->has_support_on_face(dof_index, face))
+            component_support_on_face[face].push_back(i);
+        }
+    const unsigned int dofs_per_face_on_component =
+      component_support_on_face[0].size();
+
+    const FEValuesExtractors::Vector E_extractor =
+      this->get_displacement_extractor(Displacement::E);
+    const FEValuesExtractors::Scalar V_extractor =
+      this->get_component_extractor(Component::V);
+
+    LAPACKFullMatrix<double> local_matrix(dofs_per_component,
+                                          dofs_per_component);
+    Vector<double>           local_residual(dofs_per_component);
+    Vector<double>           local_values(fe_values_cell.dofs_per_cell);
+
+    // Temporary buffers for the values of the local base function on a
+    // quadrature point
+    std::vector<double>         V_bf(dofs_per_component);
+    std::vector<Tensor<1, dim>> E_bf(dofs_per_component);
+    std::vector<double>         E_div_bf(dofs_per_component);
+
+    std::vector<double> charge_neutrality_values(n_q_points);
+    std::vector<double> charge_neutrality_values_face(n_face_q_points);
+
+    for (const auto &cell : this->dof_handler_cell.active_cell_iterators())
+      {
+        local_matrix   = 0.;
+        local_residual = 0.;
+
+        fe_values_cell.reinit(cell);
+
+        typename DoFHandler<dim>::active_cell_iterator V_cell(&(*triangulation),
+                                                              cell->level(),
+                                                              cell->index(),
+                                                              &V_dof_handler);
+        V_fe_values.reinit(V_cell);
+
+        // Get the values of the charge neutrality for this cell
+        V_fe_values.get_function_values(current_solution,
+                                        charge_neutrality_values);
+
+        for (unsigned int q = 0; q < n_q_points; ++q)
+          {
+            // Copy data of the shape function
+            for (unsigned int k = 0; k < dofs_per_component; ++k)
+              {
+                const unsigned int i = on_current_component[k];
+                V_bf[k]              = fe_values_cell[V_extractor].value(i, q);
+                E_bf[k]              = fe_values_cell[E_extractor].value(i, q);
+                E_div_bf[k] = fe_values_cell[E_extractor].divergence(i, q);
+              }
+
+            const double JxW = fe_values_cell.JxW(q);
+
+            for (unsigned int i = 0; i < dofs_per_component; ++i)
+              {
+                for (unsigned int j = 0; j < dofs_per_component; ++j)
+                  {
+                    local_matrix(i, j) +=
+                      (V_bf[j] * V_bf[i] + E_bf[i] * E_bf[j]) * JxW;
+                  }
+                local_residual[i] +=
+                  (charge_neutrality_values[q] * (V_bf[i] + E_div_bf[i])) * JxW;
+              }
+          }
+        for (unsigned int face_number = 0;
+             face_number < GeometryInfo<dim>::faces_per_cell;
+             ++face_number)
+          {
+            fe_face_values.reinit(cell, face_number);
+            V_fe_face_values.reinit(V_cell, face_number);
+
+            V_fe_face_values.get_function_values(current_solution,
+                                                 charge_neutrality_values_face);
+
+            for (unsigned int q = 0; q < n_face_q_points; ++q)
+              {
+                const double JxW    = fe_face_values.JxW(q);
+                const auto   normal = fe_face_values.normal_vector(q);
+
+                for (unsigned int k = 0; k < dofs_per_face_on_component; ++k)
+                  {
+                    const auto kk  = component_support_on_face[face_number][k];
+                    const auto kkk = on_current_component[kk];
+                    const auto f_bf_face =
+                      fe_face_values[E_extractor].value(kkk, q);
+                    local_residual[kk] += (-charge_neutrality_values_face[q] *
+                                           (f_bf_face * normal)) *
+                                          JxW;
+                  }
+              }
+          }
+        local_matrix.compute_lu_factorization();
+        local_matrix.solve(local_residual);
+
+        cell->get_dof_values(this->current_solution_cell, local_values);
+        for (unsigned int i = 0; i < dofs_per_component; i++)
+          local_values[on_current_component[i]] = local_residual[i];
+        cell->set_dof_values(local_values, this->current_solution_cell);
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::compute_local_charge_neutrality()
+  {
+    const dealii::ComponentMask V_component_mask =
+      this->get_component_mask(Component::V);
+
+    const unsigned int fsc = V_component_mask.first_selected_component();
+    const unsigned int nsc = V_component_mask.n_selected_components();
+
+    const dealii::FiniteElement<dim> &V_fe =
+      this->fe_cell->get_sub_fe(fsc, nsc);
+
+    dealii::DoFHandler<dim> V_dof_handler(*(this->triangulation));
+    V_dof_handler.distribute_dofs(V_fe);
+
+    Vector<double> current_solution(V_dof_handler.n_dofs());
+
+    // Copy the current solution (which has all the components) to a smaller
+    // system only in V
+    this->compute_local_charge_neutrality_copy_solution(V_fe,
+                                                        V_dof_handler,
+                                                        current_solution);
+
+    // Solve the problem of the local charge neutrality using Newton
+    this->compute_local_charge_neutrality_nonlinear_solver(V_fe,
+                                                           V_dof_handler,
+                                                           current_solution);
+
+    // Copy back the local charge neutrality function in the overall system
+    this->compute_local_charge_neutrality_set_solution(V_fe,
+                                                       V_dof_handler,
+                                                       current_solution);
+
+    // So far we have fixed only the cell values. Now we copy the values for the
+    // cells on the trace
+    this->project_cell_function_on_trace();
+  }
+
+
+
+  template <int dim>
   NonlinearIterationResults
   NPSolver<dim>::compute_thermodynamic_equilibrium(
     const double absolute_tol,
@@ -3856,6 +4589,20 @@ namespace Ddhdg
 
     this->set_local_charge_neutrality_first_guess();
 
+    this->compute_local_charge_neutrality();
+
+    std::vector<Component> dof_to_component_map(
+      this->dof_handler_cell.n_dofs());
+    std::vector<DofType> dof_to_dof_type(this->dof_handler_cell.n_dofs());
+    this->generate_dof_to_component_map(dof_to_component_map,
+                                        dof_to_dof_type,
+                                        false);
+
+    for (unsigned int i = 0; i < this->dof_handler_cell.n_dofs(); i++)
+      if (dof_to_component_map[i] == Component::V)
+        if (dof_to_dof_type[i] == DofType::DISPLACEMENT)
+          this->current_solution_cell[i] = 0;
+
     NonlinearIterationResults iterations = this->private_run(
       absolute_tol, relative_tol, max_number_of_iterations, true);
 
@@ -3863,7 +4610,7 @@ namespace Ddhdg
                                  current_active_components[Component::n],
                                  current_active_components[Component::p]);
 
-      return iterations;
+    return iterations;
   }
 
 
@@ -4314,7 +5061,6 @@ namespace Ddhdg
 
     data_out.add_data_vector(this->dof_handler_cell,
                              rescaled_solution,
-                             // rescaled_solution,
                              names,
                              component_interpretation);
 
@@ -4334,7 +5080,7 @@ namespace Ddhdg
       }
 
     data_out.build_patches(StaticMappingQ1<dim>::mapping,
-                           fe_trace_restricted->degree,
+                           this->fe_cell->degree,
                            DataOut<dim>::curved_inner_cells);
     data_out.write_vtk(output);
   }
