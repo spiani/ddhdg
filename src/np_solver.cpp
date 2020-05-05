@@ -4591,18 +4591,6 @@ namespace Ddhdg
 
     this->compute_local_charge_neutrality();
 
-    std::vector<Component> dof_to_component_map(
-      this->dof_handler_cell.n_dofs());
-    std::vector<DofType> dof_to_dof_type(this->dof_handler_cell.n_dofs());
-    this->generate_dof_to_component_map(dof_to_component_map,
-                                        dof_to_dof_type,
-                                        false);
-
-    for (unsigned int i = 0; i < this->dof_handler_cell.n_dofs(); i++)
-      if (dof_to_component_map[i] == Component::V)
-        if (dof_to_dof_type[i] == DofType::DISPLACEMENT)
-          this->current_solution_cell[i] = 0;
-
     NonlinearIterationResults iterations = this->private_run(
       absolute_tol, relative_tol, max_number_of_iterations, true);
 
