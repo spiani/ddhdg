@@ -5013,9 +5013,13 @@ namespace Ddhdg
   {
     std::ofstream output(solution_filename);
     DataOut<dim>  data_out;
-    // DataOutBase::VtkFlags flags;
-    // flags.write_higher_order_cells = true;
-    // data_out.set_flags(flags);
+
+    if (dim > 1)
+      {
+        DataOutBase::VtkFlags flags;
+        flags.write_higher_order_cells = true;
+        data_out.set_flags(flags);
+      }
 
     const std::set<Component> components      = all_components();
     const unsigned int        n_of_components = components.size();
