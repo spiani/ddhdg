@@ -1,6 +1,7 @@
 set(_target tests)
 
 set(_test_files
+        adimensionalizer.cpp
         disabling_components.cpp
         set_component.cpp
         linear_potential.cpp

@@ -224,7 +224,7 @@ namespace Ddhdg
     for (unsigned int i = 0; i < dof_vector.size(); i++)
       {
         if (dof_to_dof_type[i] == DofType::DISPLACEMENT)
-          gradient_rescale = this->domain_size;
+          gradient_rescale = this->scale_length;
         else
           gradient_rescale = 1.;
 
@@ -265,24 +265,30 @@ namespace Ddhdg
     const double p_rescale =
       this->get_component_rescaling_factor<Component::p>();
 
-    double gradient_rescale;
     for (unsigned int i = 0; i < dof_vector.size(); i++)
       {
-        if (dof_to_dof_type[i] == DofType::DISPLACEMENT)
-          gradient_rescale = this->domain_size;
-        else
-          gradient_rescale = 1.;
-
         switch (dof_to_component_map[i])
           {
             case Component::V:
-              rescaled_vector[i] = dof_vector[i] * V_rescale / gradient_rescale;
+              if (dof_to_dof_type[i] == DofType::DISPLACEMENT)
+                rescaled_vector[i] =
+                  dof_vector[i] * V_rescale / this->scale_length;
+              else
+                rescaled_vector[i] = dof_vector[i] * V_rescale;
               break;
             case Component::n:
-              rescaled_vector[i] = dof_vector[i] * n_rescale / gradient_rescale;
+              if (dof_to_dof_type[i] == DofType::DISPLACEMENT)
+                rescaled_vector[i] =
+                  dof_vector[i] * n_rescale / this->scale_length;
+              else
+                rescaled_vector[i] = dof_vector[i] * n_rescale;
               break;
             case Component::p:
-              rescaled_vector[i] = dof_vector[i] * p_rescale / gradient_rescale;
+              if (dof_to_dof_type[i] == DofType::DISPLACEMENT)
+                rescaled_vector[i] =
+                  dof_vector[i] * p_rescale / this->scale_length;
+              else
+                rescaled_vector[i] = dof_vector[i] * p_rescale;
               break;
             default:
               Assert(false, InvalidComponent());

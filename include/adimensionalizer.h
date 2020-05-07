@@ -52,7 +52,7 @@ namespace Ddhdg
       // Using this value, you do not rescale the drift-diffusion equations
       // return Constants::KB * this->temperature_magnitude *
       //        this->electron_mobility_magnitude * this->doping_magnitude /
-      //        (this->domain_size * Constants::Q) * 1000;
+      //        (this->scale_length * Constants::Q) * 1000;
       return 1.;
     }
 
@@ -69,7 +69,7 @@ namespace Ddhdg
                                  this->temperature_magnitude *
                                  this->electron_mobility_magnitude;
               const double den =
-                this->domain_size * this->get_current_equation_constant();
+                this->scale_length * this->get_current_equation_constant();
               return num / den;
             }
             case Component::p: {
@@ -77,7 +77,7 @@ namespace Ddhdg
                                  this->temperature_magnitude *
                                  this->electron_mobility_magnitude;
               const double den =
-                this->domain_size * this->get_current_equation_constant();
+                this->scale_length * this->get_current_equation_constant();
               return num / den;
             }
           default:
@@ -155,8 +155,8 @@ namespace Ddhdg
     {
       const double den = this->temperature_magnitude * Constants::KB *
                          this->get_poisson_equation_density_constant();
-      const double num = this->domain_size * this->domain_size * Constants::Q *
-                         Constants::Q * this->doping_magnitude;
+      const double num = this->scale_length * this->scale_length *
+                         Constants::Q * Constants::Q * this->doping_magnitude;
 
       return num / den;
     }
@@ -217,7 +217,7 @@ namespace Ddhdg
                          this->temperature_magnitude *
                          this->electron_mobility_magnitude;
       const double den =
-        this->domain_size * this->get_current_equation_constant();
+        this->scale_length * this->get_current_equation_constant();
       return num / den;
     }
 
@@ -226,9 +226,6 @@ namespace Ddhdg
                                        std::vector<double> &dr_n,
                                        std::vector<double> &dr_p) const;
 
-
-
-    const double domain_size = 1;
     const double scale_length;
     const double temperature_magnitude;
     const double doping_magnitude;
