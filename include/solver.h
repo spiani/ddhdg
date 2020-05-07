@@ -156,6 +156,13 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const = 0;
 
+    virtual double
+    get_solution_on_a_point(const dealii::Point<dim> &p, Component c) const = 0;
+
+    virtual dealii::Vector<double>
+    get_solution_on_a_point(const dealii::Point<dim> &p,
+                            Displacement              d) const = 0;
+
     virtual void
     output_results(const std::string &solution_filename,
                    bool               save_update) const = 0;

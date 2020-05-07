@@ -4,8 +4,8 @@
 
 namespace Ddhdg::Constants
 {
-  const double PI = M_PI;
-  const double E  = std::exp(1.0);
+  constexpr double PI = M_PI;
+  const double     E  = std::exp(1.0);
 
   constexpr double EPSILON0 = 8.85418781762E-12;
   constexpr double Q        = 1.602176634E-19;

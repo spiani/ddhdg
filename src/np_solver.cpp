@@ -16,6 +16,7 @@
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/data_out_faces.h>
+#include <deal.II/numerics/fe_field_function.h>
 #include <deal.II/numerics/matrix_tools.h>
 #include <deal.II/numerics/vector_tools.h>
 
@@ -4990,6 +4991,58 @@ namespace Ddhdg
     return this->estimate_error_on_trace(expected_solution,
                                          c,
                                          dealii::VectorTools::Linfty_norm);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::get_solution_on_a_point(const dealii::Point<dim> &p,
+                                         const Component           c) const
+  {
+    Assert(this->initialized, dealii::ExcNotInitialized());
+
+    dealii::Functions::FEFieldFunction<dim> fe_field_function(
+      this->dof_handler_cell, this->current_solution_cell);
+
+    const unsigned int c_index          = get_component_index(c);
+    const unsigned int dealii_component = (dim + 1) * c_index + dim;
+    const double       rescaling_factor =
+      this->adimensionalizer->get_component_rescaling_factor(c);
+
+    return fe_field_function.value(p, dealii_component) * rescaling_factor;
+  }
+
+
+
+  template <int dim>
+  dealii::Vector<double>
+  NPSolver<dim>::get_solution_on_a_point(const dealii::Point<dim> &p,
+                                         const Displacement        d) const
+  {
+    Assert(this->initialized, dealii::ExcNotInitialized());
+
+    dealii::Functions::FEFieldFunction<dim> fe_field_function(
+      this->dof_handler_cell, this->current_solution_cell);
+
+    const Component    c                = displacement2component(d);
+    const unsigned int c_index          = get_component_index(c);
+    const unsigned int dealii_component = (dim + 1) * c_index;
+    const unsigned int n_of_components  = all_components().size();
+    const double       rescaling_factor =
+      this->adimensionalizer->get_component_rescaling_factor(c);
+
+    dealii::Vector<double> all_values((dim + 1) * n_of_components);
+    dealii::Vector<double> component_values(dim);
+
+    fe_field_function.vector_value(p, all_values);
+
+    for (unsigned int i = 0; i < dim; i++)
+      component_values[i] = all_values[dealii_component + i] *
+                            rescaling_factor /
+                            this->adimensionalizer->scale_length;
+
+    return component_values;
   }
 
 
