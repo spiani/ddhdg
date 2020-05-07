@@ -600,6 +600,17 @@ namespace pyddhdg
   }
 
 
+
+  template <int dim>
+  double
+  NPSolver<dim>::get_solution_on_a_point(const dealii::Point<dim> p,
+                                         const Ddhdg::Component   c) const
+  {
+    return this->ddhdg_solver->get_solution_on_a_point(p, c);
+  }
+
+
+
   template <int dim>
   void
   NPSolver<dim>::output_results(const std::string &solution_filename,

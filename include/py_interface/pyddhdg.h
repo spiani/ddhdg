@@ -272,6 +272,9 @@ namespace pyddhdg
     estimate_linfty_error_on_trace(const std::string &expected_solution,
                                    Ddhdg::Component   c) const;
 
+    [[nodiscard]] double
+    get_solution_on_a_point(dealii::Point<dim> p, Ddhdg::Component c) const;
+
     void
     output_results(const std::string &solution_filename,
                    bool               save_update = false) const;

@@ -257,6 +257,10 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        &NPSolver<DIM>::estimate_linfty_error_on_trace,
        py::arg("expected_solution"),
        py::arg("component"))
+  .def("get_solution_on_a_point",
+       &NPSolver<DIM>::get_solution_on_a_point,
+       py::arg("point"),
+       py::arg("component"))
   .def("output_results",
        py::overload_cast<const std::string &, const bool>(
          &NPSolver<DIM>::output_results,
