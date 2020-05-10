@@ -3389,39 +3389,19 @@ namespace Ddhdg
         std::map<Ddhdg::Component, bool> has_neumann_conditions;
 
         // Now we populate the previous maps
-        if (prm::thermodyn_eq)
-          {
-            if (cell->face(face)->at_boundary())
-              {
-                has_dirichlet_conditions.insert({Component::V, true});
-                has_dirichlet_conditions.insert({Component::n, false});
-                has_dirichlet_conditions.insert({Component::p, false});
 
-                has_neumann_conditions.insert({Component::V, false});
-                has_neumann_conditions.insert({Component::n, true});
-                has_neumann_conditions.insert({Component::p, true});
-              }
-            else
-              for (const auto c : all_components())
-                {
-                  has_dirichlet_conditions.insert({c, false});
-                  has_neumann_conditions.insert({c, false});
-                }
-          }
-        else
+        for (const auto c : this->enabled_components)
           {
-            for (const auto c : this->enabled_components)
-              {
-                has_dirichlet_conditions.insert(
-                  {c,
-                   this->problem->boundary_handler
-                     ->has_dirichlet_boundary_conditions(face_boundary_id, c)});
-                has_neumann_conditions.insert(
-                  {c,
-                   this->problem->boundary_handler
-                     ->has_neumann_boundary_conditions(face_boundary_id, c)});
-              }
+            has_dirichlet_conditions.insert(
+              {c,
+               this->problem->boundary_handler
+                 ->has_dirichlet_boundary_conditions(face_boundary_id, c)});
+            has_neumann_conditions.insert(
+              {c,
+               this->problem->boundary_handler->has_neumann_boundary_conditions(
+                 face_boundary_id, c)});
           }
+
 
         // Before assembling the other parts of the matrix, we need the values
         // of epsilon, mu and D_n on the quadrature points of the current
