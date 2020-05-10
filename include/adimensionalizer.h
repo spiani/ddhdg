@@ -226,6 +226,13 @@ namespace Ddhdg
                                        std::vector<double> &dr_n,
                                        std::vector<double> &dr_p) const;
 
+    template <Component c>
+    [[nodiscard]] inline double
+    adimensionalize_tau(const double tau) const
+    {
+      return tau * this->scale_length;
+    }
+
     const double scale_length;
     const double temperature_magnitude;
     const double doping_magnitude;

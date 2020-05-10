@@ -2357,19 +2357,25 @@ namespace Ddhdg
 
         if (prm::is_V_enabled)
           V_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::V>(V_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::V>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::V>(V_tau),
+              normal,
+              q);
         if (prm::is_n_enabled)
           n_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::n>(n_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::n>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::n>(n_tau),
+              normal,
+              q);
         if (prm::is_p_enabled)
           p_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::p>(p_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::p>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::p>(p_tau),
+              normal,
+              q);
 
         for (unsigned int i = 0; i < cell_dofs_on_face; ++i)
           {
@@ -2447,19 +2453,25 @@ namespace Ddhdg
 
         if (prm::is_V_enabled)
           V_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::V>(V_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::V>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::V>(V_tau),
+              normal,
+              q);
         if (prm::is_n_enabled)
           n_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::n>(n_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::n>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::n>(n_tau),
+              normal,
+              q);
         if (prm::is_p_enabled)
           p_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::p>(p_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::p>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::p>(p_tau),
+              normal,
+              q);
 
         for (unsigned int i = 0;
              i < scratch.fe_cell_support_on_face[face].size();
@@ -2566,7 +2578,10 @@ namespace Ddhdg
           }
 
         const double tau_stabilized =
-          scratch.template compute_stabilized_tau<c>(tau, normal, q);
+          scratch.template compute_stabilized_tau<c>(
+            this->adimensionalizer->template adimensionalize_tau<c>(tau),
+            normal,
+            q);
 
         const unsigned int trace_dofs_per_face =
           scratch.fe_trace_support_on_face[face].size();
@@ -2686,7 +2701,10 @@ namespace Ddhdg
           }
 
         const double tau_stabilized =
-          scratch.template compute_stabilized_tau<c>(tau, normal, q);
+          scratch.template compute_stabilized_tau<c>(
+            this->adimensionalizer->template adimensionalize_tau<c>(tau),
+            normal,
+            q);
 
         for (unsigned int i = 0;
              i < scratch.fe_trace_support_on_face[face].size();
@@ -2757,7 +2775,10 @@ namespace Ddhdg
           scratch.fe_face_values_trace_restricted.normal_vector(q);
 
         const double tau_stabilized =
-          scratch.template compute_stabilized_tau<c>(tau, normal, q);
+          scratch.template compute_stabilized_tau<c>(
+            this->adimensionalizer->template adimensionalize_tau<c>(tau),
+            normal,
+            q);
 
         // Integrals of trace functions (both test and trial)
         for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
@@ -2807,7 +2828,10 @@ namespace Ddhdg
           scratch.fe_face_values_trace_restricted.normal_vector(q);
 
         const double tau_stabilized =
-          scratch.template compute_stabilized_tau<c>(tau, normal, q);
+          scratch.template compute_stabilized_tau<c>(
+            this->adimensionalizer->template adimensionalize_tau<c>(tau),
+            normal,
+            q);
 
         for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
           {
@@ -2986,19 +3010,25 @@ namespace Ddhdg
 
         if (prm::is_V_enabled)
           V_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::V>(V_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::V>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::V>(V_tau),
+              normal,
+              q);
         if (prm::is_n_enabled)
           n_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::n>(n_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::n>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::n>(n_tau),
+              normal,
+              q);
         if (prm::is_p_enabled)
           p_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::p>(p_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::p>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::p>(p_tau),
+              normal,
+              q);
 
         for (unsigned int i = 0; i < cell_dofs_per_face; ++i)
           {
@@ -3108,19 +3138,25 @@ namespace Ddhdg
 
         if (prm::is_V_enabled)
           V_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::V>(V_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::V>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::V>(V_tau),
+              normal,
+              q);
         if (prm::is_n_enabled)
           n_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::n>(n_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::n>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::n>(n_tau),
+              normal,
+              q);
         if (prm::is_p_enabled)
           p_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::p>(p_tau,
-                                                                  normal,
-                                                                  q);
+            scratch.template compute_stabilized_tau<Component::p>(
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::p>(p_tau),
+              normal,
+              q);
 
         for (unsigned int i = 0;
              i < scratch.fe_cell_support_on_face[face].size();
@@ -3191,17 +3227,26 @@ namespace Ddhdg
                 case Component::V:
                   tau_stabilized =
                     scratch.template compute_stabilized_tau<Component::V>(
-                      tau, normal, q);
+                      this->adimensionalizer
+                        ->template adimensionalize_tau<Component::V>(tau),
+                      normal,
+                      q);
                   break;
                 case Component::n:
                   tau_stabilized =
                     scratch.template compute_stabilized_tau<Component::n>(
-                      tau, normal, q);
+                      this->adimensionalizer
+                        ->template adimensionalize_tau<Component::n>(tau),
+                      normal,
+                      q);
                   break;
                 case Component::p:
                   tau_stabilized =
                     scratch.template compute_stabilized_tau<Component::p>(
-                      tau, normal, q);
+                      this->adimensionalizer
+                        ->template adimensionalize_tau<Component::p>(tau),
+                      normal,
+                      q);
                   break;
                 default:
                   Assert(false, InvalidComponent());
