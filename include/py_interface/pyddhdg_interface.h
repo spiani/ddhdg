@@ -3,13 +3,13 @@ m.attr("CONSTANT_Q")    = py::float_(Ddhdg::Constants::Q);
 m.attr("CONSTANT_KB")   = py::float_(Ddhdg::Constants::KB);
 m.attr("CONSTANT_EPS0") = py::float_(Ddhdg::Constants::EPSILON0);
 
-py::enum_<Ddhdg::Component>(m, "Component")
+py::enum_<Ddhdg::Component>(m, "Component", py::module_local())
   .value("v", Ddhdg::Component::V)
   .value("n", Ddhdg::Component::n)
   .value("p", Ddhdg::Component::p)
   .export_values();
 
-py::enum_<Ddhdg::Displacement>(m, "Displacement")
+py::enum_<Ddhdg::Displacement>(m, "Displacement", py::module_local())
   .value("e", Ddhdg::Displacement::E)
   .value("wn", Ddhdg::Displacement::Wn)
   .value("wp", Ddhdg::Displacement::Wp)
@@ -58,7 +58,9 @@ py::class_<LinearRecombinationTerm<DIM>, RecombinationTerm<DIM>>(
   .def("get_p_linear_coefficient",
        &LinearRecombinationTerm<DIM>::get_p_linear_coefficient);
 
-py::enum_<Ddhdg::BoundaryConditionType>(m, "BoundaryConditionType")
+py::enum_<Ddhdg::BoundaryConditionType>(m,
+                                        "BoundaryConditionType",
+                                        py::module_local())
   .value("DIRICHLET", Ddhdg::BoundaryConditionType::dirichlet)
   .value("NEUMANN", Ddhdg::BoundaryConditionType::neumann)
   .value("ROBIN", Ddhdg::BoundaryConditionType::robin)
@@ -105,7 +107,9 @@ py::class_<Problem<DIM>>(m, "Problem")
        py::arg("conduction_band_edge_energy") = 0,
        py::arg("valence_band_edge_energy")    = 0);
 
-py::class_<Ddhdg::NPSolverParameters>(m, "NPSolverParameters")
+py::class_<Ddhdg::NPSolverParameters>(m,
+                                      "NPSolverParameters",
+                                      py::module_local())
   .def(py::init<const unsigned int,
                 const unsigned int,
                 const unsigned int,
@@ -162,7 +166,7 @@ py::class_<Ddhdg::NPSolverParameters>(m, "NPSolverParameters")
     return a.tau.at(Ddhdg::Component::p);
   });
 
-py::class_<Ddhdg::Adimensionalizer>(m, "Adimensionalizer")
+py::class_<Ddhdg::Adimensionalizer>(m, "Adimensionalizer", py::module_local())
   .def(py::init<double, double, double, double>(),
        py::arg("scale_length")                = 1.,
        py::arg("temperature_magnitude")       = 1.,
@@ -175,7 +179,9 @@ py::class_<Ddhdg::Adimensionalizer>(m, "Adimensionalizer")
   .def_readonly("electron_mobility_magnitude",
                 &Ddhdg::Adimensionalizer::electron_mobility_magnitude);
 
-py::class_<Ddhdg::NonlinearIterationResults>(m, "NonlinearIterationResults")
+py::class_<Ddhdg::NonlinearIterationResults>(m,
+                                             "NonlinearIterationResults",
+                                             py::module_local())
   .def(py::init<const bool, const unsigned int, const double>())
   .def_readonly("converged", &Ddhdg::NonlinearIterationResults::converged)
   .def_readonly("iterations", &Ddhdg::NonlinearIterationResults::iterations)
