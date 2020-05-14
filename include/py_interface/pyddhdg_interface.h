@@ -186,7 +186,11 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
   .def(py::init<const Problem<DIM> &,
                 const Ddhdg::NPSolverParameters &,
                 const Ddhdg::Adimensionalizer &>())
+  .def_property_readonly("dim", [](const NPSolver<DIM> &) { return DIM; })
+  .def_property_readonly("dimension", [](const NPSolver<DIM> &) { return DIM; })
   .def("refine_grid", &NPSolver<DIM>::refine_grid, py::arg("n") = 1)
+  .def_property_readonly("n_of_triangulation_levels",
+                         &NPSolver<DIM>::n_of_triangulation_levels)
   .def("set_component",
        &NPSolver<DIM>::set_component,
        py::arg("component"),

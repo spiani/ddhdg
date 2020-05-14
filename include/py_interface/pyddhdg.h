@@ -208,6 +208,9 @@ namespace pyddhdg
     void
     refine_grid(unsigned int i = 1);
 
+    [[nodiscard]] unsigned int
+    n_of_triangulation_levels() const;
+
     void
     set_component(Ddhdg::Component   c,
                   const std::string &f,

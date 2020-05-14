@@ -353,6 +353,14 @@ namespace pyddhdg
   }
 
 
+  template <int dim>
+  unsigned int
+  NPSolver<dim>::n_of_triangulation_levels() const
+  {
+    return this->ddhdg_solver->n_of_triangulation_levels();
+  }
+
+
 
   template <int dim>
   void

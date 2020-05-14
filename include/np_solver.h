@@ -60,6 +60,12 @@ namespace Ddhdg
     void
     refine_grid(unsigned int i) override;
 
+    [[nodiscard]] unsigned int
+    n_of_triangulation_levels() const
+    {
+      return this->triangulation->n_levels();
+    }
+
     void
     interpolate_component(
       Component                                    c,
