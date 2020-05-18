@@ -324,7 +324,17 @@ namespace pyddhdg
     std::shared_ptr<dealii::Triangulation<dim>> triangulation =
       std::make_shared<dealii::Triangulation<dim>>();
 
-    dealii::GridGenerator::hyper_cube(*triangulation, left, right, true);
+    dealii::Point<dim>        p1, p2;
+    std::vector<unsigned int> subdivisions(dim);
+    for (unsigned int i = 0; i < dim; ++i)
+      {
+        p1[i]           = left;
+        p2[i]           = right;
+        subdivisions[i] = 1;
+      }
+
+    dealii::GridGenerator::subdivided_hyper_rectangle(
+      *triangulation, subdivisions, p1, p2, true);
 
     return triangulation;
   }
