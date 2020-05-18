@@ -17,9 +17,8 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Triangulation<dim>>    triangulation,
       std::shared_ptr<const Permittivity<dim>>             permittivity,
       std::shared_ptr<const ElectronMobility<dim>>         n_electron_mobility,
-      std::shared_ptr<const RecombinationTerm<dim>>        n_recombination_term,
       std::shared_ptr<const ElectronMobility<dim>>         p_electron_mobility,
-      std::shared_ptr<const RecombinationTerm<dim>>        p_recombination_term,
+      std::shared_ptr<const RecombinationTerm<dim>>        recombination_term,
       std::shared_ptr<const dealii::Function<dim>>         temperature,
       std::shared_ptr<const dealii::Function<dim>>         doping,
       std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler,
@@ -32,11 +31,10 @@ namespace Ddhdg
     const std::shared_ptr<const dealii::Triangulation<dim>> triangulation;
     const std::shared_ptr<const Permittivity<dim>>          permittivity;
     const std::shared_ptr<const ElectronMobility<dim>>      n_electron_mobility;
-    const std::shared_ptr<const RecombinationTerm<dim>> n_recombination_term;
-    const std::shared_ptr<const ElectronMobility<dim>>  p_electron_mobility;
-    const std::shared_ptr<const RecombinationTerm<dim>> p_recombination_term;
-    const std::shared_ptr<const dealii::Function<dim>>  temperature;
-    const std::shared_ptr<const dealii::Function<dim>>  doping;
+    const std::shared_ptr<const ElectronMobility<dim>>      p_electron_mobility;
+    const std::shared_ptr<const RecombinationTerm<dim>>     recombination_term;
+    const std::shared_ptr<const dealii::Function<dim>>      temperature;
+    const std::shared_ptr<const dealii::Function<dim>>      doping;
     const std::shared_ptr<const BoundaryConditionHandler<dim>> boundary_handler;
 
     const std::map<Component, double> band_density;

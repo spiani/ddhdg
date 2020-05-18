@@ -16,7 +16,6 @@ public:
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(
           Ddhdg::Constants::Q),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
-        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         std::make_shared<dealii::Functions::ConstantFunction<dim>>(

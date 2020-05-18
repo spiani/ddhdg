@@ -563,10 +563,8 @@ namespace Ddhdg
     std::vector<double>                              U_T_cell;
     std::vector<double>                              U_T_face;
     std::vector<double>                              doping_cell;
-    std::vector<double>                              r_n_cell;
-    std::vector<double>                              r_p_cell;
-    std::map<Component, std::vector<double>>         dr_n_cell;
-    std::map<Component, std::vector<double>>         dr_p_cell;
+    std::vector<double>                              r_cell;
+    std::map<Component, std::vector<double>>         dr_cell;
     std::map<Component, std::vector<double>>         previous_c_cell;
     std::map<Component, std::vector<double>>         previous_c_face;
     std::map<Component, std::vector<Tensor<1, dim>>> previous_d_cell;

@@ -99,7 +99,6 @@ protected:
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(
           12.9 * Ddhdg::Constants::EPSILON0),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
-        std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         get_temperature(),
@@ -119,7 +118,7 @@ TEST_F(ThermodynamicEquilibriumTest,
        compute_thermodynamic_equilibrium) // NOLINT
 {
   this->set_multithreading(false);
-  this->refine_grid(6);
+  this->refine_grid(3);
   this->set_enabled_components(true, false, false);
 
   if (!this->initialized)

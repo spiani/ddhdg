@@ -42,9 +42,9 @@ protected:
         case Ddhdg::Component::V:
           return get_function("sin(pi*x)*sin(pi*y)");
         case Ddhdg::Component::n:
-          return get_function("1/q * sin(2*pi*x)*sin(2*pi*y)");
+          return get_function("1/q * x");
         case Ddhdg::Component::p:
-          return get_function("1/q * sin(4*pi*x)*sin(4*pi*y)");
+          return get_function("- 1/q * x");
         default:
           AssertThrow(false, Ddhdg::InvalidComponent());
           break;
@@ -71,41 +71,14 @@ protected:
   static std::shared_ptr<dealii::FunctionParser<2>>
   get_doping()
   {
-    return get_function(
-      "2*(16*(2*cos(pi*x)^3 - cos(pi*x))*cos(pi*y)^3*sin(pi*x) +"
-      " pi^2*sin(pi*x) - 2*(8*cos(pi*x)^3 - 3*cos(pi*x))*cos(pi*y)*sin(pi*x)"
-      ")*sin(pi*y)/q");
+    return get_function("2*(pi^2*sin(pi*x)*sin(pi*y) + x)/q");
   }
 
   static std::shared_ptr<Ddhdg::RecombinationTerm<2>>
-  get_recombination_term(Ddhdg::Component c)
+  get_recombination_term()
   {
-    std::string recombination_constant_term;
-
-    switch (c)
-      {
-        case Ddhdg::Component::n:
-          recombination_constant_term =
-            "-4*pi^2*cos(pi*x)*cos(pi*y)*sin(pi*x)^2 - "
-            "32*pi^2*cos(pi*x)*cos(pi*y)*sin(pi*x)*sin(pi*y) + "
-            "4*(6*pi^2*cos(pi*x)*sin(pi*x)^2 - "
-            "pi^2*cos(pi*x))*cos(pi*y)*sin(pi*y)^2";
-          break;
-        case Ddhdg::Component::p:
-          recombination_constant_term =
-            "-32*(20*pi^2*cos(pi*x)^5 - 26*pi^2*cos(pi*x)^3 "
-            "+ 7*pi^2*cos(pi*x))*cos(pi*y)^5 + 16*(52*pi^2*cos(pi*x)^5 "
-            "- 66*pi^2*cos(pi*x)^3 + 17*pi^2*cos(pi*x))*cos(pi*y)^3 "
-            "- 16*(14*pi^2*cos(pi*x)^5 - 17*pi^2*cos(pi*x)^3 "
-            "+ 4*pi^2*cos(pi*x))*cos(pi*y) - 512*(2*(2*pi^2*cos(pi*x)^3 "
-            "- pi^2*cos(pi*x))*cos(pi*y)^3*sin(pi*x) "
-            "- (2*pi^2*cos(pi*x)^3 - pi^2*cos(pi*x)) "
-            "*cos(pi*y)*sin(pi*x))*sin(pi*y)";
-          break;
-        default:
-          AssertThrow(false, Ddhdg::InvalidComponent());
-          break;
-      }
+    std::string recombination_constant_term =
+      "(2*pi^2*x*sin(pi*x) - pi*cos(pi*x))*sin(pi*y)";
 
     std::shared_ptr<Ddhdg::LinearRecombinationTerm<dim>> recombination_term =
       std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(
@@ -123,14 +96,23 @@ protected:
     std::shared_ptr<Ddhdg::BoundaryConditionHandler<dim>> boundary_handler =
       std::make_shared<Ddhdg::BoundaryConditionHandler<dim>>();
 
-    for (const Ddhdg::Component c : components)
-      for (unsigned int i = 0; i < 4; i++)
-        {
-          boundary_handler->add_boundary_condition(i,
-                                                   Ddhdg::dirichlet,
-                                                   c,
-                                                   get_function("0"));
-        }
+    for (unsigned int i = 0; i < 4; i++)
+      {
+        boundary_handler->add_boundary_condition(i,
+                                                 Ddhdg::dirichlet,
+                                                 Ddhdg::Component::V,
+                                                 get_function("0"));
+
+        boundary_handler->add_boundary_condition(i,
+                                                 Ddhdg::dirichlet,
+                                                 Ddhdg::Component::n,
+                                                 get_function("1/q * x"));
+
+        boundary_handler->add_boundary_condition(i,
+                                                 Ddhdg::dirichlet,
+                                                 Ddhdg::Component::p,
+                                                 get_function("- 1/q * x"));
+      }
 
     return boundary_handler;
   }
@@ -143,9 +125,8 @@ protected:
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
-        get_recombination_term(Ddhdg::Component::n),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
-        get_recombination_term(Ddhdg::Component::p),
+        get_recombination_term(),
         get_temperature(),
         get_doping(),
         get_boundary_conditions(),

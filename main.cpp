@@ -102,37 +102,20 @@ public:
                   valence_band_edge_energy,
                   "The valence band edge energy (Ev) in eV",
                   dealii::Patterns::Double());
-    enter_subsection("n recombination term");
+    enter_subsection("recombination term");
     add_parameter(
       "zero order term",
-      n_recombination_term_constant_term,
+      recombination_term_constant_term,
       "A function of the space that represent the value of the recombination"
       "term when n = 0 and p = 0");
     add_parameter(
       "n coefficient",
-      n_recombination_term_n_coefficient,
+      recombination_term_n_coefficient,
       "Let the recombination term be R = a + b * n + c * p where "
       "a, b, c are space functions; then this field is the value of b");
     add_parameter(
       "p coefficient",
-      n_recombination_term_p_coefficient,
-      "Let the recombination term be R = a + b * n + c * p where "
-      "a, b, c are space functions; this this field is the value of c");
-    leave_subsection();
-    enter_subsection("p recombination term");
-    add_parameter(
-      "zero order term",
-      p_recombination_term_constant_term,
-      "A function of the space that represent the value of the recombination"
-      "term when n = 0 and p = 0");
-    add_parameter(
-      "n coefficient",
-      p_recombination_term_n_coefficient,
-      "Let the recombination term be R = a + b * n + c * p where "
-      "a, b, c are space functions; then this field is the value of b");
-    add_parameter(
-      "p coefficient",
-      p_recombination_term_p_coefficient,
+      recombination_term_p_coefficient,
       "Let the recombination term be R = a + b * n + c * p where "
       "a, b, c are space functions; this this field is the value of c");
     leave_subsection();
@@ -275,13 +258,9 @@ public:
   std::string                                  doping_str = "0.";
   std::shared_ptr<dealii::FunctionParser<dim>> doping;
 
-  std::string n_recombination_term_constant_term = "0.";
-  std::string n_recombination_term_n_coefficient = "0.";
-  std::string n_recombination_term_p_coefficient = "0.";
-
-  std::string p_recombination_term_constant_term = "0.";
-  std::string p_recombination_term_n_coefficient = "0.";
-  std::string p_recombination_term_p_coefficient = "0.";
+  std::string recombination_term_constant_term = "0.";
+  std::string recombination_term_n_coefficient = "0.";
+  std::string recombination_term_p_coefficient = "0.";
 
   double conduction_band_density     = 4.7e23;
   double valence_band_density        = 9.0e24;
@@ -453,26 +432,19 @@ main(int argc, char **argv)
 
   // Set the recombination terms
   const std::shared_ptr<const Ddhdg::RecombinationTerm<dim>>
-    n_recombination_term =
+    recombination_term =
       std::make_shared<const Ddhdg::LinearRecombinationTerm<dim>>(
-        prm.n_recombination_term_constant_term,
-        prm.n_recombination_term_n_coefficient,
-        prm.n_recombination_term_p_coefficient);
-  const std::shared_ptr<const Ddhdg::RecombinationTerm<dim>>
-    p_recombination_term =
-      std::make_shared<const Ddhdg::LinearRecombinationTerm<dim>>(
-        prm.p_recombination_term_constant_term,
-        prm.p_recombination_term_n_coefficient,
-        prm.p_recombination_term_p_coefficient);
+        prm.recombination_term_constant_term,
+        prm.recombination_term_n_coefficient,
+        prm.recombination_term_p_coefficient);
 
   // Create an object that represent the problem we are going to solve
   std::shared_ptr<const Ddhdg::Problem<dim>> problem =
     std::make_shared<const Ddhdg::Problem<dim>>(triangulation,
                                                 permittivity,
                                                 electron_mobility,
-                                                n_recombination_term,
                                                 electron_mobility,
-                                                p_recombination_term,
+                                                recombination_term,
                                                 prm.temperature,
                                                 prm.doping,
                                                 boundary_handler,

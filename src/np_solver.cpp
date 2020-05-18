@@ -154,10 +154,8 @@ namespace Ddhdg
     , U_T_cell(quadrature_formula.size())
     , U_T_face(face_quadrature_formula.size())
     , doping_cell(quadrature_formula.size())
-    , r_n_cell(quadrature_formula.size())
-    , r_p_cell(quadrature_formula.size())
-    , dr_n_cell(initialize_double_map_on_n_and_p(quadrature_formula.size()))
-    , dr_p_cell(initialize_double_map_on_n_and_p(quadrature_formula.size()))
+    , r_cell(quadrature_formula.size())
+    , dr_cell(initialize_double_map_on_n_and_p(quadrature_formula.size()))
     , previous_c_cell(
         initialize_double_map_on_components(quadrature_formula.size()))
     , previous_c_face(
@@ -292,10 +290,8 @@ namespace Ddhdg
     , U_T_cell(sd.U_T_cell)
     , U_T_face(sd.U_T_face)
     , doping_cell(sd.doping_cell)
-    , r_n_cell(sd.r_n_cell)
-    , r_p_cell(sd.r_p_cell)
-    , dr_n_cell(sd.dr_n_cell)
-    , dr_p_cell(sd.dr_p_cell)
+    , r_cell(sd.r_cell)
+    , dr_cell(sd.dr_cell)
     , previous_c_cell(sd.previous_c_cell)
     , previous_c_face(sd.previous_c_face)
     , previous_d_cell(sd.previous_d_cell)
@@ -1771,64 +1767,33 @@ namespace Ddhdg
 
     // Compute the value of the recombination term and its derivative respect
     // to n and p
-    if (this->is_enabled(Component::n))
+    if (this->is_enabled(Component::n) || this->is_enabled(Component::p))
       {
-        auto &dr_n_n = scratch.dr_n_cell.at(Component::n);
-        auto &dr_n_p = scratch.dr_n_cell.at(Component::p);
+        auto &dr_n = scratch.dr_cell.at(Component::n);
+        auto &dr_p = scratch.dr_cell.at(Component::p);
 
-        this->problem->n_recombination_term
-          ->compute_multiple_recombination_terms(
-            scratch.previous_c_cell.at(Component::n),
-            scratch.previous_c_cell.at(Component::p),
-            scratch.cell_quadrature_points,
-            scratch.r_n_cell);
-        this->problem->n_recombination_term
+        this->problem->recombination_term->compute_multiple_recombination_terms(
+          scratch.previous_c_cell.at(Component::n),
+          scratch.previous_c_cell.at(Component::p),
+          scratch.cell_quadrature_points,
+          scratch.r_cell);
+        this->problem->recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
             Component::n,
-            dr_n_n);
-        this->problem->n_recombination_term
+            dr_n);
+        this->problem->recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
             Component::p,
-            dr_n_p);
+            dr_p);
 
         this->adimensionalizer->adimensionalize_recombination_term(
-          scratch.r_n_cell, dr_n_n, dr_n_p);
-      }
-
-    if (this->is_enabled(Component::p))
-      {
-        auto &dr_p_n = scratch.dr_p_cell.at(Component::n);
-        auto &dr_p_p = scratch.dr_p_cell.at(Component::p);
-
-        this->problem->p_recombination_term
-          ->compute_multiple_recombination_terms(
-            scratch.previous_c_cell.at(Component::n),
-            scratch.previous_c_cell.at(Component::p),
-            scratch.cell_quadrature_points,
-            scratch.r_p_cell);
-        this->problem->p_recombination_term
-          ->compute_multiple_derivatives_of_recombination_terms(
-            scratch.previous_c_cell.at(Component::n),
-            scratch.previous_c_cell.at(Component::p),
-            scratch.cell_quadrature_points,
-            Component::n,
-            dr_p_n);
-        this->problem->p_recombination_term
-          ->compute_multiple_derivatives_of_recombination_terms(
-            scratch.previous_c_cell.at(Component::n),
-            scratch.previous_c_cell.at(Component::p),
-            scratch.cell_quadrature_points,
-            Component::p,
-            dr_p_p);
-
-        this->adimensionalizer->adimensionalize_recombination_term(
-          scratch.r_p_cell, dr_p_n, dr_p_p);
+          scratch.r_cell, dr_n, dr_p);
       }
   }
 
@@ -1899,11 +1864,8 @@ namespace Ddhdg
     dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
     dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
 
-    const std::vector<double> &dr_n_n = scratch.dr_n_cell.at(Component::n);
-    const std::vector<double> &dr_n_p = scratch.dr_n_cell.at(Component::p);
-
-    const std::vector<double> &dr_p_n = scratch.dr_p_cell.at(Component::n);
-    const std::vector<double> &dr_p_p = scratch.dr_p_cell.at(Component::p);
+    const std::vector<double> &dr_n = scratch.dr_cell.at(Component::n);
+    const std::vector<double> &dr_p = scratch.dr_cell.at(Component::p);
 
     const double nc = this->problem->band_density.at(Component::n);
     const double nv = this->problem->band_density.at(Component::p);
@@ -2017,7 +1979,7 @@ namespace Ddhdg
                      n[jj] * (mu_n_times_previous_E * z2_grad[ii]) +
                      n0[q] * ((scratch.mu_n_cell[q] * E[jj]) * z2_grad[ii]) +
                      (n_einstein_diffusion_coefficient * Wn[jj]) * z2_grad[ii] -
-                     (dr_n_n[q] * n[jj] + dr_n_p[q] * p[jj]) * z2[ii]) *
+                     (dr_n[q] * n[jj] + dr_p[q] * p[jj]) * z2[ii]) *
                     JxW;
                 if (prm::is_p_enabled)
                   scratch.cc_matrix(i, j) +=
@@ -2025,7 +1987,7 @@ namespace Ddhdg
                      p[jj] * (mu_p_times_previous_E * z3_grad[ii]) -
                      p0[q] * ((scratch.mu_p_cell[q] * E[jj]) * z3_grad[ii]) +
                      (p_einstein_diffusion_coefficient * Wp[jj]) * z3_grad[ii] -
-                     (dr_p_n[q] * n[jj] + dr_p_p[q] * p[jj]) * z3[ii]) *
+                     (dr_n[q] * n[jj] + dr_p[q] * p[jj]) * z3[ii]) *
                     JxW;
               }
           }
@@ -2161,7 +2123,7 @@ namespace Ddhdg
                   scratch.fe_values_cell[electron_density].gradient(ii, q);
 
                 scratch.cc_rhs[i] += (n0[q] * q2_div - Wn0[q] * q2 +
-                                      scratch.r_n_cell[q] * z2 + Jn * z2_grad) *
+                                      scratch.r_cell[q] * z2 + Jn * z2_grad) *
                                      JxW;
               }
 
@@ -2176,10 +2138,9 @@ namespace Ddhdg
                 const dealii::Tensor<1, dim> z3_grad =
                   scratch.fe_values_cell[hole_density].gradient(ii, q);
 
-                scratch.cc_rhs[i] +=
-                  (p0[q] * q3_div - Wp0[q] * q3 + +scratch.r_p_cell[q] * z3 +
-                   Jp * z3_grad) *
-                  JxW;
+                scratch.cc_rhs[i] += (p0[q] * q3_div - Wp0[q] * q3 +
+                                      +scratch.r_cell[q] * z3 + Jp * z3_grad) *
+                                     JxW;
               }
           }
       }
