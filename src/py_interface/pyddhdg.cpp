@@ -219,7 +219,7 @@ namespace pyddhdg
 
   template <int dim>
   void
-  BoundaryConditionHandler<dim>::add_boundary_condition_from_function(
+  BoundaryConditionHandler<dim>::add_boundary_condition(
     const dealii::types::boundary_id   id,
     const Ddhdg::BoundaryConditionType bc_type,
     const Ddhdg::Component             c,
@@ -235,16 +235,13 @@ namespace pyddhdg
 
   template <int dim>
   void
-  BoundaryConditionHandler<dim>::add_boundary_condition_from_string(
+  BoundaryConditionHandler<dim>::add_boundary_condition(
     const dealii::types::boundary_id   id,
     const Ddhdg::BoundaryConditionType bc_type,
     const Ddhdg::Component             c,
     const std::string &                f)
   {
-    this->add_boundary_condition_from_function(id,
-                                               bc_type,
-                                               c,
-                                               AnalyticFunction<dim>(f));
+    this->add_boundary_condition(id, bc_type, c, AnalyticFunction<dim>(f));
   }
 
 

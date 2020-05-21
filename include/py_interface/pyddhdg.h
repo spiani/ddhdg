@@ -151,16 +151,16 @@ namespace pyddhdg
     get_ddhdg_boundary_condition_handler();
 
     void
-    add_boundary_condition_from_function(dealii::types::boundary_id   id,
-                                         Ddhdg::BoundaryConditionType bc_type,
-                                         Ddhdg::Component             c,
-                                         const DealIIFunction<dim> &  f);
+    add_boundary_condition(dealii::types::boundary_id   id,
+                           Ddhdg::BoundaryConditionType bc_type,
+                           Ddhdg::Component             c,
+                           const DealIIFunction<dim> &  f);
 
     void
-    add_boundary_condition_from_string(dealii::types::boundary_id   id,
-                                       Ddhdg::BoundaryConditionType bc_type,
-                                       Ddhdg::Component             c,
-                                       const std::string &          f);
+    add_boundary_condition(dealii::types::boundary_id   id,
+                           Ddhdg::BoundaryConditionType bc_type,
+                           Ddhdg::Component             c,
+                           const std::string &          f);
 
     [[nodiscard]] bool
     has_dirichlet_boundary_conditions() const;

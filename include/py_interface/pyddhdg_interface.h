@@ -69,10 +69,18 @@ py::enum_<Ddhdg::BoundaryConditionType>(m,
 
 py::class_<BoundaryConditionHandler<DIM>>(m, "BoundaryConditionHandler")
   .def(py::init<>())
-  .def("add_boundary_condition_from_function",
-       &BoundaryConditionHandler<DIM>::add_boundary_condition_from_function)
-  .def("add_boundary_condition_from_string",
-       &BoundaryConditionHandler<DIM>::add_boundary_condition_from_string)
+  .def("add_boundary_condition",
+       py::overload_cast<dealii::types::boundary_id,
+                         Ddhdg::BoundaryConditionType,
+                         Ddhdg::Component,
+                         const DealIIFunction<DIM> &>(
+         &BoundaryConditionHandler<DIM>::add_boundary_condition))
+  .def("add_boundary_condition",
+       py::overload_cast<dealii::types::boundary_id,
+                         Ddhdg::BoundaryConditionType,
+                         Ddhdg::Component,
+                         const std::string &>(
+         &BoundaryConditionHandler<DIM>::add_boundary_condition))
   .def("has_dirichlet_boundary_conditions",
        &BoundaryConditionHandler<DIM>::has_dirichlet_boundary_conditions)
   .def("has_neumann_boundary_conditions",
