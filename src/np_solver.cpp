@@ -3738,7 +3738,10 @@ namespace Ddhdg
         ->template get_component_rescaling_factor<Component::V>();
 
     const double doping_threshold =
-      this->adimensionalizer->doping_magnitude * 1e-5;
+      (this->adimensionalizer->doping_magnitude * 1e-5 < 1e2) ?
+        this->adimensionalizer->doping_magnitude * 1e-5 :
+        1e2;
+
     const double doping_threshold_square = doping_threshold * doping_threshold;
 
     constexpr double ev = Ddhdg::Constants::EV;
