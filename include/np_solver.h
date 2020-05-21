@@ -1,3 +1,5 @@
+#pragma once
+
 #include "dof_types.h"
 #include "solver.h"
 
@@ -122,6 +124,9 @@ namespace Ddhdg
     NonlinearIterationResults
     compute_thermodynamic_equilibrium() override;
 
+    unsigned int
+    get_n_dofs(bool for_trace) const override;
+
     double
     estimate_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
@@ -179,6 +184,12 @@ namespace Ddhdg
     estimate_linfty_error_on_trace(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const override;
+
+    std::shared_ptr<dealii::Function<dim>>
+    get_solution() const override;
+
+    std::shared_ptr<dealii::Function<dim>>
+    get_solution(Component c) const override;
 
     double
     get_solution_on_a_point(const dealii::Point<dim> &p,

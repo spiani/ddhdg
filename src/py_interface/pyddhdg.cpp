@@ -39,8 +39,33 @@ namespace pyddhdg
 
 
   template <int dim>
+  DealIIFunction<dim>::DealIIFunction(
+    const std::shared_ptr<dealii::Function<dim>> f)
+    : f(f)
+  {}
+
+
+  template <int dim>
+  DealIIFunction<dim>::DealIIFunction(const double f_const)
+    : f((f_const == 0.) ?
+          std::make_shared<dealii::Functions::ZeroFunction<dim>>() :
+          std::make_shared<dealii::Functions::ConstantFunction<dim>>(f_const))
+  {}
+
+
+
+  template <int dim>
+  std::shared_ptr<dealii::Function<dim>>
+  DealIIFunction<dim>::get_dealii_function() const
+  {
+    return this->f;
+  }
+
+
+
+  template <int dim>
   std::shared_ptr<dealii::FunctionParser<dim>>
-  PythonFunction<dim>::get_function_from_string(const std::string &f_expr)
+  AnalyticFunction<dim>::get_function_from_string(const std::string &f_expr)
   {
     auto f = std::make_shared<dealii::FunctionParser<dim>>();
     f->initialize(dealii::FunctionParser<dim>::default_variable_names(),
@@ -52,42 +77,16 @@ namespace pyddhdg
 
 
   template <int dim>
-  PythonFunction<dim>::PythonFunction(std::string f_expr)
-    : f_expr(f_expr)
-    , f(get_function_from_string(f_expr))
+  AnalyticFunction<dim>::AnalyticFunction(std::string f_expr)
+    : DealIIFunction<dim>(get_function_from_string(f_expr))
+    , f_expr(f_expr)
   {}
-
-
-
-  template <int dim>
-  PythonFunction<dim>::PythonFunction(const double f_const)
-    : f_expr(std::to_string(f_const))
-    , f(std::make_shared<dealii::Functions::ConstantFunction<dim>>(f_const))
-  {}
-
-
-
-  template <int dim>
-  PythonFunction<dim>::PythonFunction(std::string f_expr,
-                                      std::shared_ptr<dealii::Function<dim>> f)
-    : f_expr(f_expr)
-    , f(f)
-  {}
-
-
-
-  template <int dim>
-  std::shared_ptr<dealii::Function<dim>>
-  PythonFunction<dim>::get_dealii_function() const
-  {
-    return this->f;
-  }
 
 
 
   template <int dim>
   std::string
-  PythonFunction<dim>::get_expression() const
+  AnalyticFunction<dim>::get_expression() const
   {
     return this->f_expr;
   }
@@ -96,15 +95,13 @@ namespace pyddhdg
 
   template <int dim>
   PiecewiseFunction<dim>::PiecewiseFunction(
-    const PythonFunction<dim> &condition,
-    const PythonFunction<dim> &f1,
-    const PythonFunction<dim> &f2)
-    : PythonFunction<dim>("(" + condition.get_expression() + ") ? " +
-                            f1.get_expression() + " : " + f2.get_expression(),
-                          std::make_shared<Ddhdg::PiecewiseFunction<dim>>(
-                            condition.get_dealii_function(),
-                            f1.get_dealii_function(),
-                            f2.get_dealii_function()))
+    const DealIIFunction<dim> &condition,
+    const DealIIFunction<dim> &f1,
+    const DealIIFunction<dim> &f2)
+    : DealIIFunction<dim>(std::make_shared<Ddhdg::PiecewiseFunction<dim>>(
+        condition.get_dealii_function(),
+        f1.get_dealii_function(),
+        f2.get_dealii_function()))
   {}
 
 
@@ -113,9 +110,9 @@ namespace pyddhdg
   PiecewiseFunction<dim>::PiecewiseFunction(const std::string &condition,
                                             const std::string &f1,
                                             const std::string &f2)
-    : PiecewiseFunction(PythonFunction<dim>(condition),
-                        PythonFunction<dim>(f1),
-                        PythonFunction<dim>(f2))
+    : PiecewiseFunction(AnalyticFunction<dim>(condition),
+                        AnalyticFunction<dim>(f1),
+                        AnalyticFunction<dim>(f2))
   {}
 
 
@@ -124,9 +121,9 @@ namespace pyddhdg
   PiecewiseFunction<dim>::PiecewiseFunction(const std::string &condition,
                                             const std::string &f1,
                                             double             f2)
-    : PiecewiseFunction(PythonFunction<dim>(condition),
-                        PythonFunction<dim>(f1),
-                        PythonFunction<dim>(f2))
+    : PiecewiseFunction(AnalyticFunction<dim>(condition),
+                        AnalyticFunction<dim>(f1),
+                        DealIIFunction<dim>(f2))
   {}
 
 
@@ -135,9 +132,9 @@ namespace pyddhdg
   PiecewiseFunction<dim>::PiecewiseFunction(const std::string &condition,
                                             double             f1,
                                             const std::string &f2)
-    : PiecewiseFunction(PythonFunction<dim>(condition),
-                        PythonFunction<dim>(f1),
-                        PythonFunction<dim>(f2))
+    : PiecewiseFunction(AnalyticFunction<dim>(condition),
+                        DealIIFunction<dim>(f1),
+                        AnalyticFunction<dim>(f2))
   {}
 
 
@@ -146,21 +143,21 @@ namespace pyddhdg
   PiecewiseFunction<dim>::PiecewiseFunction(const std::string &condition,
                                             double             f1,
                                             double             f2)
-    : PiecewiseFunction(PythonFunction<dim>(condition),
-                        PythonFunction<dim>(f1),
-                        PythonFunction<dim>(f2))
+    : PiecewiseFunction(AnalyticFunction<dim>(condition),
+                        DealIIFunction<dim>(f1),
+                        DealIIFunction<dim>(f2))
   {}
 
 
 
   template <int dim>
   LinearRecombinationTerm<dim>::LinearRecombinationTerm(
-    const PythonFunction<dim> &zero_term,
-    const PythonFunction<dim> &n_linear_coefficient,
-    const PythonFunction<dim> &p_linear_coefficient)
-    : zero_term(zero_term.get_expression())
-    , n_linear_coefficient(n_linear_coefficient.get_expression())
-    , p_linear_coefficient(p_linear_coefficient.get_expression())
+    const DealIIFunction<dim> &zero_term,
+    const DealIIFunction<dim> &n_linear_coefficient,
+    const DealIIFunction<dim> &p_linear_coefficient)
+    : zero_term(zero_term)
+    , n_linear_coefficient(n_linear_coefficient)
+    , p_linear_coefficient(p_linear_coefficient)
   {}
 
 
@@ -170,36 +167,36 @@ namespace pyddhdg
   LinearRecombinationTerm<dim>::generate_ddhdg_recombination_term()
   {
     return std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(
-      this->zero_term.get_expression(),
-      this->n_linear_coefficient.get_expression(),
-      this->p_linear_coefficient.get_expression());
+      this->zero_term.get_dealii_function(),
+      this->n_linear_coefficient.get_dealii_function(),
+      this->p_linear_coefficient.get_dealii_function());
   }
 
 
 
   template <int dim>
-  std::string
+  DealIIFunction<dim>
   LinearRecombinationTerm<dim>::get_constant_term() const
   {
-    return this->zero_term.get_expression();
+    return this->zero_term;
   }
 
 
 
   template <int dim>
-  std::string
+  DealIIFunction<dim>
   LinearRecombinationTerm<dim>::get_n_linear_coefficient() const
   {
-    return this->p_linear_coefficient.get_expression();
+    return this->p_linear_coefficient;
   }
 
 
 
   template <int dim>
-  std::string
+  DealIIFunction<dim>
   LinearRecombinationTerm<dim>::get_p_linear_coefficient() const
   {
-    return this->n_linear_coefficient.get_expression();
+    return this->n_linear_coefficient;
   }
 
 
@@ -226,7 +223,7 @@ namespace pyddhdg
     const dealii::types::boundary_id   id,
     const Ddhdg::BoundaryConditionType bc_type,
     const Ddhdg::Component             c,
-    const PythonFunction<dim> &        f)
+    const DealIIFunction<dim> &        f)
   {
     this->bc_handler->add_boundary_condition(id,
                                              bc_type,
@@ -247,7 +244,7 @@ namespace pyddhdg
     this->add_boundary_condition_from_function(id,
                                                bc_type,
                                                c,
-                                               PythonFunction<dim>(f));
+                                               AnalyticFunction<dim>(f));
   }
 
 
@@ -277,8 +274,8 @@ namespace pyddhdg
                         ElectronMobility<dim> &        n_electron_mobility,
                         ElectronMobility<dim> &        p_electron_mobility,
                         RecombinationTerm<dim> &       recombination_term,
-                        PythonFunction<dim> &          temperature,
-                        PythonFunction<dim> &          doping,
+                        DealIIFunction<dim> &          temperature,
+                        DealIIFunction<dim> &          doping,
                         BoundaryConditionHandler<dim> &bc_handler,
                         const double                   conduction_band_density,
                         const double                   valence_band_density,
@@ -487,96 +484,68 @@ namespace pyddhdg
 
   template <int dim>
   double
-  NPSolver<dim>::estimate_l2_error(const std::string &    expected_solution,
-                                   const Ddhdg::Component c) const
+  NPSolver<dim>::estimate_l2_error(const DealIIFunction<dim> expected_solution,
+                                   const Ddhdg::Component    c) const
   {
-    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
-      std::make_shared<dealii::FunctionParser<dim>>();
-    expected_solution_f->initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      expected_solution,
-      Ddhdg::Constants::constants);
-    return this->ddhdg_solver->estimate_l2_error(expected_solution_f, c);
+    return this->ddhdg_solver->estimate_l2_error(
+      expected_solution.get_dealii_function(), c);
   }
 
 
 
   template <int dim>
   double
-  NPSolver<dim>::estimate_l2_error(const std::string &       expected_solution,
+  NPSolver<dim>::estimate_l2_error(const DealIIFunction<dim> expected_solution,
                                    const Ddhdg::Displacement d) const
   {
-    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
-      std::make_shared<dealii::FunctionParser<dim>>(dim);
-    expected_solution_f->initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      expected_solution,
-      Ddhdg::Constants::constants);
-    return this->ddhdg_solver->estimate_l2_error(expected_solution_f, d);
+    return this->ddhdg_solver->estimate_l2_error(
+      expected_solution.get_dealii_function(), d);
   }
 
 
 
   template <int dim>
   double
-  NPSolver<dim>::estimate_h1_error(const std::string &    expected_solution,
-                                   const Ddhdg::Component c) const
+  NPSolver<dim>::estimate_h1_error(const DealIIFunction<dim> expected_solution,
+                                   const Ddhdg::Component    c) const
   {
-    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
-      std::make_shared<dealii::FunctionParser<dim>>();
-    expected_solution_f->initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      expected_solution,
-      Ddhdg::Constants::constants);
-    return this->ddhdg_solver->estimate_h1_error(expected_solution_f, c);
+    return this->ddhdg_solver->estimate_h1_error(
+      expected_solution.get_dealii_function(), c);
   }
 
 
 
   template <int dim>
   double
-  NPSolver<dim>::estimate_h1_error(const std::string &       expected_solution,
+  NPSolver<dim>::estimate_h1_error(const DealIIFunction<dim> expected_solution,
                                    const Ddhdg::Displacement d) const
   {
-    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
-      std::make_shared<dealii::FunctionParser<dim>>(dim);
-    expected_solution_f->initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      expected_solution,
-      Ddhdg::Constants::constants);
-    return this->ddhdg_solver->estimate_h1_error(expected_solution_f, d);
+    return this->ddhdg_solver->estimate_h1_error(
+      expected_solution.get_dealii_function(), d);
   }
 
 
 
   template <int dim>
   double
-  NPSolver<dim>::estimate_linfty_error(const std::string &    expected_solution,
-                                       const Ddhdg::Component c) const
+  NPSolver<dim>::estimate_linfty_error(
+    const DealIIFunction<dim> expected_solution,
+    const Ddhdg::Component    c) const
   {
-    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
-      std::make_shared<dealii::FunctionParser<dim>>();
-    expected_solution_f->initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      expected_solution,
-      Ddhdg::Constants::constants);
-    return this->ddhdg_solver->estimate_linfty_error(expected_solution_f, c);
+    return this->ddhdg_solver->estimate_linfty_error(
+      expected_solution.get_dealii_function(), c);
   }
 
 
 
   template <int dim>
   double
-  NPSolver<dim>::estimate_linfty_error(const std::string &expected_solution,
-                                       const Ddhdg::Displacement d) const
+  NPSolver<dim>::estimate_linfty_error(
+    const DealIIFunction<dim> expected_solution,
+    const Ddhdg::Displacement d) const
   {
-    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
-      std::make_shared<dealii::FunctionParser<dim>>(dim);
-    expected_solution_f->initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      expected_solution,
-      Ddhdg::Constants::constants);
-    return this->ddhdg_solver->estimate_linfty_error(expected_solution_f, d);
+    return this->ddhdg_solver->estimate_linfty_error(
+      expected_solution.get_dealii_function(), d);
   }
 
 
@@ -613,6 +582,15 @@ namespace pyddhdg
       Ddhdg::Constants::constants);
     return this->ddhdg_solver->estimate_linfty_error_on_trace(
       expected_solution_f, c);
+  }
+
+
+
+  template <int dim>
+  DealIIFunction<dim>
+  NPSolver<dim>::get_solution(const Ddhdg::Component c) const
+  {
+    return DealIIFunction(this->ddhdg_solver->get_solution(c));
   }
 
 
@@ -756,9 +734,13 @@ namespace pyddhdg
   template class HomogeneousElectronMobility<2>;
   template class HomogeneousElectronMobility<3>;
 
-  template class PythonFunction<1>;
-  template class PythonFunction<2>;
-  template class PythonFunction<3>;
+  template class DealIIFunction<1>;
+  template class DealIIFunction<2>;
+  template class DealIIFunction<3>;
+
+  template class AnalyticFunction<1>;
+  template class AnalyticFunction<2>;
+  template class AnalyticFunction<3>;
 
   template class PiecewiseFunction<1>;
   template class PiecewiseFunction<2>;

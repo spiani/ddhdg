@@ -4603,6 +4603,17 @@ namespace Ddhdg
 
 
   template <int dim>
+  unsigned int
+  NPSolver<dim>::get_n_dofs(bool for_trace) const
+  {
+    if (for_trace)
+      return this->dof_handler_trace.n_dofs();
+    return this->dof_handler_cell.n_dofs();
+  }
+
+
+
+  template <int dim>
   double
   NPSolver<dim>::estimate_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
@@ -4977,6 +4988,27 @@ namespace Ddhdg
     return this->estimate_error_on_trace(expected_solution,
                                          c,
                                          dealii::VectorTools::Linfty_norm);
+  }
+
+
+
+  template <int dim>
+  std::shared_ptr<dealii::Function<dim>>
+  NPSolver<dim>::get_solution() const
+  {
+    return std::make_shared<dealii::Functions::FEFieldFunction<dim>>(
+      this->dof_handler_cell, this->current_solution_cell);
+  }
+
+
+
+  template <int dim>
+  std::shared_ptr<dealii::Function<dim>>
+  NPSolver<dim>::get_solution(Component c) const
+  {
+    const unsigned int c_index = get_component_index(c);
+    const unsigned int i       = c_index * (dim + 1) + dim;
+    return std::make_shared<ComponentFunction<dim>>(this->get_solution(), i);
   }
 
 

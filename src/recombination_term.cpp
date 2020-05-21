@@ -54,28 +54,43 @@ namespace Ddhdg
 
   template <int dim>
   LinearRecombinationTerm<dim>::LinearRecombinationTerm(
-    const std::string &constant_term,
-    const std::string &n_linear_coefficient,
-    const std::string &p_linear_coefficient)
+    const std::shared_ptr<dealii::Function<dim>> constant_term,
+    const std::shared_ptr<dealii::Function<dim>> n_linear_coefficient,
+    const std::shared_ptr<dealii::Function<dim>> p_linear_coefficient)
     : constant_term(constant_term)
     , n_linear_coefficient(n_linear_coefficient)
     , p_linear_coefficient(p_linear_coefficient)
-    , parsed_constant_term(1.)
-    , parsed_n_linear_coefficient(1.)
-    , parsed_p_linear_coefficient(1.)
+  {}
+
+
+
+  template <int dim>
+  LinearRecombinationTerm<dim>::LinearRecombinationTerm(
+    const std::string &constant_term_str,
+    const std::string &n_linear_coefficient_str,
+    const std::string &p_linear_coefficient_str)
   {
-    parsed_constant_term.initialize(
+    std::shared_ptr<dealii::FunctionParser<dim>> parsed_constant_term =
+      std::make_shared<dealii::FunctionParser<dim>>(1);
+    std::shared_ptr<dealii::FunctionParser<dim>> parsed_n_linear_coefficient =
+      std::make_shared<dealii::FunctionParser<dim>>(1);
+    std::shared_ptr<dealii::FunctionParser<dim>> parsed_p_linear_coefficient =
+      std::make_shared<dealii::FunctionParser<dim>>(1);
+    parsed_constant_term->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
-      constant_term,
+      constant_term_str,
       Constants::constants);
-    parsed_n_linear_coefficient.initialize(
+    parsed_n_linear_coefficient->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
-      n_linear_coefficient,
+      n_linear_coefficient_str,
       Constants::constants);
-    parsed_p_linear_coefficient.initialize(
+    parsed_p_linear_coefficient->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
-      p_linear_coefficient,
+      p_linear_coefficient_str,
       Constants::constants);
+    this->constant_term        = parsed_constant_term;
+    this->n_linear_coefficient = parsed_n_linear_coefficient;
+    this->p_linear_coefficient = parsed_p_linear_coefficient;
   }
 
 
@@ -83,26 +98,10 @@ namespace Ddhdg
   template <int dim>
   LinearRecombinationTerm<dim>::LinearRecombinationTerm(
     const LinearRecombinationTerm<dim> &linear_recombination_term)
-    : constant_term(linear_recombination_term.get_constant_term())
-    , n_linear_coefficient(linear_recombination_term.get_n_linear_coefficient())
-    , p_linear_coefficient(linear_recombination_term.get_p_linear_coefficient())
-    , parsed_constant_term(1.)
-    , parsed_n_linear_coefficient(1.)
-    , parsed_p_linear_coefficient(1.)
-  {
-    parsed_constant_term.initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      constant_term,
-      Constants::constants);
-    parsed_n_linear_coefficient.initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      n_linear_coefficient,
-      Constants::constants);
-    parsed_p_linear_coefficient.initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      n_linear_coefficient,
-      Constants::constants);
-  }
+    : constant_term(linear_recombination_term.constant_term)
+    , n_linear_coefficient(linear_recombination_term.n_linear_coefficient)
+    , p_linear_coefficient(linear_recombination_term.p_linear_coefficient)
+  {}
 
 
 
@@ -113,9 +112,9 @@ namespace Ddhdg
     const double              p,
     const dealii::Point<dim> &q) const
   {
-    const double a = this->parsed_constant_term.value(q);
-    const double b = this->parsed_n_linear_coefficient.value(q);
-    const double c = this->parsed_p_linear_coefficient.value(q);
+    const double a = this->constant_term->value(q);
+    const double b = this->n_linear_coefficient->value(q);
+    const double c = this->p_linear_coefficient->value(q);
     return a + n * b + p * c;
   }
 
@@ -134,9 +133,9 @@ namespace Ddhdg
     switch (c)
       {
         case Component::n:
-          return this->parsed_n_linear_coefficient.value(q);
+          return this->n_linear_coefficient->value(q);
         case Component::p:
-          return this->parsed_p_linear_coefficient.value(q);
+          return this->p_linear_coefficient->value(q);
         default:
           Assert(false, InvalidComponent());
           break;
@@ -164,13 +163,13 @@ namespace Ddhdg
            dealii::ExcDimensionMismatch(n_of_points, r.size()));
 
     std::vector<double> a(n_of_points);
-    this->parsed_constant_term.value_list(P, a);
+    this->constant_term->value_list(P, a);
 
     std::vector<double> b(n_of_points);
-    this->parsed_n_linear_coefficient.value_list(P, b);
+    this->n_linear_coefficient->value_list(P, b);
 
     std::vector<double> c(n_of_points);
-    this->parsed_p_linear_coefficient.value_list(P, c);
+    this->p_linear_coefficient->value_list(P, c);
 
     for (std::size_t q = 0; q < n_of_points; q++)
       r[q] = a[q] + b[q] * n[q] + c[q] * p[q];
@@ -200,10 +199,10 @@ namespace Ddhdg
     switch (c)
       {
         case Component::n:
-          this->parsed_n_linear_coefficient.value_list(P, r);
+          this->n_linear_coefficient->value_list(P, r);
           break;
         case Component::p:
-          this->parsed_p_linear_coefficient.value_list(P, r);
+          this->p_linear_coefficient->value_list(P, r);
           break;
         default:
           Assert(false, InvalidComponent());

@@ -52,18 +52,25 @@ namespace pyddhdg
   };
 
   template <int dim>
-  class PythonFunction
+  class DealIIFunction
   {
   public:
-    explicit PythonFunction(std::string f_expr);
+    explicit DealIIFunction(std::shared_ptr<dealii::Function<dim>> f);
 
-    explicit PythonFunction(double f_const);
-
-    PythonFunction(std::string                            f_expr,
-                   std::shared_ptr<dealii::Function<dim>> f);
+    explicit DealIIFunction(double f_const);
 
     std::shared_ptr<dealii::Function<dim>>
     get_dealii_function() const;
+
+  private:
+    const std::shared_ptr<dealii::Function<dim>> f;
+  };
+
+  template <int dim>
+  class AnalyticFunction : public DealIIFunction<dim>
+  {
+  public:
+    explicit AnalyticFunction(std::string f_expr);
 
     [[nodiscard]] std::string
     get_expression() const;
@@ -72,17 +79,16 @@ namespace pyddhdg
     static std::shared_ptr<dealii::FunctionParser<dim>>
     get_function_from_string(const std::string &f_expr);
 
-    std::string                                  f_expr;
-    const std::shared_ptr<dealii::Function<dim>> f;
+    const std::string f_expr;
   };
 
   template <int dim>
-  class PiecewiseFunction : public PythonFunction<dim>
+  class PiecewiseFunction : public DealIIFunction<dim>
   {
   public:
-    PiecewiseFunction(const PythonFunction<dim> &condition,
-                      const PythonFunction<dim> &f1,
-                      const PythonFunction<dim> &f2);
+    PiecewiseFunction(const DealIIFunction<dim> &condition,
+                      const DealIIFunction<dim> &f1,
+                      const DealIIFunction<dim> &f2);
 
     PiecewiseFunction(const std::string &condition,
                       const std::string &f1,
@@ -113,26 +119,26 @@ namespace pyddhdg
   class LinearRecombinationTerm : public RecombinationTerm<dim>
   {
   public:
-    LinearRecombinationTerm(const PythonFunction<dim> &zero_term,
-                            const PythonFunction<dim> &n_linear_coefficient,
-                            const PythonFunction<dim> &p_linear_coefficient);
+    LinearRecombinationTerm(const DealIIFunction<dim> &zero_term,
+                            const DealIIFunction<dim> &n_linear_coefficient,
+                            const DealIIFunction<dim> &p_linear_coefficient);
 
     std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
     generate_ddhdg_recombination_term() override;
 
-    [[nodiscard]] std::string
+    [[nodiscard]] DealIIFunction<dim>
     get_constant_term() const;
 
-    [[nodiscard]] std::string
+    [[nodiscard]] DealIIFunction<dim>
     get_n_linear_coefficient() const;
 
-    [[nodiscard]] std::string
+    [[nodiscard]] DealIIFunction<dim>
     get_p_linear_coefficient() const;
 
   private:
-    const PythonFunction<dim> zero_term;
-    const PythonFunction<dim> n_linear_coefficient;
-    const PythonFunction<dim> p_linear_coefficient;
+    const DealIIFunction<dim> zero_term;
+    const DealIIFunction<dim> n_linear_coefficient;
+    const DealIIFunction<dim> p_linear_coefficient;
   };
 
   template <int dim>
@@ -148,7 +154,7 @@ namespace pyddhdg
     add_boundary_condition_from_function(dealii::types::boundary_id   id,
                                          Ddhdg::BoundaryConditionType bc_type,
                                          Ddhdg::Component             c,
-                                         const PythonFunction<dim> &  f);
+                                         const DealIIFunction<dim> &  f);
 
     void
     add_boundary_condition_from_string(dealii::types::boundary_id   id,
@@ -176,8 +182,8 @@ namespace pyddhdg
             ElectronMobility<dim> &        n_electron_mobility,
             ElectronMobility<dim> &        p_electron_mobility,
             RecombinationTerm<dim> &       recombination_term,
-            PythonFunction<dim> &          temperature,
-            PythonFunction<dim> &          doping,
+            DealIIFunction<dim> &          temperature,
+            DealIIFunction<dim> &          doping,
             BoundaryConditionHandler<dim> &bc_handler,
             double                         conduction_band_density,
             double                         valence_band_density,
@@ -243,27 +249,27 @@ namespace pyddhdg
     compute_thermodynamic_equilibrium();
 
     [[nodiscard]] double
-    estimate_l2_error(const std::string &expected_solution,
-                      Ddhdg::Component   c) const;
+    estimate_l2_error(DealIIFunction<dim> expected_solution,
+                      Ddhdg::Component    c) const;
 
     [[nodiscard]] double
-    estimate_l2_error(const std::string & expected_solution,
+    estimate_l2_error(DealIIFunction<dim> expected_solution,
                       Ddhdg::Displacement d) const;
 
     [[nodiscard]] double
-    estimate_h1_error(const std::string &expected_solution,
-                      Ddhdg::Component   c) const;
+    estimate_h1_error(DealIIFunction<dim> expected_solution,
+                      Ddhdg::Component    c) const;
 
     [[nodiscard]] double
-    estimate_h1_error(const std::string & expected_solution,
+    estimate_h1_error(DealIIFunction<dim> expected_solution,
                       Ddhdg::Displacement d) const;
 
     [[nodiscard]] double
-    estimate_linfty_error(const std::string &expected_solution,
-                          Ddhdg::Component   c) const;
+    estimate_linfty_error(DealIIFunction<dim> expected_solution,
+                          Ddhdg::Component    c) const;
 
     [[nodiscard]] double
-    estimate_linfty_error(const std::string & expected_solution,
+    estimate_linfty_error(DealIIFunction<dim> expected_solution,
                           Ddhdg::Displacement d) const;
 
     [[nodiscard]] double
@@ -273,6 +279,9 @@ namespace pyddhdg
     [[nodiscard]] double
     estimate_linfty_error_on_trace(const std::string &expected_solution,
                                    Ddhdg::Component   c) const;
+
+    [[nodiscard]] DealIIFunction<dim>
+    get_solution(Ddhdg::Component c) const;
 
     [[nodiscard]] double
     get_solution_on_a_point(dealii::Point<dim> p, Ddhdg::Component c) const;

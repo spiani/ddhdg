@@ -29,15 +29,16 @@ py::class_<HomogeneousElectronMobility<DIM>, ElectronMobility<DIM>>(
   "HomogeneousElectronMobility")
   .def(py::init<const double &>());
 
-py::class_<PythonFunction<DIM>>(m, "AnalyticFunction")
-  .def(py::init<std::string>())
-  .def(py::init<double>())
-  .def("get_expression", &PythonFunction<DIM>::get_expression);
+py::class_<DealIIFunction<DIM>>(m, "DealIIFunction").def(py::init<double>());
 
-py::class_<PiecewiseFunction<DIM>, PythonFunction<DIM>>(m, "PiecewiseFunction")
-  .def(py::init<const PythonFunction<DIM> &,
-                const PythonFunction<DIM> &,
-                const PythonFunction<DIM> &>())
+py::class_<AnalyticFunction<DIM>, DealIIFunction<DIM>>(m, "AnalyticFunction")
+  .def(py::init<std::string>())
+  .def("get_expression", &AnalyticFunction<DIM>::get_expression);
+
+py::class_<PiecewiseFunction<DIM>, DealIIFunction<DIM>>(m, "PiecewiseFunction")
+  .def(py::init<const DealIIFunction<DIM> &,
+                const DealIIFunction<DIM> &,
+                const DealIIFunction<DIM> &>())
   .def(
     py::init<const std::string &, const std::string &, const std::string &>())
   .def(py::init<const std::string &, const std::string &, double>())
@@ -49,9 +50,9 @@ py::class_<RecombinationTerm<DIM>>(m, "RecombinationTerm");
 py::class_<LinearRecombinationTerm<DIM>, RecombinationTerm<DIM>>(
   m,
   "LinearRecombinationTerm")
-  .def(py::init<const PythonFunction<DIM> &,
-                const PythonFunction<DIM> &,
-                const PythonFunction<DIM> &>())
+  .def(py::init<const DealIIFunction<DIM> &,
+                const DealIIFunction<DIM> &,
+                const DealIIFunction<DIM> &>())
   .def("get_constant_term", &LinearRecombinationTerm<DIM>::get_constant_term)
   .def("get_n_linear_coefficient",
        &LinearRecombinationTerm<DIM>::get_n_linear_coefficient)
@@ -84,8 +85,8 @@ py::class_<Problem<DIM>>(m, "Problem")
                 ElectronMobility<DIM> &,
                 ElectronMobility<DIM> &,
                 RecombinationTerm<DIM> &,
-                PythonFunction<DIM> &,
-                PythonFunction<DIM> &,
+                DealIIFunction<DIM> &,
+                DealIIFunction<DIM> &,
                 BoundaryConditionHandler<DIM> &,
                 double,
                 double,
@@ -222,37 +223,37 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
   .def("compute_thermodynamic_equilibrium",
        &NPSolver<DIM>::compute_thermodynamic_equilibrium)
   .def("estimate_l2_error",
-       py::overload_cast<const std::string &, const Ddhdg::Component>(
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_l2_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("component"))
   .def("estimate_l2_error",
-       py::overload_cast<const std::string &, const Ddhdg::Displacement>(
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Displacement>(
          &NPSolver<DIM>::estimate_l2_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("displacement"))
   .def("estimate_h1_error",
-       py::overload_cast<const std::string &, const Ddhdg::Component>(
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_h1_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("component"))
   .def("estimate_h1_error",
-       py::overload_cast<const std::string &, const Ddhdg::Displacement>(
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Displacement>(
          &NPSolver<DIM>::estimate_h1_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("displacement"))
   .def("estimate_linfty_error",
-       py::overload_cast<const std::string &, const Ddhdg::Component>(
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_linfty_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("component"))
   .def("estimate_linfty_error",
-       py::overload_cast<const std::string &, const Ddhdg::Displacement>(
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Displacement>(
          &NPSolver<DIM>::estimate_linfty_error,
          py::const_),
        py::arg("expected_solution"),
@@ -265,6 +266,7 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        &NPSolver<DIM>::estimate_linfty_error_on_trace,
        py::arg("expected_solution"),
        py::arg("component"))
+  .def("get_solution", &NPSolver<DIM>::get_solution, py::arg("component"))
   .def("get_solution_on_a_point",
        &NPSolver<DIM>::get_solution_on_a_point,
        py::arg("point"),

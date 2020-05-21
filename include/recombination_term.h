@@ -46,26 +46,32 @@ namespace Ddhdg
   class LinearRecombinationTerm : public RecombinationTerm<dim>
   {
   public:
-    explicit LinearRecombinationTerm(const std::string &constant_term,
-                                     const std::string &n_linear_coefficient,
-                                     const std::string &p_linear_coefficient);
+    explicit LinearRecombinationTerm(
+      std::shared_ptr<dealii::Function<dim>> constant_term,
+      std::shared_ptr<dealii::Function<dim>> n_linear_coefficient,
+      std::shared_ptr<dealii::Function<dim>> p_linear_coefficient);
+
+    explicit LinearRecombinationTerm(
+      const std::string &constant_term_str,
+      const std::string &n_linear_coefficient_str,
+      const std::string &p_linear_coefficient_str);
 
     LinearRecombinationTerm(
       const LinearRecombinationTerm<dim> &linear_recombination_term);
 
-    [[nodiscard]] inline std::string
+    [[nodiscard]] inline std::shared_ptr<dealii::Function<dim>>
     get_constant_term() const
     {
       return constant_term;
     }
 
-    [[nodiscard]] inline std::string
+    [[nodiscard]] inline std::shared_ptr<dealii::Function<dim>>
     get_n_linear_coefficient() const
     {
       return n_linear_coefficient;
     }
 
-    [[nodiscard]] inline std::string
+    [[nodiscard]] inline std::shared_ptr<dealii::Function<dim>>
     get_p_linear_coefficient() const
     {
       return p_linear_coefficient;
@@ -100,12 +106,8 @@ namespace Ddhdg
     virtual ~LinearRecombinationTerm() = default;
 
   private:
-    const std::string constant_term;
-    const std::string n_linear_coefficient;
-    const std::string p_linear_coefficient;
-
-    dealii::FunctionParser<dim> parsed_constant_term;
-    dealii::FunctionParser<dim> parsed_n_linear_coefficient;
-    dealii::FunctionParser<dim> parsed_p_linear_coefficient;
+    std::shared_ptr<dealii::Function<dim>> constant_term;
+    std::shared_ptr<dealii::Function<dim>> n_linear_coefficient;
+    std::shared_ptr<dealii::Function<dim>> p_linear_coefficient;
   };
 } // namespace Ddhdg

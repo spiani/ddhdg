@@ -98,6 +98,9 @@ namespace Ddhdg
     virtual NonlinearIterationResults
     compute_thermodynamic_equilibrium() = 0;
 
+    virtual unsigned int
+    get_n_dofs(bool for_trace) const = 0;
+
     virtual double
     estimate_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
@@ -155,6 +158,12 @@ namespace Ddhdg
     estimate_linfty_error_on_trace(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const = 0;
+
+    virtual std::shared_ptr<dealii::Function<dim>>
+    get_solution() const = 0;
+
+    virtual std::shared_ptr<dealii::Function<dim>>
+    get_solution(Component c) const = 0;
 
     virtual double
     get_solution_on_a_point(const dealii::Point<dim> &p, Component c) const = 0;
