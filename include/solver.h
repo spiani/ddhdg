@@ -93,10 +93,19 @@ namespace Ddhdg
     virtual NonlinearIterationResults
     compute_thermodynamic_equilibrium(double absolute_tol,
                                       double relative_tol,
-                                      int    max_number_of_iterations) = 0;
+                                      int    max_number_of_iterations);
 
     virtual NonlinearIterationResults
-    compute_thermodynamic_equilibrium() = 0;
+    compute_thermodynamic_equilibrium(double absolute_tol,
+                                      double relative_tol,
+                                      int    max_number_of_iterations,
+                                      bool   generate_first_guess) = 0;
+
+    virtual NonlinearIterationResults
+    compute_thermodynamic_equilibrium();
+
+    virtual NonlinearIterationResults
+    compute_thermodynamic_equilibrium(bool generate_first_guess) = 0;
 
     virtual unsigned int
     get_n_dofs(bool for_trace) const = 0;

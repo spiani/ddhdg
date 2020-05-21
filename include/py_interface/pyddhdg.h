@@ -222,6 +222,11 @@ namespace pyddhdg
                   bool               use_projection);
 
     void
+    set_component(Ddhdg::Component    c,
+                  DealIIFunction<dim> f,
+                  bool                use_projection);
+
+    void
     set_current_solution(const std::string &v_f,
                          const std::string &n_f,
                          const std::string &p_f,
@@ -246,7 +251,13 @@ namespace pyddhdg
     run();
 
     Ddhdg::NonlinearIterationResults
-    compute_thermodynamic_equilibrium();
+    compute_thermodynamic_equilibrium(bool generate_first_guess);
+
+    Ddhdg::NonlinearIterationResults
+    compute_thermodynamic_equilibrium(double absolute_tol,
+                                      double relative_tol,
+                                      int    max_number_of_iterations,
+                                      bool   generate_first_guess);
 
     [[nodiscard]] double
     estimate_l2_error(DealIIFunction<dim> expected_solution,

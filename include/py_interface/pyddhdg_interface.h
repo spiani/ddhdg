@@ -197,7 +197,14 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
   .def_property_readonly("n_of_triangulation_levels",
                          &NPSolver<DIM>::n_of_triangulation_levels)
   .def("set_component",
-       &NPSolver<DIM>::set_component,
+       py::overload_cast<Ddhdg::Component, const std::string &, bool>(
+         &NPSolver<DIM>::set_component),
+       py::arg("component"),
+       py::arg("analytic_function"),
+       py::arg("use_projection") = false)
+  .def("set_component",
+       py::overload_cast<Ddhdg::Component, DealIIFunction<DIM>, bool>(
+         &NPSolver<DIM>::set_component),
        py::arg("component"),
        py::arg("analytic_function"),
        py::arg("use_projection") = false)
@@ -220,8 +227,17 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("n_enabled"),
        py::arg("p_enabled"))
   .def("run", &NPSolver<DIM>::run)
+  .def(
+    "compute_thermodynamic_equilibrium",
+    py::overload_cast<bool>(&NPSolver<DIM>::compute_thermodynamic_equilibrium),
+    py::arg("generate_first_guess") = true)
   .def("compute_thermodynamic_equilibrium",
-       &NPSolver<DIM>::compute_thermodynamic_equilibrium)
+       py::overload_cast<double, double, int, bool>(
+         &NPSolver<DIM>::compute_thermodynamic_equilibrium),
+       py::arg("absolute_tol"),
+       py::arg("relative_tol"),
+       py::arg("max_number_of_iterations"),
+       py::arg("generate_first_guess") = true)
   .def("estimate_l2_error",
        py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_l2_error,

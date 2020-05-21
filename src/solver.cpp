@@ -38,6 +38,29 @@ namespace Ddhdg
 
 
   template <int dim>
+  NonlinearIterationResults
+  Solver<dim>::compute_thermodynamic_equilibrium(double absolute_tol,
+                                                 double relative_tol,
+                                                 int max_number_of_iterations)
+  {
+    return this->compute_thermodynamic_equilibrium(absolute_tol,
+                                                   relative_tol,
+                                                   max_number_of_iterations,
+                                                   true);
+  }
+
+
+
+  template <int dim>
+  NonlinearIterationResults
+  Solver<dim>::compute_thermodynamic_equilibrium()
+  {
+    return this->compute_thermodynamic_equilibrium(true);
+  }
+
+
+
+  template <int dim>
   void
   Solver<dim>::output_results(const std::string &solution_filename) const
   {

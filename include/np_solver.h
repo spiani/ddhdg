@@ -52,6 +52,7 @@ namespace Ddhdg
   {
   public:
     using Solver<dim>::output_results;
+    using Solver<dim>::compute_thermodynamic_equilibrium;
 
     explicit NPSolver(std::shared_ptr<const Problem<dim>>       problem,
                       std::shared_ptr<const NPSolverParameters> parameters =
@@ -119,10 +120,11 @@ namespace Ddhdg
     NonlinearIterationResults
     compute_thermodynamic_equilibrium(double absolute_tol,
                                       double relative_tol,
-                                      int    max_number_of_iterations) override;
+                                      int    max_number_of_iterations,
+                                      bool   generate_first_guess) override;
 
     NonlinearIterationResults
-    compute_thermodynamic_equilibrium() override;
+    compute_thermodynamic_equilibrium(bool generate_first_guess) override;
 
     unsigned int
     get_n_dofs(bool for_trace) const override;

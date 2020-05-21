@@ -4561,7 +4561,8 @@ namespace Ddhdg
   NPSolver<dim>::compute_thermodynamic_equilibrium(
     const double absolute_tol,
     const double relative_tol,
-    const int    max_number_of_iterations)
+    const int    max_number_of_iterations,
+    const bool   generate_first_guess)
   {
     std::map<Component, bool> current_active_components;
     for (Component c : all_components())
@@ -4574,10 +4575,11 @@ namespace Ddhdg
     if (!this->initialized)
       this->setup_overall_system();
 
-    this->set_local_charge_neutrality_first_guess();
-
-    this->compute_local_charge_neutrality();
-
+    if (generate_first_guess)
+      {
+        this->set_local_charge_neutrality_first_guess();
+        this->compute_local_charge_neutrality();
+      }
     NonlinearIterationResults iterations = this->private_run(
       absolute_tol, relative_tol, max_number_of_iterations, true);
 
@@ -4592,12 +4594,13 @@ namespace Ddhdg
 
   template <int dim>
   NonlinearIterationResults
-  NPSolver<dim>::compute_thermodynamic_equilibrium()
+  NPSolver<dim>::compute_thermodynamic_equilibrium(bool generate_first_guess)
   {
     return this->compute_thermodynamic_equilibrium(
       this->parameters->nonlinear_solver_absolute_tolerance,
       this->parameters->nonlinear_solver_relative_tolerance,
-      this->parameters->nonlinear_solver_max_number_of_iterations);
+      this->parameters->nonlinear_solver_max_number_of_iterations,
+      generate_first_guess);
   }
 
 

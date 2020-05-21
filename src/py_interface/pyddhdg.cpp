@@ -386,6 +386,19 @@ namespace pyddhdg
 
   template <int dim>
   void
+  NPSolver<dim>::set_component(const Ddhdg::Component    c,
+                               const DealIIFunction<dim> f,
+                               const bool                use_projection)
+  {
+    this->ddhdg_solver->set_component(c,
+                                      f.get_dealii_function(),
+                                      use_projection);
+  }
+
+
+
+  template <int dim>
+  void
   NPSolver<dim>::set_current_solution(const std::string &v_f,
                                       const std::string &n_f,
                                       const std::string &p_f,
@@ -475,9 +488,26 @@ namespace pyddhdg
 
   template <int dim>
   Ddhdg::NonlinearIterationResults
-  NPSolver<dim>::compute_thermodynamic_equilibrium()
+  NPSolver<dim>::compute_thermodynamic_equilibrium(bool generate_first_guess)
   {
-    return this->ddhdg_solver->compute_thermodynamic_equilibrium();
+    return this->ddhdg_solver->compute_thermodynamic_equilibrium(
+      generate_first_guess);
+  }
+
+
+
+  template <int dim>
+  Ddhdg::NonlinearIterationResults
+  NPSolver<dim>::compute_thermodynamic_equilibrium(double absolute_tol,
+                                                   double relative_tol,
+                                                   int max_number_of_iterations,
+                                                   bool generate_first_guess)
+  {
+    return this->ddhdg_solver->compute_thermodynamic_equilibrium(
+      absolute_tol,
+      relative_tol,
+      max_number_of_iterations,
+      generate_first_guess);
   }
 
 
