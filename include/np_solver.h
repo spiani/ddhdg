@@ -460,29 +460,9 @@ namespace Ddhdg
       Vector<double> &                  current_solution);
 
     void
-    compute_local_charge_neutrality_single_cell_residual(
-      ChargeNeutralityScratchData &scratch,
-      const Vector<double> &       V0,
-      Vector<double> &             local_residual);
-
-    void
-    compute_local_charge_neutrality_single_cell_solve_jacobian(
-      ChargeNeutralityScratchData &scratch,
-      const Vector<double> &       V0,
-      const Vector<double> &       local_residual,
-      Vector<double> &             update);
-
-    void
-    compute_local_charge_neutrality_for_single_cell(
-      const typename DoFHandler<dim>::active_cell_iterator &cell,
-      ChargeNeutralityScratchData &                         scratch,
-      Vector<double> &                                      current_solution);
-
-    void
     compute_local_charge_neutrality_nonlinear_solver(
-      const dealii::FiniteElement<dim> &V_fe,
-      const dealii::DoFHandler<dim> &   V_dof_handler,
-      Vector<double> &                  current_solution);
+      const dealii::DoFHandler<dim> &V_dof_handler,
+      Vector<double> &               current_solution);
 
     void
     compute_local_charge_neutrality_set_solution(
@@ -668,80 +648,6 @@ namespace Ddhdg
             Assert(false, InvalidComponent());
             return 1.;
         }
-    }
-  };
-
-  template <int dim>
-  struct NPSolver<dim>::ChargeNeutralityScratchData
-  {
-    const dealii::FiniteElement<dim> &   V_fe;
-    const dealii::DoFHandler<dim> &      V_dof_handler;
-    const QGauss<dim>                    quadrature_formula;
-    const std::unique_ptr<FEValues<dim>> fe_values;
-
-    LAPACKFullMatrix<double>             jacobian;
-    Vector<double>                       V0;
-    Vector<double>                       local_update;
-    Vector<double>                       local_residual;
-    std::vector<types::global_dof_index> dof_indices;
-
-    std::vector<dealii::Point<dim>> quadrature_points;
-    std::vector<double>             T;
-    std::vector<double>             c;
-    std::vector<double>             V0_q;
-
-    std::vector<double> delta_V;
-
-    const double V_rescale;
-    const double c_rescale;
-    const double Nc;
-    const double Nv;
-    const double Ec;
-    const double Ev;
-
-    ChargeNeutralityScratchData(const dealii::FiniteElement<dim> &V_fe,
-                                const dealii::DoFHandler<dim> &   V_dof_handler,
-                                const dealii::QGauss<dim> &quadrature_formula,
-                                const double               V_rescale,
-                                const double               c_rescale,
-                                const double               Nc,
-                                const double               Nv,
-                                const double               Ec,
-                                const double               Ev)
-      : V_fe(V_fe)
-      , V_dof_handler(V_dof_handler)
-      , quadrature_formula(quadrature_formula)
-      , fe_values(generate_fe_values(V_fe, quadrature_formula))
-      , jacobian(V_fe.n_dofs_per_cell(), V_fe.n_dofs_per_cell())
-      , V0(V_fe.n_dofs_per_cell())
-      , local_update(V_fe.n_dofs_per_cell())
-      , local_residual(V_fe.n_dofs_per_cell())
-      , dof_indices(V_fe.n_dofs_per_cell())
-      , quadrature_points(quadrature_formula.size())
-      , T(quadrature_formula.size())
-      , c(quadrature_formula.size())
-      , V0_q(quadrature_formula.size())
-      , delta_V(V_fe.n_dofs_per_cell())
-      , V_rescale(V_rescale)
-      , c_rescale(c_rescale)
-      , Nc(Nc)
-      , Nv(Nv)
-      , Ec(Ec)
-      , Ev(Ev)
-    {}
-
-    static std::unique_ptr<FEValues<dim>>
-    generate_fe_values(const dealii::FiniteElement<dim> &V_fe,
-                       const QGauss<dim> &               quadrature_formula)
-    {
-      const dealii::UpdateFlags flags_cell(update_values | update_gradients |
-                                           update_JxW_values |
-                                           update_quadrature_points);
-
-      std::unique_ptr<FEValues<dim>> fe_values =
-        std::make_unique<FEValues<dim>>(V_fe, quadrature_formula, flags_cell);
-
-      return fe_values;
     }
   };
 } // namespace Ddhdg

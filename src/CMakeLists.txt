@@ -9,6 +9,7 @@ add_library(DDHDG SHARED
         problem.cpp
         recombination_term.cpp
         solver.cpp
+        thermodynamic_equilibrium.cpp
         )
 
 if (WITH_PYTHON_INTERFACE)
