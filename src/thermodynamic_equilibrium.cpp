@@ -1,8 +1,5 @@
 #include <deal.II/dofs/dof_tools.h>
 
-#include <deal.II/sundials/kinsol.h>
-
-#include <cfloat>
 #include <cmath>
 
 #include "np_solver.h"
@@ -425,6 +422,10 @@ namespace Ddhdg
     const dealii::DoFHandler<dim> &V_dof_handler,
     Vector<double> &               current_solution)
   {
+    constexpr double       ABS_TOL                  = 1e-14;
+    constexpr double       REL_TOL                  = 1e-10;
+    constexpr unsigned int MAX_NUMBER_OF_ITERATIONS = 10000;
+
     dealii::Vector<double> doping_values(V_dof_handler.n_dofs());
     dealii::Vector<double> temperature_values(V_dof_handler.n_dofs());
 
@@ -434,16 +435,6 @@ namespace Ddhdg
     dealii::VectorTools::interpolate(V_dof_handler,
                                      *(this->problem->temperature),
                                      temperature_values);
-
-    dealii::SUNDIALS::KINSOL<
-      dealii::Vector<double>>::AdditionalData::SolutionStrategy strategy =
-      dealii::SUNDIALS::KINSOL<
-        dealii::Vector<double>>::AdditionalData::SolutionStrategy::newton;
-
-    dealii::SUNDIALS::KINSOL<dealii::Vector<double>>::AdditionalData
-      additional_data(strategy, 2000);
-
-    dealii::SUNDIALS::KINSOL<dealii::Vector<double>> kinsol(additional_data);
 
     const double Nc = this->problem->band_density.at(Component::n);
     const double Nv = this->problem->band_density.at(Component::p);
@@ -459,72 +450,96 @@ namespace Ddhdg
     const unsigned int n_dofs = V_dof_handler.n_dofs();
     for (unsigned int i = 0; i < n_dofs; i++)
       {
-        const double T = temperature_values[i];
-        const double c = doping_values[i];
+        const double T   = temperature_values[i];
+        const double c   = doping_values[i];
+        const double KbT = Constants::KB * T;
 
         const double current_c_rescale = (std::abs(c) < 1) ? 1 : std::abs(c);
 
-        std::function<int(const dealii::Vector<double> &,
-                          dealii::Vector<double> &)>
-          residual = [=](const dealii::Vector<double> &v,
-                         dealii::Vector<double> &      residual) {
-            // Compute the exponents that appears in the function
-            const double exp_n =
-              (V_rescale * v[0] * Constants::Q - Ec) / (Constants::KB * T);
+        const double coeff =
+          (V_rescale * Constants::Q) / (Constants::KB * T * current_c_rescale);
 
-            const double exp_p =
-              (Ev - V_rescale * v[0] * Constants::Q) / (Constants::KB * T);
+        std::function<double(const double)> residual = [=](const double v) {
+          // Compute the exponents that appears in the function
+          const double exp_n = (V_rescale * v * Constants::Q - Ec) / KbT;
 
-            residual[0] =
-              (c - Nc * exp(exp_n) + Nv * exp(exp_p)) / current_c_rescale;
-            return 0;
-          };
+          const double exp_p = (Ev - V_rescale * v * Constants::Q) / KbT;
 
-        std::function<int(const dealii::Vector<double> &ycur,
-                          const dealii::Vector<double> &fcur,
-                          const dealii::Vector<double> &rhs,
-                          dealii::Vector<double> &      dst)>
-          solve_jacobian_system = [=](const dealii::Vector<double> &ycur,
-                                      const dealii::Vector<double> &,
-                                      const dealii::Vector<double> &rhs,
-                                      dealii::Vector<double> &      dst) {
-            const double exp_n =
-              (V_rescale * ycur[0] * Constants::Q - Ec) / (Constants::KB * T);
+          const double residual =
+            (c - Nc * exp(exp_n) + Nv * exp(exp_p)) / current_c_rescale;
+          return residual;
+        };
 
-            const double exp_p =
-              (Ev - V_rescale * ycur[0] * Constants::Q) / (Constants::KB * T);
+        std::function<double(const double, const double)>
+          solve_jacobian_system = [=](const double v, const double rhs) {
+            const double exp_n = (V_rescale * v * Constants::Q - Ec) / KbT;
 
-            const double coeff = (V_rescale * Constants::Q) /
-                                 (Constants::KB * T * current_c_rescale);
+            const double exp_p = (Ev - V_rescale * v * Constants::Q) / KbT;
 
             const double dF =
               -Nc * coeff * exp(exp_n) - Nv * coeff * exp(exp_p);
-            dst[0] = rhs[0] / dF;
-            return 0;
+
+            return -rhs / dF;
           };
 
-        std::function<void(dealii::Vector<double> &)> reinit_vector =
-          [](dealii::Vector<double> &v) { v.reinit(1); };
+        unsigned int current_iteration = 0;
+        bool         converged         = false;
+        double       current_v         = current_solution[i];
+        double       rhs               = residual(current_v);
+        double       temp_rhs;
+        double       delta_v;
+        int          float_type;
 
-        dealii::Vector<double> initial_guess(1);
+        while (current_iteration < MAX_NUMBER_OF_ITERATIONS)
+          {
+            delta_v = solve_jacobian_system(current_v, rhs);
 
-        initial_guess[0] = current_solution[i];
+            // Avoid movements bigger than 1
+            if (std::abs(delta_v) > 1.)
+              delta_v = std::abs(delta_v) / delta_v;
 
-        kinsol.reinit_vector         = reinit_vector;
-        kinsol.residual              = residual;
-        kinsol.solve_jacobian_system = solve_jacobian_system;
+            temp_rhs = residual(current_v + delta_v);
 
-        kinsol.solve(initial_guess);
+            // Do not move in place that increase the residual
+            while (std::fpclassify(temp_rhs) == FP_INFINITE ||
+                   std::abs(rhs) < std::abs(temp_rhs))
+              {
+                delta_v /= 2.;
+                temp_rhs = residual(current_v + delta_v);
+                if (std::abs(delta_v) < ABS_TOL)
+                  break;
+              }
+            current_v += delta_v;
+            rhs = temp_rhs;
 
-        const auto float_type = std::fpclassify(initial_guess[0]);
-        if (float_type == FP_NAN || float_type == FP_INFINITE)
+            if (std::abs(delta_v) < ABS_TOL)
+              {
+                converged = true;
+                break;
+              }
+
+            if (std::abs(delta_v / current_v) < REL_TOL)
+              {
+                converged = true;
+                break;
+              }
+
+            float_type = std::fpclassify(rhs);
+            if (float_type == FP_NAN || float_type == FP_INFINITE)
+              break;
+
+            ++current_iteration;
+          }
+        float_type = std::fpclassify(current_v);
+
+        if (!converged || float_type == FP_NAN || float_type == FP_INFINITE)
           AssertThrow(
             false,
             ExcMessage(
               "Newton method has not converged during computation of local "
               "charge neutrality"));
 
-        current_solution[i] = initial_guess[0];
+        current_solution[i] = current_v;
       }
   }
 
