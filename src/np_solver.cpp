@@ -1943,14 +1943,15 @@ namespace Ddhdg
 
         if (prm::thermodyn_eq)
           {
-            const double KbT        = Constants::KB * scratch.T_cell[q];
-            const double q_over_KbT = Constants::Q / KbT;
+            const double KbT_over_q =
+              Constants::KB * scratch.T_cell[q] / (Constants::Q * V_rescale);
+            const double ev_rescaled = ev / (Constants::Q * V_rescale);
+            const double ec_rescaled = ec / (Constants::Q * V_rescale);
+
             thermodynamic_equilibrium_der =
               -Q / n_rescale *
-              (nv * q_over_KbT * V_rescale *
-                 exp((ev - Constants::Q * V0[q] * V_rescale) / KbT) +
-               nc * q_over_KbT * V_rescale *
-                 exp((Constants::Q * V0[q] * V_rescale - ec) / KbT));
+              (nv / KbT_over_q * exp((ev_rescaled - V0[q]) / KbT_over_q) +
+               nc / KbT_over_q * exp((V0[q] - ec_rescaled) / KbT_over_q));
           }
 
         for (unsigned int i = 0; i < dofs_per_component; ++i)
@@ -2077,11 +2078,14 @@ namespace Ddhdg
 
         if (prm::thermodyn_eq)
           {
-            const double KbT = Constants::KB * scratch.T_cell[q];
+            const double KbT_over_q =
+              Constants::KB * scratch.T_cell[q] / (Constants::Q * V_rescale);
+            const double ev_rescaled = ev / (Constants::Q * V_rescale);
+            const double ec_rescaled = ec / (Constants::Q * V_rescale);
             thermodynamic_equilibrium_rhs =
               Q / n_rescale *
-              (nv * exp((ev - Constants::Q * V0[q] * V_rescale) / KbT) -
-               nc * exp((Constants::Q * V0[q] * V_rescale - ec) / KbT));
+              (nv * exp((ev_rescaled - V0[q]) / KbT_over_q) -
+               nc * exp((V0[q] - ec_rescaled) / KbT_over_q));
           }
 
         for (unsigned int i = 0; i < dofs_per_component; ++i)
