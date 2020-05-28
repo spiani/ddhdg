@@ -1,7 +1,9 @@
 add_library(DDHDG SHARED
         adimensionalizer.cpp
+        assembling_methods.cpp
         boundary_conditions.cpp
         electron_mobility.cpp
+        error_estimation.cpp
         function_tools.cpp
         nonlinear_iteration_results.cpp
         np_solver.cpp

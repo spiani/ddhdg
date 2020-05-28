@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cmath>
+#include <map>
+#include <string>
 
 namespace Ddhdg::Constants
 {
