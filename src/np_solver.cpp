@@ -3639,6 +3639,10 @@ namespace Ddhdg
     int    step                = 0;
     double update_cell_norm    = 0.;
     double current_solution_cell_norm;
+    double update_trace_norm = 0.;
+    double current_solution_trace_norm;
+    double update_norm = 0.;
+    double current_solution_norm;
 
     for (step = 1;
          step <= max_number_of_iterations || max_number_of_iterations < 0;
@@ -3669,21 +3673,30 @@ namespace Ddhdg
 
         update_cell_norm           = this->update_cell.linfty_norm();
         current_solution_cell_norm = this->current_solution_cell.linfty_norm();
+        update_trace_norm          = this->update_trace.linfty_norm();
+        current_solution_trace_norm =
+          this->current_solution_trace.linfty_norm();
+        update_norm = std::max(update_cell_norm, update_trace_norm);
+        current_solution_norm =
+          std::max(current_solution_cell_norm, current_solution_trace_norm);
 
         std::cout << "Difference in norm compared to the previous step: "
-                  << update_cell_norm << std::endl;
+                  << update_norm << std::endl;
 
         this->current_solution_trace += this->update_trace;
         this->current_solution_cell += this->update_cell;
 
-        if (update_cell_norm < absolute_tol)
+        std::cout << "Current solution norm: " << current_solution_norm
+                  << std::endl;
+
+        if (update_norm < absolute_tol)
           {
             std::cout << "Update is smaller than absolute tolerance. "
                       << "CONVERGENCE REACHED" << std::endl;
             convergence_reached = true;
             break;
           }
-        if (update_cell_norm < relative_tol * current_solution_cell_norm)
+        if (update_norm < relative_tol * current_solution_norm)
           {
             std::cout << "Update is smaller than relative tolerance. "
                       << "CONVERGENCE REACHED" << std::endl;
