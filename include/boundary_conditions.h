@@ -172,6 +172,12 @@ namespace Ddhdg
     get_neumann_conditions_for_id(dealii::types::boundary_id id,
                                   Component                  c) const;
 
+    [[nodiscard]] bool
+    has_boundary_conditions() const;
+
+    [[nodiscard]] bool
+    has_boundary_conditions(dealii::types::boundary_id id) const;
+
   protected:
     dirichlet_boundary_id_map<dim> dbc_map;
     neumann_boundary_id_map<dim>   nbc_map;
