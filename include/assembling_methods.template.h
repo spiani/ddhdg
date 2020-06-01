@@ -81,10 +81,10 @@ namespace Ddhdg
                         this->enabled_components);
 
     for (const auto &cell :
-         this->dof_handler_trace_restricted.active_cell_iterators())
+      this->dof_handler_trace_restricted.active_cell_iterators())
       {
         (this->*get_assemble_system_one_cell_function(
-                  compute_thermodynamic_equilibrium))(cell, scratch, task_data);
+          compute_thermodynamic_equilibrium))(cell, scratch, task_data);
         copy_local_to_global(task_data);
       }
   }
@@ -369,12 +369,12 @@ namespace Ddhdg
           n_einstein_diffusion_coefficient =
             scratch
               .template compute_einstein_diffusion_coefficient<Component::n,
-                                                               false>(q);
+                false>(q);
         if (prm::is_p_enabled)
           p_einstein_diffusion_coefficient =
             scratch
               .template compute_einstein_diffusion_coefficient<Component::p,
-                                                               false>(q);
+                false>(q);
 
         if (prm::thermodyn_eq)
           {
@@ -497,12 +497,12 @@ namespace Ddhdg
           n_einstein_diffusion_coefficient =
             scratch
               .template compute_einstein_diffusion_coefficient<Component::n,
-                                                               false>(q);
+                false>(q);
         if (prm::is_p_enabled)
           p_einstein_diffusion_coefficient =
             scratch
               .template compute_einstein_diffusion_coefficient<Component::p,
-                                                               false>(q);
+                false>(q);
 
         if (prm::is_n_enabled)
           Jn = n0[q] * (scratch.mu_n_cell[q] * E0[q]) -
@@ -929,7 +929,7 @@ namespace Ddhdg
                                     const unsigned int                 face)
   {
     if (c != V && c != n && c != p)
-      AssertThrow(false, InvalidComponent());
+    AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -1015,7 +1015,7 @@ namespace Ddhdg
 
                     scratch.tc_matrix(ii, jj) -=
                       ((c_[j] * mu_n_times_previous_E + n0[q] * mu_n_times_E) *
-                         normal -
+                       normal -
                        (n_einstein_diffusion_coefficient * f[j]) * normal -
                        tau_stabilized * c_[j]) *
                       xi[i] * JxW;
@@ -1027,7 +1027,7 @@ namespace Ddhdg
 
                     scratch.tc_matrix(ii, jj) -=
                       (-(c_[j] * mu_p_times_previous_E + p0[q] * mu_p_times_E) *
-                         normal -
+                       normal -
                        (p_einstein_diffusion_coefficient * f[j]) * normal -
                        tau_stabilized * c_[j]) *
                       xi[i] * JxW;
@@ -1048,7 +1048,7 @@ namespace Ddhdg
     const unsigned int                 face)
   {
     if (c != V && c != n && c != p)
-      AssertThrow(false, InvalidComponent());
+    AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -1152,7 +1152,7 @@ namespace Ddhdg
     const unsigned int                 face)
   {
     if (c != V && c != n && c != p)
-      AssertThrow(false, InvalidComponent());
+    AssertThrow(false, InvalidComponent());
 
     auto &tr_c = scratch.tr_c.at(c);
     auto &xi   = scratch.tr_c.at(c);
@@ -1206,7 +1206,7 @@ namespace Ddhdg
     const unsigned int                 face)
   {
     if (c != V && c != n && c != p)
-      AssertThrow(false, InvalidComponent());
+    AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -1257,7 +1257,7 @@ namespace Ddhdg
     unsigned int                                  face)
   {
     if (c != V && c != n && c != p)
-      Assert(false, InvalidComponent());
+    Assert(false, InvalidComponent());
 
     auto &tr_c  = scratch.tr_c.at(c);
     auto &tr_c0 = scratch.previous_tr_c_face.at(c);
@@ -1280,8 +1280,8 @@ namespace Ddhdg
           scratch.fe_face_values_trace_restricted.quadrature_point(q);
         const double dbc_value =
           (prm::thermodyn_eq) ?
-            0 :
-            dbc.evaluate(quadrature_point) / rescaling_factor - tr_c0[q];
+          0 :
+          dbc.evaluate(quadrature_point) / rescaling_factor - tr_c0[q];
 
         for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
           {
@@ -1310,7 +1310,7 @@ namespace Ddhdg
     unsigned int                                face)
   {
     if (c != Component::V && c != Component::n && c != Component::p)
-      Assert(false, InvalidComponent());
+    Assert(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -1447,7 +1447,7 @@ namespace Ddhdg
                   scratch.cc_matrix(ii, jj) +=
                     ((n[j] * mu_n_times_previous_E +
                       scratch.mu_n_face[q] * E[j] * n0[q]) *
-                       normal * z2[i] -
+                     normal * z2[i] -
                      n_einstein_diffusion_coefficient * Wn[j] * normal * z2[i] -
                      n_tau_stabilized * n[j] * z2[i]) *
                     JxW;
@@ -1455,7 +1455,7 @@ namespace Ddhdg
                   scratch.cc_matrix(ii, jj) +=
                     (-(p[j] * mu_p_times_previous_E +
                        scratch.mu_p_face[q] * E[j] * p0[q]) *
-                       normal * z3[i] -
+                     normal * z3[i] -
                      p_einstein_diffusion_coefficient * Wp[j] * normal * z3[i] -
                      p_tau_stabilized * p[j] * z3[i]) *
                     JxW;
@@ -1631,7 +1631,7 @@ namespace Ddhdg
                         ->template adimensionalize_tau<Component::V>(tau),
                       normal,
                       q);
-                  break;
+                break;
                 case Component::n:
                   tau_stabilized =
                     scratch.template compute_stabilized_tau<Component::n>(
@@ -1639,7 +1639,7 @@ namespace Ddhdg
                         ->template adimensionalize_tau<Component::n>(tau),
                       normal,
                       q);
-                  break;
+                break;
                 case Component::p:
                   tau_stabilized =
                     scratch.template compute_stabilized_tau<Component::p>(
@@ -1647,10 +1647,10 @@ namespace Ddhdg
                         ->template adimensionalize_tau<Component::p>(tau),
                       normal,
                       q);
-                  break;
+                break;
                 default:
-                  Assert(false, InvalidComponent());
-                  tau_stabilized = 1.;
+                Assert(false, InvalidComponent());
+                tau_stabilized = 1.;
               }
 
             for (unsigned int i = 0;
@@ -1684,11 +1684,11 @@ namespace Ddhdg
       {
         const DirichletBoundaryCondition<dim> dbc =
           (prm::thermodyn_eq) ?
-            DirichletBoundaryCondition<dim>(
-              std::make_shared<dealii::Functions::ZeroFunction<dim>>(),
-              Component::V) :
-            this->problem->boundary_handler->get_dirichlet_conditions_for_id(
-              face_boundary_id, c);
+          DirichletBoundaryCondition<dim>(
+            std::make_shared<dealii::Functions::ZeroFunction<dim>>(),
+            Component::V) :
+          this->problem->boundary_handler->get_dirichlet_conditions_for_id(
+            face_boundary_id, c);
         this->apply_dbc_on_face<prm, c>(scratch, task_data, dbc, face);
       }
     else
@@ -1701,10 +1701,10 @@ namespace Ddhdg
           {
             const NeumannBoundaryCondition<dim> nbc =
               (prm::thermodyn_eq) ?
-                NeumannBoundaryCondition<dim>(
-                  std::make_shared<dealii::Functions::ZeroFunction<dim>>(), c) :
-                this->problem->boundary_handler->get_neumann_conditions_for_id(
-                  face_boundary_id, c);
+              NeumannBoundaryCondition<dim>(
+                std::make_shared<dealii::Functions::ZeroFunction<dim>>(), c) :
+              this->problem->boundary_handler->get_neumann_conditions_for_id(
+                face_boundary_id, c);
             this->apply_nbc_on_face<c>(scratch, task_data, nbc, face);
           }
       }
@@ -1734,7 +1734,7 @@ namespace Ddhdg
             has_neumann_conditions.at(Component::V),
             face_boundary_id,
             face);
-          break;
+        break;
         case Component::n:
           assemble_flux_conditions<prm, Component::n>(
             scratch,
@@ -1743,7 +1743,7 @@ namespace Ddhdg
             has_neumann_conditions.at(Component::n),
             face_boundary_id,
             face);
-          break;
+        break;
         case Component::p:
           assemble_flux_conditions<prm, Component::p>(
             scratch,
@@ -1752,10 +1752,10 @@ namespace Ddhdg
             has_neumann_conditions.at(Component::p),
             face_boundary_id,
             face);
-          break;
+        break;
         default:
-          Assert(false, InvalidComponent());
-          break;
+        Assert(false, InvalidComponent());
+        break;
       }
   }
 
@@ -1917,9 +1917,5 @@ namespace Ddhdg
         loc_cell->set_dof_values(scratch.tmp_rhs, update_cell);
       }
   }
-
-  template class NPSolver<1>;
-  template class NPSolver<2>;
-  template class NPSolver<3>;
 
 } // namespace Ddhdg

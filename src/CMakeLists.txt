@@ -1,6 +1,8 @@
 add_library(DDHDG SHARED
         adimensionalizer.cpp
-        assembling_methods.cpp
+        assembling_methods_1d.cpp
+        assembling_methods_2d.cpp
+        assembling_methods_3d.cpp
         boundary_conditions.cpp
         electron_mobility.cpp
         error_estimation.cpp
