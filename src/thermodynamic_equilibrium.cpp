@@ -500,7 +500,7 @@ namespace Ddhdg
 
             temp_rhs = residual(current_v + delta_v);
 
-            // Do not move in place that increase the residual
+            // Do not move in a place that increases the residual
             while (std::fpclassify(temp_rhs) == FP_INFINITE ||
                    std::abs(rhs) < std::abs(temp_rhs))
               {
