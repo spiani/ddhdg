@@ -445,30 +445,10 @@ namespace Ddhdg
                 bool   compute_thermodynamic_equilibrium);
 
     inline void
-    compute_local_charge_neutrality_first_guess(
+    compute_local_charge_neutrality_on_a_point(
       const std::vector<double> &evaluated_doping,
       const std::vector<double> &evaluated_temperature,
       std::vector<double> &      evaluated_potentials);
-
-    void
-    set_local_charge_neutrality_first_guess();
-
-    void
-    compute_local_charge_neutrality_copy_solution(
-      const dealii::FiniteElement<dim> &V_fe,
-      const dealii::DoFHandler<dim> &   V_dof_handler,
-      Vector<double> &                  current_solution);
-
-    void
-    compute_local_charge_neutrality_nonlinear_solver(
-      const dealii::DoFHandler<dim> &V_dof_handler,
-      Vector<double> &               current_solution);
-
-    void
-    compute_local_charge_neutrality_set_solution(
-      const dealii::FiniteElement<dim> &V_fe,
-      const dealii::DoFHandler<dim> &   V_dof_handler,
-      Vector<double> &                  current_solution);
 
     void
     compute_local_charge_neutrality();
