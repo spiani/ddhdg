@@ -34,7 +34,7 @@ namespace Ddhdg
       this->current_solution_cell,
       expected_solution_multidim,
       difference_per_cell,
-      QGauss<dim>(this->get_number_of_quadrature_points()),
+      QGauss<dim>(this->get_number_of_quadrature_points() + 2),
       norm,
       &component_selection);
 
@@ -90,7 +90,7 @@ namespace Ddhdg
       this->current_solution_cell,
       expected_solution_multidim,
       difference_per_cell,
-      QGauss<dim>(this->get_number_of_quadrature_points()),
+      QGauss<dim>(this->get_number_of_quadrature_points() + 2),
       norm,
       &component_selection);
 
@@ -123,7 +123,7 @@ namespace Ddhdg
         expected_solution, c);
 
     const QGauss<dim - 1> face_quadrature_formula(
-      this->get_number_of_quadrature_points());
+      this->get_number_of_quadrature_points() + 2);
     const UpdateFlags flags(update_values | update_quadrature_points |
                             update_JxW_values);
 

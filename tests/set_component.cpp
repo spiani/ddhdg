@@ -187,6 +187,17 @@ TYPED_TEST(SetComponentMethod, interpolation) // NOLINT
 {
   const unsigned int dim = TypeParam::value;
 
+  constexpr double V_TOLERANCE = 5e-1;
+  constexpr double N_TOLERANCE = 1e-2;
+  constexpr double P_TOLERANCE = 1e-2;
+
+  constexpr double WN_TOLERANCE = 5e-2;
+  constexpr double WP_TOLERANCE = 5e-2;
+
+  constexpr double V_TRACE_TOLERANCE = 5e-1;
+  constexpr double N_TRACE_TOLERANCE = 5e-2;
+  constexpr double P_TRACE_TOLERANCE = 5e-2;
+
   const auto V_expected_solution =
     TestFixture::get_expected_solution(Ddhdg::Component::V);
   const auto n_expected_solution =
@@ -212,17 +223,17 @@ TYPED_TEST(SetComponentMethod, interpolation) // NOLINT
   const double p_l2_error =
     this->estimate_l2_error(p_expected_solution, Ddhdg::Component::p);
 
-  EXPECT_LT(V_l2_error, 5e-1);
-  EXPECT_LT(n_l2_error, 1e-2);
-  EXPECT_LT(p_l2_error, 1e-2);
+  EXPECT_LT(V_l2_error, V_TOLERANCE);
+  EXPECT_LT(n_l2_error, N_TOLERANCE);
+  EXPECT_LT(p_l2_error, P_TOLERANCE);
 
   const double Wn_l2_error =
     this->estimate_l2_error(Wn_expected_solution, Ddhdg::Displacement::Wn);
   const double Wp_l2_error =
     this->estimate_l2_error(Wp_expected_solution, Ddhdg::Displacement::Wp);
 
-  EXPECT_LT(Wn_l2_error, 5e-2);
-  EXPECT_LT(Wp_l2_error, 5e-2);
+  EXPECT_LT(Wn_l2_error, WN_TOLERANCE);
+  EXPECT_LT(Wp_l2_error, WP_TOLERANCE);
 
   const double V_l2_trace_error =
     this->estimate_l2_error_on_trace(V_expected_solution, Ddhdg::Component::V);
@@ -231,15 +242,26 @@ TYPED_TEST(SetComponentMethod, interpolation) // NOLINT
   const double p_l2_trace_error =
     this->estimate_l2_error_on_trace(p_expected_solution, Ddhdg::Component::p);
 
-  EXPECT_LT(V_l2_trace_error, 5e-1);
-  EXPECT_LT(n_l2_trace_error, 5e-2);
-  EXPECT_LT(p_l2_trace_error, 5e-2);
+  EXPECT_LT(V_l2_trace_error, V_TRACE_TOLERANCE);
+  EXPECT_LT(n_l2_trace_error, N_TRACE_TOLERANCE);
+  EXPECT_LT(p_l2_trace_error, P_TRACE_TOLERANCE);
 }
 
 
 TYPED_TEST(SetComponentMethod, projection) // NOLINT
 {
   const unsigned int dim = TypeParam::value;
+
+  constexpr double V_TOLERANCE = 5e-1;
+  constexpr double N_TOLERANCE = 1e-2;
+  constexpr double P_TOLERANCE = 3e-3;
+
+  constexpr double WN_TOLERANCE = 1e-2;
+  constexpr double WP_TOLERANCE = 2e-2;
+
+  constexpr double V_TRACE_TOLERANCE = 5e-1;
+  constexpr double N_TRACE_TOLERANCE = 1e-2;
+  constexpr double P_TRACE_TOLERANCE = 1e-2;
 
   const auto V_expected_solution =
     TestFixture::get_expected_solution(Ddhdg::Component::V);
@@ -266,17 +288,17 @@ TYPED_TEST(SetComponentMethod, projection) // NOLINT
   const double p_l2_error =
     this->estimate_l2_error(p_expected_solution, Ddhdg::Component::p);
 
-  EXPECT_LT(V_l2_error, 5e-1);
-  EXPECT_LT(n_l2_error, 1e-2);
-  EXPECT_LT(p_l2_error, 1e-6);
+  EXPECT_LT(V_l2_error, V_TOLERANCE);
+  EXPECT_LT(n_l2_error, N_TOLERANCE);
+  EXPECT_LT(p_l2_error, P_TOLERANCE);
 
   const double Wn_l2_error =
     this->estimate_l2_error(Wn_expected_solution, Ddhdg::Displacement::Wn);
   const double Wp_l2_error =
     this->estimate_l2_error(Wp_expected_solution, Ddhdg::Displacement::Wp);
 
-  EXPECT_LT(Wn_l2_error, 1e-2);
-  EXPECT_LT(Wp_l2_error, 1e-2);
+  EXPECT_LT(Wn_l2_error, WN_TOLERANCE);
+  EXPECT_LT(Wp_l2_error, WP_TOLERANCE);
 
   const double V_l2_trace_error =
     this->estimate_l2_error_on_trace(V_expected_solution, Ddhdg::Component::V);
@@ -285,7 +307,7 @@ TYPED_TEST(SetComponentMethod, projection) // NOLINT
   const double p_l2_trace_error =
     this->estimate_l2_error_on_trace(p_expected_solution, Ddhdg::Component::p);
 
-  EXPECT_LT(V_l2_trace_error, 5e-1);
-  EXPECT_LT(n_l2_trace_error, 1e-2);
-  EXPECT_LT(p_l2_trace_error, 1e-6);
+  EXPECT_LT(V_l2_trace_error, V_TRACE_TOLERANCE);
+  EXPECT_LT(n_l2_trace_error, N_TRACE_TOLERANCE);
+  EXPECT_LT(p_l2_trace_error, P_TRACE_TOLERANCE);
 }
