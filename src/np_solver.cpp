@@ -1766,6 +1766,9 @@ namespace Ddhdg
         std::cout << "Difference in norm compared to the previous step: "
                   << update_norm << std::endl;
 
+        this->update_trace *= 1.;
+        this->update_cell *= 1.;
+
         this->current_solution_trace += this->update_trace;
         this->current_solution_cell += this->update_cell;
 

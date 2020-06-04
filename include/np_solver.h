@@ -7,12 +7,6 @@ namespace Ddhdg
 {
   using namespace dealii;
 
-  DeclExceptionMsg(
-    MissingConvergenceForChargeNeutrality,
-    "On at least one cell, Newton algorithm has not converged while computing "
-    "the local charge neutrality. Please ensure that the magnitude of the "
-    "doping is set with a correct value in the adimensionalizer");
-
   template <int dim>
   class TemplatizedParametersInterface;
 
