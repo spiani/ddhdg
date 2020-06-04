@@ -268,6 +268,9 @@ namespace pyddhdg
                       Ddhdg::Displacement d) const;
 
     [[nodiscard]] double
+    estimate_l2_error(NPSolver<dim> solver, Ddhdg::Component c) const;
+
+    [[nodiscard]] double
     estimate_h1_error(DealIIFunction<dim> expected_solution,
                       Ddhdg::Component    c) const;
 
@@ -276,12 +279,18 @@ namespace pyddhdg
                       Ddhdg::Displacement d) const;
 
     [[nodiscard]] double
+    estimate_h1_error(NPSolver<dim> solver, Ddhdg::Component c) const;
+
+    [[nodiscard]] double
     estimate_linfty_error(DealIIFunction<dim> expected_solution,
                           Ddhdg::Component    c) const;
 
     [[nodiscard]] double
     estimate_linfty_error(DealIIFunction<dim> expected_solution,
                           Ddhdg::Displacement d) const;
+
+    [[nodiscard]] double
+    estimate_linfty_error(NPSolver<dim> solver, Ddhdg::Component c) const;
 
     [[nodiscard]] double
     estimate_l2_error_on_trace(const std::string &expected_solution,

@@ -533,6 +533,18 @@ namespace pyddhdg
 
   template <int dim>
   double
+  NPSolver<dim>::estimate_l2_error(const NPSolver<dim>    solver,
+                                   const Ddhdg::Component c) const
+  {
+    return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
+                                              c,
+                                              dealii::VectorTools::L2_norm);
+  }
+
+
+
+  template <int dim>
+  double
   NPSolver<dim>::estimate_h1_error(const DealIIFunction<dim> expected_solution,
                                    const Ddhdg::Component    c) const
   {
@@ -549,6 +561,18 @@ namespace pyddhdg
   {
     return this->ddhdg_solver->estimate_h1_error(
       expected_solution.get_dealii_function(), d);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_h1_error(const NPSolver<dim>    solver,
+                                   const Ddhdg::Component c) const
+  {
+    return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
+                                              c,
+                                              dealii::VectorTools::H1_norm);
   }
 
 
@@ -573,6 +597,18 @@ namespace pyddhdg
   {
     return this->ddhdg_solver->estimate_linfty_error(
       expected_solution.get_dealii_function(), d);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_linfty_error(const NPSolver<dim>    solver,
+                                       const Ddhdg::Component c) const
+  {
+    return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
+                                              c,
+                                              dealii::VectorTools::Linfty_norm);
   }
 
 

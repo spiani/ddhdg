@@ -187,6 +187,16 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const override;
 
+    double
+    estimate_error(const NPSolver<dim> &         other,
+                   Component                     c,
+                   dealii::VectorTools::NormType norm) const;
+
+    double
+    estimate_error(const NPSolver<dim> &         other,
+                   Displacement                  d,
+                   dealii::VectorTools::NormType norm) const;
+
     std::shared_ptr<dealii::Function<dim>>
     get_solution() const override;
 

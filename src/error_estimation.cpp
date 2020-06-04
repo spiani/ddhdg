@@ -379,6 +379,96 @@ namespace Ddhdg
                                          dealii::VectorTools::Linfty_norm);
   }
 
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_error(const NPSolver<dim> &         other,
+                                Component                     c,
+                                dealii::VectorTools::NormType norm) const
+  {
+    Vector<double> difference_per_cell(triangulation->n_active_cells());
+
+    auto tmp(this->current_solution_cell);
+
+    dealii::VectorTools::interpolate_to_different_mesh(
+      other.dof_handler_cell,
+      other.current_solution_cell,
+      this->dof_handler_cell,
+      tmp);
+
+    tmp -= this->current_solution_cell;
+
+    unsigned int component_index = get_component_index(c) * (1 + dim) + dim;
+
+    const unsigned int n_of_components = (dim + 1) * all_components().size();
+    const auto         component_selection =
+      dealii::ComponentSelectFunction<dim>(component_index, n_of_components);
+
+    VectorTools::integrate_difference(
+      this->dof_handler_cell,
+      tmp,
+      dealii::Functions::ZeroFunction<dim>(n_of_components),
+      difference_per_cell,
+      QGauss<dim>(this->get_number_of_quadrature_points() + 2),
+      norm,
+      &component_selection);
+
+    const double global_error =
+      VectorTools::compute_global_error(*(this->triangulation),
+                                        difference_per_cell,
+                                        norm);
+    return global_error;
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_error(const NPSolver<dim> &         other,
+                                Displacement                  d,
+                                dealii::VectorTools::NormType norm) const
+  {
+    Vector<double> difference_per_cell(triangulation->n_active_cells());
+
+    auto tmp(this->current_solution_cell);
+
+    dealii::VectorTools::interpolate_to_different_mesh(
+      other.dof_handler_cell,
+      other.current_solution_cell,
+      this->dof_handler_cell,
+      tmp);
+
+    tmp -= this->current_solution_cell;
+
+    Component c = displacement2component(d);
+
+    unsigned int       component_index = get_component_index(c);
+    const unsigned int n_of_components = (dim + 1) * all_components().size();
+
+    const std::pair<const unsigned int, const unsigned int> selection_interval =
+      {component_index * (dim + 1), component_index * (dim + 1) + dim};
+    const auto component_selection =
+      dealii::ComponentSelectFunction<dim>(selection_interval, n_of_components);
+
+    VectorTools::integrate_difference(
+      this->dof_handler_cell,
+      tmp,
+      dealii::Functions::ZeroFunction<dim>(3 * (dim + 1)),
+      difference_per_cell,
+      QGauss<dim>(this->get_number_of_quadrature_points() + 2),
+      norm,
+      &component_selection);
+
+    const double global_error =
+      VectorTools::compute_global_error(*(this->triangulation),
+                                        difference_per_cell,
+                                        norm);
+    return global_error;
+  }
+
+
+
   template class NPSolver<1>;
   template class NPSolver<2>;
   template class NPSolver<3>;
