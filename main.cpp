@@ -423,8 +423,9 @@ main(int argc, char **argv)
                                                prm.p_boundary_function);
     }
   // For the time being, we will fix the permittivity (epsilon0) to one
-  const std::shared_ptr<const Ddhdg::Permittivity<dim>> permittivity =
-    std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.);
+  const std::shared_ptr<const Ddhdg::HomogeneousPermittivity<dim>>
+    permittivity =
+      std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.);
 
   // The same for the electron mobility
   const std::shared_ptr<const Ddhdg::ElectronMobility<dim>> electron_mobility =
@@ -439,19 +440,22 @@ main(int argc, char **argv)
         prm.recombination_term_p_coefficient);
 
   // Create an object that represent the problem we are going to solve
-  std::shared_ptr<const Ddhdg::Problem<dim>> problem =
-    std::make_shared<const Ddhdg::Problem<dim>>(triangulation,
-                                                permittivity,
-                                                electron_mobility,
-                                                electron_mobility,
-                                                recombination_term,
-                                                prm.temperature,
-                                                prm.doping,
-                                                boundary_handler,
-                                                prm.conduction_band_density,
-                                                prm.valence_band_density,
-                                                prm.conduction_band_edge_energy,
-                                                prm.valence_band_edge_energy);
+  std::shared_ptr<
+    const Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
+    problem = std::make_shared<
+      const Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
+      triangulation,
+      permittivity,
+      electron_mobility,
+      electron_mobility,
+      recombination_term,
+      prm.temperature,
+      prm.doping,
+      boundary_handler,
+      prm.conduction_band_density,
+      prm.valence_band_density,
+      prm.conduction_band_edge_energy,
+      prm.valence_band_edge_energy);
 
   // Choose the parameters for the solver
   std::shared_ptr<const Ddhdg::NPSolverParameters> parameters =
@@ -473,7 +477,8 @@ main(int argc, char **argv)
       prm.length_scale, prm.doping_magnitude, prm.electron_mobility_magnitude);
 
   // Create a solver for the problem
-  Ddhdg::NPSolver<dim> solver(problem, parameters, adimensionalizer);
+  Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>> solver(
+    problem, parameters, adimensionalizer);
 
   std::cout << std::endl
             << std::endl

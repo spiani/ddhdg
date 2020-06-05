@@ -5,12 +5,13 @@
 #include <gtest/gtest.h>
 
 template <typename D>
-class SetComponentMethod : public Ddhdg::NPSolver<D::value>,
-                           public ::testing::Test
+class SetComponentMethod
+  : public Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousPermittivity<D::value>>,
+    public ::testing::Test
 {
 public:
   SetComponentMethod()
-    : Ddhdg::NPSolver<D::value>(
+    : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousPermittivity<D::value>>(
         get_problem(),
         std::make_shared<Ddhdg::NPSolverParameters>(0, 1, 2)){};
 
@@ -149,13 +150,15 @@ protected:
     return boundary_handler;
   }
 
-  static std::shared_ptr<Ddhdg::Problem<D::value>>
+  static std::shared_ptr<
+    Ddhdg::Problem<D::value, Ddhdg::HomogeneousPermittivity<D::value>>>
   get_problem()
   {
     const unsigned int dim = D::value;
 
-    std::shared_ptr<Ddhdg::Problem<dim>> problem =
-      std::make_shared<Ddhdg::Problem<dim>>(
+    std::shared_ptr<Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
+      problem = std::make_shared<
+        Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),

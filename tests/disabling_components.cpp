@@ -3,17 +3,19 @@
 #include <ddhdg.h>
 #include <gtest/gtest.h>
 
-class DisablingComponentsTest : public Ddhdg::NPSolver<2>,
-                                public ::testing::Test
+class DisablingComponentsTest
+  : public Ddhdg::NPSolver<2, Ddhdg::HomogeneousPermittivity<2>>,
+    public ::testing::Test
 {
 public:
   DisablingComponentsTest()
-    : Ddhdg::NPSolver<2>(get_problem(),
-                         std::make_shared<Ddhdg::NPSolverParameters>(1, 2, 3),
-                         std::make_shared<Ddhdg::Adimensionalizer>(
-                           1,
-                           Ddhdg::Constants::Q / Ddhdg::Constants::KB,
-                           1 / Ddhdg::Constants::Q)){};
+    : Ddhdg::NPSolver<2, Ddhdg::HomogeneousPermittivity<2>>(
+        get_problem(),
+        std::make_shared<Ddhdg::NPSolverParameters>(1, 2, 3),
+        std::make_shared<Ddhdg::Adimensionalizer>(1,
+                                                  Ddhdg::Constants::Q /
+                                                    Ddhdg::Constants::KB,
+                                                  1 / Ddhdg::Constants::Q)){};
 
 protected:
   constexpr static const unsigned int dim = 2;
@@ -117,11 +119,12 @@ protected:
     return boundary_handler;
   }
 
-  static std::shared_ptr<Ddhdg::Problem<2>>
+  static std::shared_ptr<Ddhdg::Problem<2, Ddhdg::HomogeneousPermittivity<2>>>
   get_problem()
   {
-    std::shared_ptr<Ddhdg::Problem<dim>> problem =
-      std::make_shared<Ddhdg::Problem<dim>>(
+    std::shared_ptr<Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
+      problem = std::make_shared<
+        Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),

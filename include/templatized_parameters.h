@@ -7,24 +7,26 @@ namespace Ddhdg
   DeclExceptionMsg(MetaprogrammingError,
                    "Something went wrong with the loop on templates");
 
-  template <int dim>
+  template <int dim, class Permittivity>
   class TemplatizedParametersInterface
   {
   public:
     [[nodiscard]] virtual unsigned int
     get_parameter_mask() const = 0;
 
-    virtual TemplatizedParametersInterface<dim> *
+    virtual TemplatizedParametersInterface<dim, Permittivity> *
     get_previous() const = 0;
 
-    virtual typename NPSolver<dim>::assemble_system_one_cell_pointer
-    get_assemble_system_one_cell_function() const = 0;
+    virtual
+      typename NPSolver<dim, Permittivity>::assemble_system_one_cell_pointer
+      get_assemble_system_one_cell_function() const = 0;
 
     virtual ~TemplatizedParametersInterface() = default;
   };
 
-  template <int dim, unsigned int parameter_mask>
-  class TemplatizedParameters : public TemplatizedParametersInterface<dim>
+  template <int dim, class Permittivity, unsigned int parameter_mask>
+  class TemplatizedParameters
+    : public TemplatizedParametersInterface<dim, Permittivity>
   {
   public:
     static const unsigned int mask         = parameter_mask;
@@ -36,38 +38,38 @@ namespace Ddhdg
     [[nodiscard]] unsigned int
     get_parameter_mask() const override;
 
-    TemplatizedParametersInterface<dim> *
+    TemplatizedParametersInterface<dim, Permittivity> *
     get_previous() const override;
 
-    typename NPSolver<dim>::assemble_system_one_cell_pointer
+    typename NPSolver<dim, Permittivity>::assemble_system_one_cell_pointer
     get_assemble_system_one_cell_function() const override;
   };
 
-  template <int dim, unsigned int parameter_mask>
+  template <int dim, class Permittivity, unsigned int parameter_mask>
   unsigned int
-  TemplatizedParameters<dim, parameter_mask>::get_parameter_mask() const
+  TemplatizedParameters<dim, Permittivity, parameter_mask>::get_parameter_mask()
+    const
   {
     return mask;
   }
 
-  template <int dim, unsigned int parameter_mask>
-  TemplatizedParametersInterface<dim> *
-  TemplatizedParameters<dim, parameter_mask>::get_previous() const
+  template <int dim, class Permittivity, unsigned int parameter_mask>
+  TemplatizedParametersInterface<dim, Permittivity> *
+  TemplatizedParameters<dim, Permittivity, parameter_mask>::get_previous() const
   {
     if (parameter_mask == 0)
       Assert(false, MetaprogrammingError());
     const unsigned int k = (parameter_mask == 0) ? 0 : parameter_mask - 1;
-    return new TemplatizedParameters<dim, k>();
+    return new TemplatizedParameters<dim, Permittivity, k>();
   }
 
-  template <int dim, unsigned int parameter_mask>
-  typename NPSolver<dim>::assemble_system_one_cell_pointer
-  TemplatizedParameters<dim,
-                        parameter_mask>::get_assemble_system_one_cell_function()
-    const
+  template <int dim, class Permittivity, unsigned int parameter_mask>
+  typename NPSolver<dim, Permittivity>::assemble_system_one_cell_pointer
+  TemplatizedParameters<dim, Permittivity, parameter_mask>::
+    get_assemble_system_one_cell_function() const
   {
-    return &NPSolver<dim>::template assemble_system_one_cell<
-      TemplatizedParameters<dim, parameter_mask>>;
+    return &NPSolver<dim, Permittivity>::template assemble_system_one_cell<
+      TemplatizedParameters<dim, Permittivity, parameter_mask>>;
   }
 
 } // namespace Ddhdg

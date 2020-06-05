@@ -12,18 +12,20 @@ constexpr double ND = 1e22;
 constexpr double NA = 1e23;
 
 
-class LocalChargeNeutralityTest : public Ddhdg::NPSolver<dim>,
-                                  public ::testing::Test
+class LocalChargeNeutralityTest
+  : public Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>>,
+    public ::testing::Test
 {
 public:
   LocalChargeNeutralityTest()
-    : Ddhdg::NPSolver<dim>(get_problem(),
-                           std::make_shared<Ddhdg::NPSolverParameters>(3, 1, 1),
-                           std::make_shared<Ddhdg::Adimensionalizer>(
-                             1,
-                             Ddhdg::Constants::Q / Ddhdg::Constants::KB,
-                             1e23,
-                             1)){};
+    : Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>>(
+        get_problem(),
+        std::make_shared<Ddhdg::NPSolverParameters>(3, 1, 1),
+        std::make_shared<Ddhdg::Adimensionalizer>(1,
+                                                  Ddhdg::Constants::Q /
+                                                    Ddhdg::Constants::KB,
+                                                  1e23,
+                                                  1)){};
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<dim>>
@@ -92,11 +94,13 @@ protected:
     return boundary_handler;
   }
 
-  static std::shared_ptr<Ddhdg::Problem<dim>>
+  static std::shared_ptr<
+    Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
   get_problem()
   {
-    std::shared_ptr<Ddhdg::Problem<dim>> problem =
-      std::make_shared<Ddhdg::Problem<dim>>(
+    std::shared_ptr<Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
+      problem = std::make_shared<
+        Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(
           12.9 * Ddhdg::Constants::EPSILON0),

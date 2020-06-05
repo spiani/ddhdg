@@ -10,12 +10,12 @@
 
 namespace Ddhdg
 {
-  template <int dim>
+  template <int dim, class Permittivity>
   struct Problem
   {
     Problem(
       std::shared_ptr<const dealii::Triangulation<dim>>    triangulation,
-      std::shared_ptr<const Permittivity<dim>>             permittivity,
+      std::shared_ptr<const Permittivity>                  permittivity,
       std::shared_ptr<const ElectronMobility<dim>>         n_electron_mobility,
       std::shared_ptr<const ElectronMobility<dim>>         p_electron_mobility,
       std::shared_ptr<const RecombinationTerm<dim>>        recombination_term,
@@ -29,7 +29,7 @@ namespace Ddhdg
 
 
     const std::shared_ptr<const dealii::Triangulation<dim>> triangulation;
-    const std::shared_ptr<const Permittivity<dim>>          permittivity;
+    const std::shared_ptr<const Permittivity>               permittivity;
     const std::shared_ptr<const ElectronMobility<dim>>      n_electron_mobility;
     const std::shared_ptr<const ElectronMobility<dim>>      p_electron_mobility;
     const std::shared_ptr<const RecombinationTerm<dim>>     recombination_term;

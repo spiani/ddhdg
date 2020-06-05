@@ -2,5 +2,5 @@
 
 namespace Ddhdg
 {
-  template class NPSolver<2>;
+  template class NPSolver<2, HomogeneousPermittivity<2>>;
 } // namespace Ddhdg

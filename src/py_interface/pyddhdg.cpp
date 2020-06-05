@@ -14,7 +14,7 @@ namespace pyddhdg
 
 
   template <int dim>
-  std::shared_ptr<Ddhdg::Permittivity<dim>>
+  std::shared_ptr<Ddhdg::HomogeneousPermittivity<dim>>
   HomogeneousPermittivity<dim>::generate_ddhdg_permittivity()
   {
     return std::make_shared<Ddhdg::HomogeneousPermittivity<dim>>(this->epsilon);
@@ -267,7 +267,7 @@ namespace pyddhdg
   template <int dim>
   Problem<dim>::Problem(const double                   left,
                         const double                   right,
-                        Permittivity<dim> &            permittivity,
+                        HomogeneousPermittivity<dim> & permittivity,
                         ElectronMobility<dim> &        n_electron_mobility,
                         ElectronMobility<dim> &        p_electron_mobility,
                         RecombinationTerm<dim> &       recombination_term,
@@ -278,7 +278,8 @@ namespace pyddhdg
                         const double                   valence_band_density,
                         const double conduction_band_edge_energy,
                         const double valence_band_edge_energy)
-    : ddhdg_problem(std::make_shared<Ddhdg::Problem<dim>>(
+    : ddhdg_problem(std::make_shared<
+                    Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
         generate_triangulation(left, right),
         permittivity.generate_ddhdg_permittivity(),
         n_electron_mobility.generate_ddhdg_electron_mobility(),
@@ -303,7 +304,8 @@ namespace pyddhdg
 
 
   template <int dim>
-  std::shared_ptr<const Ddhdg::Problem<dim>>
+  std::shared_ptr<
+    const Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
   Problem<dim>::get_ddhdg_problem() const
   {
     return this->ddhdg_problem;
@@ -339,7 +341,8 @@ namespace pyddhdg
   NPSolver<dim>::NPSolver(const Problem<dim> &             problem,
                           const Ddhdg::NPSolverParameters &parameters,
                           const Ddhdg::Adimensionalizer &  adimensionalizer)
-    : ddhdg_solver(std::make_shared<Ddhdg::NPSolver<dim>>(
+    : ddhdg_solver(std::make_shared<
+                   Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
         problem.get_ddhdg_problem(),
         std::make_shared<const Ddhdg::NPSolverParameters>(parameters),
         std::make_shared<const Ddhdg::Adimensionalizer>(adimensionalizer)))

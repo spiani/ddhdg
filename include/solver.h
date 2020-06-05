@@ -28,12 +28,12 @@ namespace Ddhdg
 
   DeclExceptionMsg(NoTraceIn1D, "The trace can not be saved in 1D");
 
-  template <int dim>
+  template <int dim, class Permittivity>
   class Solver
   {
   public:
-    Solver(std::shared_ptr<const Problem<dim>>     problem,
-           std::shared_ptr<const Adimensionalizer> adimensionalizer =
+    Solver(std::shared_ptr<const Problem<dim, Permittivity>> problem,
+           std::shared_ptr<const Adimensionalizer>           adimensionalizer =
              std::make_shared<Adimensionalizer>());
 
     virtual void
@@ -327,8 +327,8 @@ namespace Ddhdg
       return 9e99;
     }
 
-    const std::shared_ptr<const Problem<dim>>     problem;
-    const std::shared_ptr<const Adimensionalizer> adimensionalizer;
+    const std::shared_ptr<const Problem<dim, Permittivity>> problem;
+    const std::shared_ptr<const Adimensionalizer>           adimensionalizer;
   };
 
 } // namespace Ddhdg

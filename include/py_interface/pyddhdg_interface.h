@@ -15,11 +15,7 @@ py::enum_<Ddhdg::Displacement>(m, "Displacement", py::module_local())
   .value("wp", Ddhdg::Displacement::Wp)
   .export_values();
 
-py::class_<Permittivity<DIM>>(m, "Permittivity");
-
-py::class_<HomogeneousPermittivity<DIM>, Permittivity<DIM>>(
-  m,
-  "HomogeneousPermittivity")
+py::class_<HomogeneousPermittivity<DIM>>(m, "HomogeneousPermittivity")
   .def(py::init<const double &>());
 
 py::class_<ElectronMobility<DIM>>(m, "ElectronMobility");
@@ -89,7 +85,7 @@ py::class_<BoundaryConditionHandler<DIM>>(m, "BoundaryConditionHandler")
 py::class_<Problem<DIM>>(m, "Problem")
   .def(py::init<double,
                 double,
-                Permittivity<DIM> &,
+                HomogeneousPermittivity<DIM> &,
                 ElectronMobility<DIM> &,
                 ElectronMobility<DIM> &,
                 RecombinationTerm<DIM> &,

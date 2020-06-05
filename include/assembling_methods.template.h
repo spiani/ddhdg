@@ -5,9 +5,9 @@
 
 namespace Ddhdg
 {
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::assemble_system_multithreaded(
+  NPSolver<dim, Permittivity>::assemble_system_multithreaded(
     const bool trace_reconstruct,
     const bool compute_thermodynamic_equilibrium)
   {
@@ -36,21 +36,23 @@ namespace Ddhdg
                         face_flags_cell,
                         flags_trace,
                         flags_trace_restricted,
+                        *(this->problem->permittivity),
                         this->enabled_components);
     WorkStream::run(dof_handler_trace_restricted.begin_active(),
                     dof_handler_trace_restricted.end(),
                     *this,
                     this->get_assemble_system_one_cell_function(
                       compute_thermodynamic_equilibrium),
-                    &NPSolver<dim>::copy_local_to_global,
+                    &NPSolver<dim, Permittivity>::copy_local_to_global,
                     scratch,
                     task_data);
   }
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::assemble_system(const bool trace_reconstruct,
-                                 const bool compute_thermodynamic_equilibrium)
+  NPSolver<dim, Permittivity>::assemble_system(
+    const bool trace_reconstruct,
+    const bool compute_thermodynamic_equilibrium)
   {
     Assert(this->initialized, dealii::ExcNotInitialized());
 
@@ -78,6 +80,7 @@ namespace Ddhdg
                         face_flags_cell,
                         flags_trace,
                         flags_trace_restricted,
+                        *(this->problem->permittivity),
                         this->enabled_components);
 
     for (const auto &cell :
@@ -91,9 +94,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
-  typename NPSolver<dim>::assemble_system_one_cell_pointer
-  NPSolver<dim>::get_assemble_system_one_cell_function(
+  template <int dim, class Permittivity>
+  typename NPSolver<dim, Permittivity>::assemble_system_one_cell_pointer
+  NPSolver<dim, Permittivity>::get_assemble_system_one_cell_function(
     const bool compute_thermodynamic_equilibrium)
   {
     // The last three bits of parameter_mask are the values of the flags
@@ -109,10 +112,10 @@ namespace Ddhdg
     if (this->is_enabled(Component::p))
       parameter_mask += 1;
 
-    TemplatizedParametersInterface<dim> *p1;
-    TemplatizedParametersInterface<dim> *p2;
+    TemplatizedParametersInterface<dim, Permittivity> *p1;
+    TemplatizedParametersInterface<dim, Permittivity> *p2;
 
-    p1 = new TemplatizedParameters<dim, 15>();
+    p1 = new TemplatizedParameters<dim, Permittivity, 15>();
     while (p1->get_parameter_mask() != parameter_mask)
       {
         p2 = p1->get_previous();
@@ -120,7 +123,7 @@ namespace Ddhdg
         p1 = p2;
       }
 
-    typename NPSolver<dim>::assemble_system_one_cell_pointer f =
+    typename NPSolver<dim, Permittivity>::assemble_system_one_cell_pointer f =
       p1->get_assemble_system_one_cell_function();
     delete p1;
     return f;
@@ -128,10 +131,10 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::prepare_data_on_cell_quadrature_points(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch)
+  NPSolver<dim, Permittivity>::prepare_data_on_cell_quadrature_points(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch)
   {
     const unsigned int n_q_points =
       scratch.fe_values_cell.get_quadrature().size();
@@ -160,11 +163,9 @@ namespace Ddhdg
         scratch.fe_values_cell.quadrature_point(q);
 
     // Compute the value of epsilon
-    this->problem->permittivity->compute_absolute_permittivity(
-      scratch.cell_quadrature_points, scratch.epsilon_cell);
-    // Rescale the permittivity to get adimensionality
-    this->adimensionalizer->template adimensionalize_permittivity<dim>(
-      scratch.epsilon_cell);
+    scratch.permittivity.initialize_on_cell(
+      scratch.cell_quadrature_points,
+      this->adimensionalizer->get_permittivity_rescaling_factor());
 
     // Compute the value of mu
     if (this->is_enabled(Component::n))
@@ -234,11 +235,11 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm>
   void
-  NPSolver<dim>::add_cell_products_to_cc_matrix(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch)
+  NPSolver<dim, Permittivity>::add_cell_products_to_cc_matrix(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch)
   {
     const unsigned int n_q_points =
       scratch.fe_values_cell.get_quadrature().size();
@@ -292,6 +293,8 @@ namespace Ddhdg
 
     const unsigned int dofs_per_component =
       scratch.enabled_component_indices.size();
+
+    dealii::Tensor<1, dim> epsilon_times_E;
 
     dealii::Tensor<1, dim> mu_n_times_previous_E;
     dealii::Tensor<1, dim> mu_p_times_previous_E;
@@ -397,9 +400,11 @@ namespace Ddhdg
                 const unsigned int jj = scratch.enabled_component_indices[j];
                 if (prm::is_V_enabled)
                   {
+                    scratch.permittivity.epsilon_operator_on_cell(
+                      q, E[jj], epsilon_times_E);
                     scratch.cc_matrix(i, j) +=
                       (-V[jj] * q1_div[ii] + E[jj] * q1[ii] -
-                       (scratch.epsilon_cell[q] * E[jj]) * z1_grad[ii]) *
+                       epsilon_times_E * z1_grad[ii]) *
                       JxW;
 
                     if (prm::thermodyn_eq)
@@ -432,11 +437,11 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm>
   void
-  NPSolver<dim>::add_cell_products_to_cc_rhs(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch)
+  NPSolver<dim, Permittivity>::add_cell_products_to_cc_rhs(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch)
   {
     const unsigned int n_q_points =
       scratch.fe_values_cell.get_quadrature().size();
@@ -465,6 +470,8 @@ namespace Ddhdg
 
     const auto &c0 = scratch.doping_cell;
 
+    dealii::Tensor<1, dim> epsilon_times_E;
+
     dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
     dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
 
@@ -492,6 +499,11 @@ namespace Ddhdg
     for (unsigned int q = 0; q < n_q_points; ++q)
       {
         const double JxW = scratch.fe_values_cell.JxW(q);
+
+        if (prm::is_V_enabled)
+          scratch.permittivity.epsilon_operator_on_cell(q,
+                                                        E0[q],
+                                                        epsilon_times_E);
 
         if (prm::is_n_enabled)
           n_einstein_diffusion_coefficient =
@@ -538,8 +550,7 @@ namespace Ddhdg
                   scratch.fe_values_cell[electric_potential].gradient(ii, q);
 
                 scratch.cc_rhs[i] +=
-                  (V0[q] * q1_div - E0[q] * q1 +
-                   (scratch.epsilon_cell[q] * E0[q]) * z1_grad +
+                  (V0[q] * q1_div - E0[q] * q1 + epsilon_times_E * z1_grad +
                    Q * c0[q] * z1) *
                   JxW;
 
@@ -587,10 +598,10 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::prepare_data_on_face_quadrature_points(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch)
+  NPSolver<dim, Permittivity>::prepare_data_on_face_quadrature_points(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch)
   {
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -618,10 +629,9 @@ namespace Ddhdg
           current_solution_trace, scratch.previous_tr_c_face[c]);
       }
 
-    this->problem->permittivity->compute_absolute_permittivity(
-      scratch.face_quadrature_points, scratch.epsilon_face);
-    this->adimensionalizer->template adimensionalize_permittivity<dim>(
-      scratch.epsilon_face);
+    scratch.permittivity.initialize_on_face(
+      scratch.face_quadrature_points,
+      this->adimensionalizer->get_permittivity_rescaling_factor());
 
     if (this->is_enabled(Component::n))
       {
@@ -651,12 +661,12 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   inline void
-  NPSolver<dim>::copy_fe_values_on_scratch(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch,
-    const unsigned int                 face,
-    const unsigned int                 q)
+  NPSolver<dim, Permittivity>::copy_fe_values_on_scratch(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    const unsigned int                               face,
+    const unsigned int                               q)
   {
     for (const auto c : this->enabled_components)
       {
@@ -686,12 +696,12 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   inline void
-  NPSolver<dim>::copy_fe_values_for_trace(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch,
-    const unsigned int                 face,
-    const unsigned int                 q)
+  NPSolver<dim, Permittivity>::copy_fe_values_for_trace(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    const unsigned int                               face,
+    const unsigned int                               q)
   {
     for (const auto c : this->enabled_components)
       {
@@ -712,11 +722,12 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm>
   inline void
-  NPSolver<dim>::assemble_ct_matrix(Ddhdg::NPSolver<dim>::ScratchData &scratch,
-                                    const unsigned int                 face)
+  NPSolver<dim, Permittivity>::assemble_ct_matrix(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    const unsigned int                               face)
   {
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -756,12 +767,11 @@ namespace Ddhdg
           scratch.fe_face_values_trace_restricted.normal_vector(q);
 
         if (prm::is_V_enabled)
-          V_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::V>(
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::V>(V_tau),
-              normal,
-              q);
+          V_tau_stabilized = scratch.permittivity.compute_stabilized_v_tau(
+            q,
+            this->adimensionalizer->template adimensionalize_tau<Component::V>(
+              V_tau),
+            normal);
         if (prm::is_n_enabled)
           n_tau_stabilized =
             scratch.template compute_stabilized_tau<Component::n>(
@@ -810,12 +820,12 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm>
   inline void
-  NPSolver<dim>::add_ct_matrix_terms_to_cc_rhs(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch,
-    const unsigned int                 face)
+  NPSolver<dim, Permittivity>::add_ct_matrix_terms_to_cc_rhs(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    const unsigned int                               face)
   {
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -852,12 +862,11 @@ namespace Ddhdg
           scratch.fe_face_values_trace_restricted.normal_vector(q);
 
         if (prm::is_V_enabled)
-          V_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::V>(
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::V>(V_tau),
-              normal,
-              q);
+          V_tau_stabilized = scratch.permittivity.compute_stabilized_v_tau(
+            q,
+            this->adimensionalizer->template adimensionalize_tau<Component::V>(
+              V_tau),
+            normal);
         if (prm::is_n_enabled)
           n_tau_stabilized =
             scratch.template compute_stabilized_tau<Component::n>(
@@ -922,11 +931,12 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm, Component c>
   inline void
-  NPSolver<dim>::assemble_tc_matrix(Ddhdg::NPSolver<dim>::ScratchData &scratch,
-                                    const unsigned int                 face)
+  NPSolver<dim, Permittivity>::assemble_tc_matrix(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    const unsigned int                               face)
   {
     if (c != V && c != n && c != p)
       AssertThrow(false, InvalidComponent());
@@ -939,6 +949,8 @@ namespace Ddhdg
     auto &xi = scratch.tr_c.at(c);
 
     const auto &E = scratch.previous_d_face.at(Component::V);
+
+    dealii::Tensor<1, dim> epsilon_times_E;
 
     dealii::Tensor<1, dim> mu_n_times_previous_E;
     dealii::Tensor<1, dim> mu_p_times_previous_E;
@@ -977,11 +989,14 @@ namespace Ddhdg
                   q);
           }
 
+        const double rescaled_tau =
+          this->adimensionalizer->template adimensionalize_tau<c>(tau);
         const double tau_stabilized =
-          scratch.template compute_stabilized_tau<c>(
-            this->adimensionalizer->template adimensionalize_tau<c>(tau),
-            normal,
-            q);
+          (c == Component::V) ?
+            scratch.permittivity.compute_stabilized_v_tau(q,
+                                                          rescaled_tau,
+                                                          normal) :
+            scratch.template compute_stabilized_tau<c>(rescaled_tau, normal, q);
 
         const unsigned int trace_dofs_per_face =
           scratch.fe_trace_support_on_face[face].size();
@@ -1003,9 +1018,10 @@ namespace Ddhdg
                 // problem on this cell)
                 if (c == V)
                   {
+                    scratch.permittivity.epsilon_operator_on_face(
+                      q, f[j], epsilon_times_E);
                     scratch.tc_matrix(ii, jj) -=
-                      ((scratch.epsilon_face[q] * f[j]) * normal +
-                       tau_stabilized * c_[j]) *
+                      (epsilon_times_E * normal + tau_stabilized * c_[j]) *
                       xi[i] * JxW;
                   }
                 if (c == n)
@@ -1039,13 +1055,13 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm, Component c>
   inline void
-  NPSolver<dim>::add_tc_matrix_terms_to_tt_rhs(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch,
-    Ddhdg::NPSolver<dim>::PerTaskData &task_data,
-    const unsigned int                 face)
+  NPSolver<dim, Permittivity>::add_tc_matrix_terms_to_tt_rhs(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
+    const unsigned int                               face)
   {
     if (c != V && c != n && c != p)
       AssertThrow(false, InvalidComponent());
@@ -1061,9 +1077,10 @@ namespace Ddhdg
 
     const auto &E0 = scratch.previous_d_face[Component::V];
 
-    double epsilon_times_previous_E_times_normal = 0.;
-    double mu_n_times_previous_E_times_normal    = 0.;
-    double mu_p_times_previous_E_times_normal    = 0.;
+    dealii::Tensor<1, dim> epsilon_times_E;
+    double                 epsilon_times_previous_E_times_normal = 0.;
+    double                 mu_n_times_previous_E_times_normal    = 0.;
+    double                 mu_p_times_previous_E_times_normal    = 0.;
 
     dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
     dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
@@ -1078,8 +1095,10 @@ namespace Ddhdg
 
         if (c == Component::V)
           {
-            epsilon_times_previous_E_times_normal =
-              scratch.epsilon_face[q] * E0[q] * normal;
+            scratch.permittivity.epsilon_operator_on_face(q,
+                                                          E0[q],
+                                                          epsilon_times_E);
+            epsilon_times_previous_E_times_normal = epsilon_times_E * normal;
           }
         if (c == Component::n)
           {
@@ -1100,11 +1119,14 @@ namespace Ddhdg
                   q);
           }
 
+        const double tau_rescaled =
+          this->adimensionalizer->template adimensionalize_tau<c>(tau);
         const double tau_stabilized =
-          scratch.template compute_stabilized_tau<c>(
-            this->adimensionalizer->template adimensionalize_tau<c>(tau),
-            normal,
-            q);
+          (c == Component::V) ?
+            scratch.permittivity.compute_stabilized_v_tau(q,
+                                                          tau_rescaled,
+                                                          normal) :
+            scratch.template compute_stabilized_tau<c>(tau_rescaled, normal, q);
 
         for (unsigned int i = 0;
              i < scratch.fe_trace_support_on_face[face].size();
@@ -1143,13 +1165,13 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm, Component c>
   inline void
-  NPSolver<dim>::assemble_tt_matrix(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch,
-    Ddhdg::NPSolver<dim>::PerTaskData &task_data,
-    const unsigned int                 face)
+  NPSolver<dim, Permittivity>::assemble_tt_matrix(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
+    const unsigned int                               face)
   {
     if (c != V && c != n && c != p)
       AssertThrow(false, InvalidComponent());
@@ -1174,11 +1196,14 @@ namespace Ddhdg
         const Tensor<1, dim> normal =
           scratch.fe_face_values_trace_restricted.normal_vector(q);
 
+        const double tau_rescaled =
+          this->adimensionalizer->template adimensionalize_tau<c>(tau);
         const double tau_stabilized =
-          scratch.template compute_stabilized_tau<c>(
-            this->adimensionalizer->template adimensionalize_tau<c>(tau),
-            normal,
-            q);
+          (c == Component::V) ?
+            scratch.permittivity.compute_stabilized_v_tau(q,
+                                                          tau_rescaled,
+                                                          normal) :
+            scratch.template compute_stabilized_tau<c>(tau_rescaled, normal, q);
 
         // Integrals of trace functions (both test and trial)
         for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
@@ -1197,13 +1222,13 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm, Component c>
   inline void
-  NPSolver<dim>::add_tt_matrix_terms_to_tt_rhs(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch,
-    Ddhdg::NPSolver<dim>::PerTaskData &task_data,
-    const unsigned int                 face)
+  NPSolver<dim, Permittivity>::add_tt_matrix_terms_to_tt_rhs(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
+    const unsigned int                               face)
   {
     if (c != V && c != n && c != p)
       AssertThrow(false, InvalidComponent());
@@ -1227,11 +1252,14 @@ namespace Ddhdg
         const Tensor<1, dim> normal =
           scratch.fe_face_values_trace_restricted.normal_vector(q);
 
+        const double tau_rescaled =
+          this->adimensionalizer->template adimensionalize_tau<c>(tau);
         const double tau_stabilized =
-          scratch.template compute_stabilized_tau<c>(
-            this->adimensionalizer->template adimensionalize_tau<c>(tau),
-            normal,
-            q);
+          (c == Component::V) ?
+            scratch.permittivity.compute_stabilized_v_tau(q,
+                                                          tau_rescaled,
+                                                          normal) :
+            scratch.template compute_stabilized_tau<c>(tau_rescaled, normal, q);
 
         for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
           {
@@ -1247,14 +1275,14 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm, Ddhdg::Component c>
   inline void
-  NPSolver<dim>::apply_dbc_on_face(
-    Ddhdg::NPSolver<dim>::ScratchData &           scratch,
-    Ddhdg::NPSolver<dim>::PerTaskData &           task_data,
-    const Ddhdg::DirichletBoundaryCondition<dim> &dbc,
-    unsigned int                                  face)
+  NPSolver<dim, Permittivity>::apply_dbc_on_face(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
+    const Ddhdg::DirichletBoundaryCondition<dim> &   dbc,
+    unsigned int                                     face)
   {
     if (c != V && c != n && c != p)
       Assert(false, InvalidComponent());
@@ -1300,14 +1328,14 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <Ddhdg::Component c>
   void
-  NPSolver<dim>::apply_nbc_on_face(
-    Ddhdg::NPSolver<dim>::ScratchData &         scratch,
-    Ddhdg::NPSolver<dim>::PerTaskData &         task_data,
-    const Ddhdg::NeumannBoundaryCondition<dim> &nbc,
-    unsigned int                                face)
+  NPSolver<dim, Permittivity>::apply_nbc_on_face(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
+    const Ddhdg::NeumannBoundaryCondition<dim> &     nbc,
+    unsigned int                                     face)
   {
     if (c != Component::V && c != Component::n && c != Component::p)
       Assert(false, InvalidComponent());
@@ -1342,12 +1370,12 @@ namespace Ddhdg
   }
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm>
   inline void
-  NPSolver<dim>::add_border_products_to_cc_matrix(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch,
-    const unsigned int                 face)
+  NPSolver<dim, Permittivity>::add_border_products_to_cc_matrix(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    const unsigned int                               face)
   {
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -1376,6 +1404,8 @@ namespace Ddhdg
     double V_tau_stabilized = 0;
     double n_tau_stabilized = 0;
     double p_tau_stabilized = 0;
+
+    dealii::Tensor<1, dim> epsilon_times_E;
 
     dealii::Tensor<1, dim> mu_n_times_previous_E;
     dealii::Tensor<1, dim> mu_p_times_previous_E;
@@ -1409,12 +1439,11 @@ namespace Ddhdg
               .template compute_einstein_diffusion_coefficient<Component::p>(q);
 
         if (prm::is_V_enabled)
-          V_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::V>(
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::V>(V_tau),
-              normal,
-              q);
+          V_tau_stabilized = scratch.permittivity.compute_stabilized_v_tau(
+            q,
+            this->adimensionalizer->template adimensionalize_tau<Component::V>(
+              V_tau),
+            normal);
         if (prm::is_n_enabled)
           n_tau_stabilized =
             scratch.template compute_stabilized_tau<Component::n>(
@@ -1439,10 +1468,14 @@ namespace Ddhdg
                   scratch.fe_cell_support_on_face[face][j];
 
                 if (prm::is_V_enabled)
-                  scratch.cc_matrix(ii, jj) +=
-                    (scratch.epsilon_face[q] * E[j] * normal * z1[i] +
-                     V_tau_stabilized * V[j] * z1[i]) *
-                    JxW;
+                  {
+                    scratch.permittivity.epsilon_operator_on_face(
+                      q, E[j], epsilon_times_E);
+                    scratch.cc_matrix(ii, jj) +=
+                      (epsilon_times_E * normal * z1[i] +
+                       V_tau_stabilized * V[j] * z1[i]) *
+                      JxW;
+                  }
                 if (prm::is_n_enabled)
                   scratch.cc_matrix(ii, jj) +=
                     ((n[j] * mu_n_times_previous_E +
@@ -1466,12 +1499,12 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm>
   inline void
-  NPSolver<dim>::add_border_products_to_cc_rhs(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch,
-    const unsigned int                 face)
+  NPSolver<dim, Permittivity>::add_border_products_to_cc_rhs(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    const unsigned int                               face)
   {
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -1498,7 +1531,8 @@ namespace Ddhdg
     double n_tau_stabilized = 0.;
     double p_tau_stabilized = 0.;
 
-    double epsilon_times_E0_times_normal = 0.;
+    dealii::Tensor<1, dim> epsilon_times_E;
+    double                 epsilon_times_E0_times_normal = 0.;
 
     dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
     dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
@@ -1513,8 +1547,12 @@ namespace Ddhdg
           scratch.fe_face_values_trace_restricted.normal_vector(q);
 
         if (prm::is_V_enabled)
-          epsilon_times_E0_times_normal =
-            (scratch.epsilon_face[q] * E0[q]) * normal;
+          {
+            scratch.permittivity.epsilon_operator_on_face(q,
+                                                          E0[q],
+                                                          epsilon_times_E);
+            epsilon_times_E0_times_normal = epsilon_times_E * normal;
+          }
 
         if (prm::is_n_enabled)
           n_einstein_diffusion_coefficient =
@@ -1537,12 +1575,11 @@ namespace Ddhdg
                     normal;
 
         if (prm::is_V_enabled)
-          V_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::V>(
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::V>(V_tau),
-              normal,
-              q);
+          V_tau_stabilized = scratch.permittivity.compute_stabilized_v_tau(
+            q,
+            this->adimensionalizer->template adimensionalize_tau<Component::V>(
+              V_tau),
+            normal);
         if (prm::is_n_enabled)
           n_tau_stabilized =
             scratch.template compute_stabilized_tau<Component::n>(
@@ -1593,12 +1630,12 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm>
   inline void
-  NPSolver<dim>::add_trace_terms_to_cc_rhs(
-    Ddhdg::NPSolver<dim>::ScratchData &scratch,
-    const unsigned int                 face)
+  NPSolver<dim, Permittivity>::add_trace_terms_to_cc_rhs(
+    Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
+    const unsigned int                               face)
   {
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
@@ -1626,11 +1663,11 @@ namespace Ddhdg
               {
                 case Component::V:
                   tau_stabilized =
-                    scratch.template compute_stabilized_tau<Component::V>(
+                    scratch.permittivity.compute_stabilized_v_tau(
+                      q,
                       this->adimensionalizer
                         ->template adimensionalize_tau<Component::V>(tau),
-                      normal,
-                      q);
+                      normal);
                   break;
                 case Component::n:
                   tau_stabilized =
@@ -1669,10 +1706,10 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm, Component c>
   void
-  NPSolver<dim>::assemble_flux_conditions(
+  NPSolver<dim, Permittivity>::assemble_flux_conditions(
     ScratchData &            scratch,
     PerTaskData &            task_data,
     const bool               has_dirichlet_conditions,
@@ -1712,10 +1749,10 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm>
   void
-  NPSolver<dim>::assemble_flux_conditions_wrapper(
+  NPSolver<dim, Permittivity>::assemble_flux_conditions_wrapper(
     const Component                         c,
     ScratchData &                           scratch,
     PerTaskData &                           task_data,
@@ -1761,10 +1798,10 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   template <typename prm>
   void
-  NPSolver<dim>::assemble_system_one_cell(
+  NPSolver<dim, Permittivity>::assemble_system_one_cell(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
     ScratchData &                                         scratch,
     PerTaskData &                                         task_data)

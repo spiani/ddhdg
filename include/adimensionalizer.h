@@ -161,18 +161,6 @@ namespace Ddhdg
       return num / den;
     }
 
-    template <int dim>
-    void
-    adimensionalize_permittivity(
-      std::vector<dealii::Tensor<2, dim>> &data) const
-    {
-      const double permittivity_rescaling =
-        this->get_permittivity_rescaling_factor();
-      const unsigned int n_of_elements = data.size();
-      for (unsigned int i = 0; i < n_of_elements; i++)
-        data[i] /= permittivity_rescaling;
-    }
-
     [[nodiscard]] inline double
     get_thermal_voltage_rescaling_factor() const
     {

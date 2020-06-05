@@ -6,23 +6,7 @@
 namespace Ddhdg
 {
   template <int dim>
-  class Permittivity
-  {
-  public:
-    virtual dealii::Tensor<2, dim>
-    compute_absolute_permittivity(const dealii::Point<dim> &q) const = 0;
-
-    virtual void
-    compute_absolute_permittivity(
-      const std::vector<dealii::Point<dim>> &P,
-      std::vector<dealii::Tensor<2, dim>> &  epsilon) const;
-
-    virtual ~Permittivity()
-    {}
-  };
-
-  template <int dim>
-  class HomogeneousPermittivity : public Permittivity<dim>
+  class HomogeneousPermittivity
   {
   public:
     explicit HomogeneousPermittivity(double epsilon)
@@ -30,16 +14,46 @@ namespace Ddhdg
     {}
 
     const double epsilon0;
+    double       rescaled_epsilon = 0;
 
-    virtual dealii::Tensor<2, dim>
-    compute_absolute_permittivity(const dealii::Point<dim> &q) const;
+    inline void
+    initialize_on_cell(const std::vector<dealii::Point<dim>> &,
+                       const double rescaling_factor)
+    {
+      this->rescaled_epsilon = this->epsilon0 / rescaling_factor;
+    }
 
-    virtual void
-    compute_absolute_permittivity(
-      const std::vector<dealii::Point<dim>> &P,
-      std::vector<dealii::Tensor<2, dim>> &  epsilon) const;
+    inline void
+    initialize_on_face(const std::vector<dealii::Point<dim>> &,
+                       const double rescaling_factor)
+    {
+      this->rescaled_epsilon = this->epsilon0 / rescaling_factor;
+    }
 
-    virtual ~HomogeneousPermittivity()
-    {}
+    inline void
+    epsilon_operator_on_cell(const unsigned int,
+                             const dealii::Tensor<1, dim> &v,
+                             dealii::Tensor<1, dim> &      w)
+    {
+      for (unsigned int i = 0; i < dim; i++)
+        w[i] = v[i] * this->rescaled_epsilon;
+    }
+
+    inline void
+    epsilon_operator_on_face(const unsigned int,
+                             const dealii::Tensor<1, dim> &v,
+                             dealii::Tensor<1, dim> &      w)
+    {
+      for (unsigned int i = 0; i < dim; i++)
+        w[i] = v[i] * this->rescaled_epsilon;
+    }
+
+    inline double
+    compute_stabilized_v_tau(const unsigned int,
+                             const double v_tau,
+                             const dealii::Tensor<1, dim> &)
+    {
+      return v_tau * this->rescaled_epsilon;
+    }
   };
 } // namespace Ddhdg

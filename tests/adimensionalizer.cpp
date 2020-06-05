@@ -7,11 +7,12 @@
 constexpr unsigned int dim = 1;
 
 
-class LaplacianEqualCosineProblem : public Ddhdg::Problem<dim>
+class LaplacianEqualCosineProblem
+  : public Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>
 {
 public:
   LaplacianEqualCosineProblem(const double grid_size)
-    : Ddhdg::Problem<dim>(
+    : Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>(
         get_triangulation(grid_size),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(
           Ddhdg::Constants::Q),
@@ -112,15 +113,12 @@ TEST(AdimensionalizerTest, scale_length)
   std::shared_ptr<Ddhdg::NPSolverParameters> parameters =
     std::make_shared<Ddhdg::NPSolverParameters>();
 
-  Ddhdg::NPSolver<dim> solver_m(problem_in_m,
-                                parameters,
-                                adimensionalizer_for_m);
-  Ddhdg::NPSolver<dim> solver_mm(problem_in_mm,
-                                 parameters,
-                                 adimensionalizer_for_mm);
-  Ddhdg::NPSolver<dim> solver_km(problem_in_km,
-                                 parameters,
-                                 adimensionalizer_for_km);
+  Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>> solver_m(
+    problem_in_m, parameters, adimensionalizer_for_m);
+  Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>> solver_mm(
+    problem_in_mm, parameters, adimensionalizer_for_mm);
+  Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>> solver_km(
+    problem_in_km, parameters, adimensionalizer_for_km);
 
   solver_m.set_enabled_components(true, false, false);
   solver_mm.set_enabled_components(true, false, false);

@@ -51,9 +51,9 @@ namespace Ddhdg
     , multithreading(multithreading)
   {}
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::unique_ptr<dealii::Triangulation<dim>>
-  NPSolver<dim>::copy_triangulation(
+  NPSolver<dim, Permittivity>::copy_triangulation(
     const std::shared_ptr<const dealii::Triangulation<dim>> triangulation)
   {
     std::unique_ptr<dealii::Triangulation<dim>> new_triangulation =
@@ -64,9 +64,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::map<Component, std::vector<double>>
-  NPSolver<dim>::ScratchData::initialize_double_map_on_components(
+  NPSolver<dim, Permittivity>::ScratchData::initialize_double_map_on_components(
     const unsigned int n)
   {
     std::map<Component, std::vector<double>> m;
@@ -79,9 +79,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::map<Component, std::vector<Tensor<1, dim>>>
-  NPSolver<dim>::ScratchData::initialize_tensor_map_on_components(
+  NPSolver<dim, Permittivity>::ScratchData::initialize_tensor_map_on_components(
     const unsigned int n)
   {
     std::map<Component, std::vector<Tensor<1, dim>>> m;
@@ -94,9 +94,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::map<Component, std::vector<double>>
-  NPSolver<dim>::ScratchData::initialize_double_map_on_n_and_p(
+  NPSolver<dim, Permittivity>::ScratchData::initialize_double_map_on_n_and_p(
     const unsigned int k)
   {
     std::map<Component, std::vector<double>> m;
@@ -107,8 +107,8 @@ namespace Ddhdg
 
 
 
-  template <int dim>
-  NPSolver<dim>::ScratchData::ScratchData(
+  template <int dim, class Permittivity>
+  NPSolver<dim, Permittivity>::ScratchData::ScratchData(
     const FiniteElement<dim> & fe_trace_restricted,
     const FiniteElement<dim> & fe_trace,
     const FiniteElement<dim> & fe_cell,
@@ -118,6 +118,7 @@ namespace Ddhdg
     const UpdateFlags          cell_face_flags,
     const UpdateFlags          trace_flags,
     const UpdateFlags          trace_restricted_flags,
+    const Permittivity &       permittivity,
     const std::set<Component> &enabled_components)
     : fe_values_cell(fe_cell, quadrature_formula, cell_flags)
     , fe_face_values_cell(fe_cell, face_quadrature_formula, cell_face_flags)
@@ -139,10 +140,9 @@ namespace Ddhdg
     , cc_rhs(dofs_on_enabled_components)
     , tmp_rhs(fe_cell.dofs_per_cell)
     , restricted_tmp_rhs(dofs_on_enabled_components)
+    , permittivity(permittivity)
     , cell_quadrature_points(quadrature_formula.size())
     , face_quadrature_points(face_quadrature_formula.size())
-    , epsilon_cell(quadrature_formula.size())
-    , epsilon_face(face_quadrature_formula.size())
     , mu_n_cell(quadrature_formula.size())
     , mu_p_cell(quadrature_formula.size())
     , mu_n_face(face_quadrature_formula.size())
@@ -176,9 +176,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::vector<unsigned int>
-  NPSolver<dim>::ScratchData::check_dofs_on_enabled_components(
+  NPSolver<dim, Permittivity>::ScratchData::check_dofs_on_enabled_components(
     const FiniteElement<dim> & fe_cell,
     const std::set<Component> &enabled_components)
   {
@@ -202,9 +202,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::vector<std::vector<unsigned int>>
-  NPSolver<dim>::ScratchData::check_dofs_on_faces_for_cells(
+  NPSolver<dim, Permittivity>::ScratchData::check_dofs_on_faces_for_cells(
     const FiniteElement<dim> &       fe_cell,
     const std::vector<unsigned int> &enabled_component_indices)
   {
@@ -226,9 +226,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::vector<std::vector<unsigned int>>
-  NPSolver<dim>::ScratchData::check_dofs_on_faces_for_trace(
+  NPSolver<dim, Permittivity>::ScratchData::check_dofs_on_faces_for_trace(
     const FiniteElement<dim> &fe_trace_restricted)
   {
     const unsigned int faces_per_cell = GeometryInfo<dim>::faces_per_cell;
@@ -249,8 +249,8 @@ namespace Ddhdg
 
 
 
-  template <int dim>
-  NPSolver<dim>::ScratchData::ScratchData(const ScratchData &sd)
+  template <int dim, class Permittivity>
+  NPSolver<dim, Permittivity>::ScratchData::ScratchData(const ScratchData &sd)
     : fe_values_cell(sd.fe_values_cell.get_fe(),
                      sd.fe_values_cell.get_quadrature(),
                      sd.fe_values_cell.get_update_flags())
@@ -275,10 +275,9 @@ namespace Ddhdg
     , cc_rhs(sd.cc_rhs)
     , tmp_rhs(sd.tmp_rhs)
     , restricted_tmp_rhs(sd.restricted_tmp_rhs)
+    , permittivity(sd.permittivity)
     , cell_quadrature_points(sd.cell_quadrature_points)
     , face_quadrature_points(sd.face_quadrature_points)
-    , epsilon_cell(sd.epsilon_cell)
-    , epsilon_face(sd.epsilon_face)
     , mu_n_cell(sd.mu_n_cell)
     , mu_p_cell(sd.mu_p_cell)
     , mu_n_face(sd.mu_n_face)
@@ -305,9 +304,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   FESystem<dim>
-  NPSolver<dim>::generate_fe_system(
+  NPSolver<dim, Permittivity>::generate_fe_system(
     const std::map<Component, unsigned int> &degree,
     const bool                               on_trace)
   {
@@ -340,12 +339,12 @@ namespace Ddhdg
 
 
 
-  template <int dim>
-  NPSolver<dim>::NPSolver(
-    const std::shared_ptr<const Problem<dim>>       problem,
-    const std::shared_ptr<const NPSolverParameters> parameters,
-    const std::shared_ptr<const Adimensionalizer>   adimensionalizer)
-    : Solver<dim>(problem, adimensionalizer)
+  template <int dim, class Permittivity>
+  NPSolver<dim, Permittivity>::NPSolver(
+    const std::shared_ptr<const Problem<dim, Permittivity>> problem,
+    const std::shared_ptr<const NPSolverParameters>         parameters,
+    const std::shared_ptr<const Adimensionalizer>           adimensionalizer)
+    : Solver<dim, Permittivity>(problem, adimensionalizer)
     , triangulation(copy_triangulation(problem->triangulation))
     , parameters(std::make_unique<NPSolverParameters>(*parameters))
     , rescaled_doping(
@@ -364,9 +363,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::refine_grid(unsigned int i)
+  NPSolver<dim, Permittivity>::refine_grid(unsigned int i)
   {
     triangulation->refine_global(i);
     this->initialized = false;
@@ -374,9 +373,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::map<Component, unsigned int>
-  NPSolver<dim>::restrict_degrees_on_enabled_component() const
+  NPSolver<dim, Permittivity>::restrict_degrees_on_enabled_component() const
   {
     std::map<Component, unsigned int> restricted_map;
     for (const auto k : this->parameters->degree)
@@ -389,9 +388,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::setup_overall_system()
+  NPSolver<dim, Permittivity>::setup_overall_system()
   {
     this->dof_handler_cell.distribute_dofs(*(this->fe_cell));
     this->dof_handler_trace.distribute_dofs(*(this->fe_trace));
@@ -412,9 +411,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::setup_restricted_trace_system()
+  NPSolver<dim, Permittivity>::setup_restricted_trace_system()
   {
     this->fe_trace_restricted.reset(new FESystem<dim>(
       generate_fe_system(restrict_degrees_on_enabled_component(), true)));
@@ -451,9 +450,10 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   dealii::ComponentMask
-  NPSolver<dim>::get_component_mask(const Component component) const
+  NPSolver<dim, Permittivity>::get_component_mask(
+    const Component component) const
   {
     dealii::ComponentMask mask(3 * (dim + 1), false);
     switch (component)
@@ -476,9 +476,10 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   dealii::ComponentMask
-  NPSolver<dim>::get_component_mask(const Displacement displacement) const
+  NPSolver<dim, Permittivity>::get_component_mask(
+    const Displacement displacement) const
   {
     dealii::ComponentMask mask(3 * (dim + 1), false);
     switch (displacement)
@@ -504,9 +505,10 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   dealii::ComponentMask
-  NPSolver<dim>::get_trace_component_mask(const Component component) const
+  NPSolver<dim, Permittivity>::get_trace_component_mask(
+    const Component component) const
   {
     dealii::ComponentMask mask(3, false);
     switch (component)
@@ -529,9 +531,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::shared_ptr<dealii::Function<dim>>
-  NPSolver<dim>::extend_function_on_all_components(
+  NPSolver<dim, Permittivity>::extend_function_on_all_components(
     const std::shared_ptr<const dealii::Function<dim>> f,
     const Component                                    c) const
   {
@@ -562,9 +564,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::shared_ptr<dealii::Function<dim>>
-  NPSolver<dim>::extend_function_on_all_components(
+  NPSolver<dim, Permittivity>::extend_function_on_all_components(
     const std::shared_ptr<const dealii::Function<dim>> f,
     const Displacement                                 d) const
   {
@@ -610,9 +612,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::shared_ptr<dealii::Function<dim>>
-  NPSolver<dim>::extend_function_on_all_trace_components(
+  NPSolver<dim, Permittivity>::extend_function_on_all_trace_components(
     const std::shared_ptr<const dealii::Function<dim>> f,
     const Component                                    c) const
   {
@@ -643,9 +645,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   unsigned int
-  NPSolver<dim>::get_number_of_quadrature_points() const
+  NPSolver<dim, Permittivity>::get_number_of_quadrature_points() const
   {
     Assert(this->initialized, dealii::ExcNotInitialized());
     if (this->fe_cell->degree > this->fe_trace->degree)
@@ -655,9 +657,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::interpolate_component(
+  NPSolver<dim, Permittivity>::interpolate_component(
     const Component                                    c,
     const std::shared_ptr<const dealii::Function<dim>> c_function)
   {
@@ -764,9 +766,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::project_component(
+  NPSolver<dim, Permittivity>::project_component(
     const Component                                    c,
     const std::shared_ptr<const dealii::Function<dim>> c_function)
   {
@@ -1046,9 +1048,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::project_cell_function_on_trace()
+  NPSolver<dim, Permittivity>::project_cell_function_on_trace()
   {
     Assert(this->initialized, dealii::ExcNotInitialized());
 
@@ -1267,27 +1269,27 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::set_multithreading(const bool multithreading)
+  NPSolver<dim, Permittivity>::set_multithreading(const bool multithreading)
   {
     this->parameters->multithreading = multithreading;
   }
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   bool
-  NPSolver<dim>::is_enabled(const Component c) const
+  NPSolver<dim, Permittivity>::is_enabled(const Component c) const
   {
     return this->enabled_components.find(c) != this->enabled_components.end();
   }
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::enable_component(const Component c)
+  NPSolver<dim, Permittivity>::enable_component(const Component c)
   {
     if (this->enabled_components.find(c) == this->enabled_components.end())
       {
@@ -1299,9 +1301,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::disable_component(const Component c)
+  NPSolver<dim, Permittivity>::disable_component(const Component c)
   {
     if (this->enabled_components.find(c) != this->enabled_components.end())
       {
@@ -1313,9 +1315,10 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::enable_components(const std::set<Component> &cmps)
+  NPSolver<dim, Permittivity>::enable_components(
+    const std::set<Component> &cmps)
   {
     bool changed_something = false;
 
@@ -1332,9 +1335,10 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::disable_components(const std::set<Component> &cmps)
+  NPSolver<dim, Permittivity>::disable_components(
+    const std::set<Component> &cmps)
   {
     bool changed_something = false;
 
@@ -1351,11 +1355,11 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::set_enabled_components(const bool V_enabled,
-                                        const bool n_enabled,
-                                        const bool p_enabled)
+  NPSolver<dim, Permittivity>::set_enabled_components(const bool V_enabled,
+                                                      const bool n_enabled,
+                                                      const bool p_enabled)
   {
     bool changed_something = false;
 
@@ -1384,9 +1388,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::set_current_solution(
+  NPSolver<dim, Permittivity>::set_current_solution(
     const std::shared_ptr<const dealii::Function<dim>> V_function,
     const std::shared_ptr<const dealii::Function<dim>> n_function,
     const std::shared_ptr<const dealii::Function<dim>> p_function,
@@ -1401,9 +1405,10 @@ namespace Ddhdg
   }
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   dealii::FEValuesExtractors::Scalar
-  NPSolver<dim>::get_component_extractor(const Component component) const
+  NPSolver<dim, Permittivity>::get_component_extractor(
+    const Component component) const
   {
     dealii::FEValuesExtractors::Scalar extractor;
     switch (component)
@@ -1426,9 +1431,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   dealii::FEValuesExtractors::Vector
-  NPSolver<dim>::get_displacement_extractor(
+  NPSolver<dim, Permittivity>::get_displacement_extractor(
     const Displacement displacement) const
   {
     dealii::FEValuesExtractors::Vector extractor;
@@ -1452,9 +1457,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::generate_dof_to_component_map(
+  NPSolver<dim, Permittivity>::generate_dof_to_component_map(
     std::vector<Component> &dof_to_component,
     std::vector<DofType> &  dof_to_dof_type,
     const bool              for_trace) const
@@ -1552,10 +1557,11 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   dealii::FEValuesExtractors::Scalar
-  NPSolver<dim>::get_trace_component_extractor(const Component component,
-                                               const bool      restricted) const
+  NPSolver<dim, Permittivity>::get_trace_component_extractor(
+    const Component component,
+    const bool      restricted) const
   {
     unsigned int c_index;
     if (restricted)
@@ -1568,9 +1574,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::copy_local_to_global(const PerTaskData &data)
+  NPSolver<dim, Permittivity>::copy_local_to_global(const PerTaskData &data)
   {
     if (!data.trace_reconstruct)
       this->constraints.distribute_local_to_global(data.tt_matrix,
@@ -1582,9 +1588,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::solve_linear_problem()
+  NPSolver<dim, Permittivity>::solve_linear_problem()
   {
     std::cout << "    RHS norm   : " << this->system_rhs.l2_norm() << std::endl
               << "    Matrix norm: " << this->system_matrix.linfty_norm()
@@ -1613,9 +1619,9 @@ namespace Ddhdg
   }
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::build_restricted_to_trace_dof_map()
+  NPSolver<dim, Permittivity>::build_restricted_to_trace_dof_map()
   {
     const unsigned int trace_dofs = this->fe_trace->dofs_per_cell;
     const unsigned int trace_restricted_dofs =
@@ -1692,9 +1698,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::copy_restricted_to_trace()
+  NPSolver<dim, Permittivity>::copy_restricted_to_trace()
   {
     const unsigned int restricted_global_dofs =
       this->dof_handler_trace_restricted.n_dofs();
@@ -1708,12 +1714,13 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   NonlinearIterationResults
-  NPSolver<dim>::private_run(const double absolute_tol,
-                             const double relative_tol,
-                             const int    max_number_of_iterations,
-                             const bool   compute_thermodynamic_equilibrium)
+  NPSolver<dim, Permittivity>::private_run(
+    const double absolute_tol,
+    const double relative_tol,
+    const int    max_number_of_iterations,
+    const bool   compute_thermodynamic_equilibrium)
   {
     if (!this->initialized)
       setup_overall_system();
@@ -1798,11 +1805,11 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   NonlinearIterationResults
-  NPSolver<dim>::run(const double absolute_tol,
-                     const double relative_tol,
-                     const int    max_number_of_iterations)
+  NPSolver<dim, Permittivity>::run(const double absolute_tol,
+                                   const double relative_tol,
+                                   const int    max_number_of_iterations)
   {
     return this->private_run(absolute_tol,
                              relative_tol,
@@ -1812,9 +1819,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   NonlinearIterationResults
-  NPSolver<dim>::run()
+  NPSolver<dim, Permittivity>::run()
   {
     return this->run(
       this->parameters->nonlinear_solver_absolute_tolerance,
@@ -1824,9 +1831,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   unsigned int
-  NPSolver<dim>::get_n_dofs(bool for_trace) const
+  NPSolver<dim, Permittivity>::get_n_dofs(bool for_trace) const
   {
     if (for_trace)
       return this->dof_handler_trace.n_dofs();
@@ -1835,9 +1842,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::shared_ptr<dealii::Function<dim>>
-  NPSolver<dim>::get_solution() const
+  NPSolver<dim, Permittivity>::get_solution() const
   {
     return std::make_shared<dealii::Functions::FEFieldFunction<dim>>(
       this->dof_handler_cell, this->current_solution_cell);
@@ -1845,9 +1852,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   std::shared_ptr<dealii::Function<dim>>
-  NPSolver<dim>::get_solution(Component c) const
+  NPSolver<dim, Permittivity>::get_solution(Component c) const
   {
     const unsigned int c_index = get_component_index(c);
     const unsigned int i       = c_index * (dim + 1) + dim;
@@ -1856,10 +1863,11 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   double
-  NPSolver<dim>::get_solution_on_a_point(const dealii::Point<dim> &p,
-                                         const Component           c) const
+  NPSolver<dim, Permittivity>::get_solution_on_a_point(
+    const dealii::Point<dim> &p,
+    const Component           c) const
   {
     Assert(this->initialized, dealii::ExcNotInitialized());
 
@@ -1876,10 +1884,11 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   dealii::Vector<double>
-  NPSolver<dim>::get_solution_on_a_point(const dealii::Point<dim> &p,
-                                         const Displacement        d) const
+  NPSolver<dim, Permittivity>::get_solution_on_a_point(
+    const dealii::Point<dim> &p,
+    const Displacement        d) const
   {
     Assert(this->initialized, dealii::ExcNotInitialized());
 
@@ -1908,10 +1917,11 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::output_results(const std::string &solution_filename,
-                                const bool         save_update) const
+  NPSolver<dim, Permittivity>::output_results(
+    const std::string &solution_filename,
+    const bool         save_update) const
   {
     std::ofstream output(solution_filename);
     DataOut<dim>  data_out;
@@ -1995,9 +2005,10 @@ namespace Ddhdg
 
   template <>
   void
-  NPSolver<1>::output_results(const std::string &solution_filename,
-                              const std::string &trace_filename,
-                              const bool         save_update) const
+  NPSolver<1, HomogeneousPermittivity<1>>::output_results(
+    const std::string &solution_filename,
+    const std::string &trace_filename,
+    const bool         save_update) const
   {
     (void)solution_filename;
     (void)trace_filename;
@@ -2007,11 +2018,12 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::output_results(const std::string &solution_filename,
-                                const std::string &trace_filename,
-                                const bool         save_update) const
+  NPSolver<dim, Permittivity>::output_results(
+    const std::string &solution_filename,
+    const std::string &trace_filename,
+    const bool         save_update) const
   {
     this->output_results(solution_filename, save_update);
 
@@ -2072,9 +2084,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::print_convergence_table(
+  NPSolver<dim, Permittivity>::print_convergence_table(
     std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
     std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
     std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
@@ -2102,9 +2114,9 @@ namespace Ddhdg
 
 
 
-  template <int dim>
+  template <int dim, class Permittivity>
   void
-  NPSolver<dim>::print_convergence_table(
+  NPSolver<dim, Permittivity>::print_convergence_table(
     std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
     std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
     std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
@@ -2175,8 +2187,8 @@ namespace Ddhdg
   }
 
 
-  template class NPSolver<1>;
-  template class NPSolver<2>;
-  template class NPSolver<3>;
+  template class NPSolver<1, HomogeneousPermittivity<1>>;
+  template class NPSolver<2, HomogeneousPermittivity<2>>;
+  template class NPSolver<3, HomogeneousPermittivity<3>>;
 
 } // namespace Ddhdg

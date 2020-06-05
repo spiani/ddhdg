@@ -7,10 +7,10 @@ namespace Ddhdg
 {
   using namespace dealii;
 
-  template <int dim>
+  template <int dim, class Permittivity>
   class TemplatizedParametersInterface;
 
-  template <int dim, unsigned int parameter_mask>
+  template <int dim, class Permittivity, unsigned int parameter_mask>
   class TemplatizedParameters;
 
   struct NPSolverParameters
@@ -41,14 +41,14 @@ namespace Ddhdg
     bool                              multithreading;
   };
 
-  template <int dim>
-  class NPSolver : public Solver<dim>
+  template <int dim, class Permittivity>
+  class NPSolver : public Solver<dim, Permittivity>
   {
   public:
-    using Solver<dim>::output_results;
-    using Solver<dim>::compute_thermodynamic_equilibrium;
+    using Solver<dim, Permittivity>::output_results;
+    using Solver<dim, Permittivity>::compute_thermodynamic_equilibrium;
 
-    explicit NPSolver(std::shared_ptr<const Problem<dim>>       problem,
+    explicit NPSolver(std::shared_ptr<const Problem<dim, Permittivity>> problem,
                       std::shared_ptr<const NPSolverParameters> parameters =
                         std::make_shared<NPSolverParameters>(),
                       std::shared_ptr<const Adimensionalizer> adimensionalizer =
@@ -182,14 +182,14 @@ namespace Ddhdg
       Component                                    c) const override;
 
     double
-    estimate_error(const NPSolver<dim> &         other,
-                   Component                     c,
-                   dealii::VectorTools::NormType norm) const;
+    estimate_error(const NPSolver<dim, Permittivity> &other,
+                   Component                          c,
+                   dealii::VectorTools::NormType      norm) const;
 
     double
-    estimate_error(const NPSolver<dim> &         other,
-                   Displacement                  d,
-                   dealii::VectorTools::NormType norm) const;
+    estimate_error(const NPSolver<dim, Permittivity> &other,
+                   Displacement                       d,
+                   dealii::VectorTools::NormType      norm) const;
 
     std::shared_ptr<dealii::Function<dim>>
     get_solution() const override;
@@ -317,7 +317,8 @@ namespace Ddhdg
 
     dealii::Threads::Mutex inversion_mutex;
 
-    typedef void (NPSolver<dim>::*assemble_system_one_cell_pointer)(
+    typedef void (
+      NPSolver<dim, Permittivity>::*assemble_system_one_cell_pointer)(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
       ScratchData &                                         scratch,
       PerTaskData &                                         task_data);
@@ -371,9 +372,10 @@ namespace Ddhdg
 
     template <typename prm, Component c>
     inline void
-    add_tc_matrix_terms_to_tt_rhs(ScratchData &                      scratch,
-                                  Ddhdg::NPSolver<dim>::PerTaskData &task_data,
-                                  unsigned int                       face);
+    add_tc_matrix_terms_to_tt_rhs(
+      ScratchData &                                    scratch,
+      Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
+      unsigned int                                     face);
 
     template <typename prm, Component c>
     inline void
@@ -383,9 +385,10 @@ namespace Ddhdg
 
     template <typename prm, Component c>
     inline void
-    add_tt_matrix_terms_to_tt_rhs(ScratchData &                      scratch,
-                                  Ddhdg::NPSolver<dim>::PerTaskData &task_data,
-                                  unsigned int                       face);
+    add_tt_matrix_terms_to_tt_rhs(
+      ScratchData &                                    scratch,
+      Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
+      unsigned int                                     face);
 
     template <typename prm, Component c>
     inline void
@@ -487,14 +490,14 @@ namespace Ddhdg
 
     bool initialized = false;
 
-    friend class TemplatizedParametersInterface<dim>;
+    friend class TemplatizedParametersInterface<dim, Permittivity>;
 
-    template <int d, unsigned int parameter_mask>
+    template <int d, class p, unsigned int parameter_mask>
     friend class TemplatizedParameters;
   };
 
-  template <int dim>
-  struct NPSolver<dim>::PerTaskData
+  template <int dim, class Permittivity>
+  struct NPSolver<dim, Permittivity>::PerTaskData
   {
     FullMatrix<double>                   tt_matrix;
     Vector<double>                       tt_vector;
@@ -509,8 +512,8 @@ namespace Ddhdg
     {}
   };
 
-  template <int dim>
-  struct NPSolver<dim>::ScratchData
+  template <int dim, class Permittivity>
+  struct NPSolver<dim, Permittivity>::ScratchData
   {
     FEValues<dim>                   fe_values_cell;
     FEFaceValues<dim>               fe_face_values_cell;
@@ -527,10 +530,9 @@ namespace Ddhdg
     Vector<double>                                   cc_rhs;
     Vector<double>                                   tmp_rhs;
     Vector<double>                                   restricted_tmp_rhs;
+    Permittivity                                     permittivity;
     std::vector<Point<dim>>                          cell_quadrature_points;
     std::vector<Point<dim>>                          face_quadrature_points;
-    std::vector<Tensor<2, dim>>                      epsilon_cell;
-    std::vector<Tensor<2, dim>>                      epsilon_face;
     std::vector<Tensor<2, dim>>                      mu_n_cell;
     std::vector<Tensor<2, dim>>                      mu_p_cell;
     std::vector<Tensor<2, dim>>                      mu_n_face;
@@ -586,6 +588,7 @@ namespace Ddhdg
                 UpdateFlags                cell_face_flags,
                 UpdateFlags                trace_flags,
                 UpdateFlags                trace_restricted_flags,
+                const Permittivity &       permittivity,
                 const std::set<Component> &enabled_components);
 
     ScratchData(const ScratchData &sd);
@@ -618,8 +621,6 @@ namespace Ddhdg
     {
       switch (cmp)
         {
-          case Component::V:
-            return this->epsilon_face[q] * normal * normal * c_tau;
           case Component::n:
             return this->template compute_einstein_diffusion_coefficient<
                      Component::n>(q) *

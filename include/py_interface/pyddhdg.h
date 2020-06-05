@@ -8,22 +8,12 @@
 namespace pyddhdg
 {
   template <int dim>
-  class Permittivity
-  {
-  public:
-    virtual ~Permittivity() = default;
-
-    virtual std::shared_ptr<Ddhdg::Permittivity<dim>>
-    generate_ddhdg_permittivity() = 0;
-  };
-
-  template <int dim>
-  class HomogeneousPermittivity : public Permittivity<dim>
+  class HomogeneousPermittivity
   {
   public:
     explicit HomogeneousPermittivity(double epsilon);
 
-    virtual std::shared_ptr<Ddhdg::Permittivity<dim>>
+    std::shared_ptr<Ddhdg::HomogeneousPermittivity<dim>>
     generate_ddhdg_permittivity();
 
     const double epsilon;
@@ -178,7 +168,7 @@ namespace pyddhdg
   public:
     Problem(double                         left,
             double                         right,
-            Permittivity<dim> &            permittivity,
+            HomogeneousPermittivity<dim> & permittivity,
             ElectronMobility<dim> &        n_electron_mobility,
             ElectronMobility<dim> &        p_electron_mobility,
             RecombinationTerm<dim> &       recombination_term,
@@ -192,14 +182,17 @@ namespace pyddhdg
 
     Problem(const Problem<dim> &problem);
 
-    std::shared_ptr<const Ddhdg::Problem<dim>>
+    std::shared_ptr<
+      const Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
     get_ddhdg_problem() const;
 
   private:
     static std::shared_ptr<dealii::Triangulation<dim>>
     generate_triangulation(double left = 0., double right = 1.);
 
-    const std::shared_ptr<const Ddhdg::Problem<dim>> ddhdg_problem;
+    const std::shared_ptr<
+      const Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
+      ddhdg_problem;
   };
 
   template <int dim>
@@ -333,7 +326,9 @@ namespace pyddhdg
                             unsigned int       initial_refinements = 0);
 
   private:
-    const std::shared_ptr<Ddhdg::NPSolver<dim>> ddhdg_solver;
+    const std::shared_ptr<
+      Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>>>
+      ddhdg_solver;
   };
 
 } // namespace pyddhdg

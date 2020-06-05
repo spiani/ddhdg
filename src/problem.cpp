@@ -2,10 +2,10 @@
 
 namespace Ddhdg
 {
-  template <int dim>
-  Problem<dim>::Problem(
+  template <int dim, class Permittivity>
+  Problem<dim, Permittivity>::Problem(
     const std::shared_ptr<const dealii::Triangulation<dim>> triangulation,
-    const std::shared_ptr<const Permittivity<dim>>          permittivity,
+    const std::shared_ptr<const Permittivity>               permittivity,
     const std::shared_ptr<const ElectronMobility<dim>>      n_electron_mobility,
     const std::shared_ptr<const ElectronMobility<dim>>      p_electron_mobility,
     const std::shared_ptr<const RecombinationTerm<dim>>     recombination_term,
@@ -30,7 +30,7 @@ namespace Ddhdg
                        {Component::p, valence_band_edge_energy}}
   {}
 
-  template struct Problem<1>;
-  template struct Problem<2>;
-  template struct Problem<3>;
+  template struct Problem<1, HomogeneousPermittivity<1>>;
+  template struct Problem<2, HomogeneousPermittivity<2>>;
+  template struct Problem<3, HomogeneousPermittivity<3>>;
 } // namespace Ddhdg
