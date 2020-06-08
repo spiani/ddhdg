@@ -1843,6 +1843,15 @@ namespace Ddhdg
 
 
   template <int dim, class Permittivity>
+  unsigned int
+  NPSolver<dim, Permittivity>::get_n_active_cells() const
+  {
+    return this->triangulation->n_active_cells();
+  }
+
+
+
+  template <int dim, class Permittivity>
   std::shared_ptr<dealii::Function<dim>>
   NPSolver<dim, Permittivity>::get_solution() const
   {

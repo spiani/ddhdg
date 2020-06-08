@@ -123,6 +123,9 @@ namespace Ddhdg
     unsigned int
     get_n_dofs(bool for_trace) const override;
 
+    unsigned int
+    get_n_active_cells() const override;
+
     double
     estimate_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,

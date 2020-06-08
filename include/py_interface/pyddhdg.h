@@ -209,6 +209,12 @@ namespace pyddhdg
     [[nodiscard]] unsigned int
     n_of_triangulation_levels() const;
 
+    [[nodiscard]] unsigned int
+    get_n_dofs(bool for_trace) const;
+
+    [[nodiscard]] unsigned int
+    get_n_active_cells() const;
+
     void
     set_component(Ddhdg::Component   c,
                   const std::string &f,

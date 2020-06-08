@@ -200,6 +200,8 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
   .def("refine_grid", &NPSolver<DIM>::refine_grid, py::arg("n") = 1)
   .def_property_readonly("n_of_triangulation_levels",
                          &NPSolver<DIM>::n_of_triangulation_levels)
+  .def("get_n_dofs", &NPSolver<DIM>::get_n_dofs, py::arg("for_trace") = false)
+  .def_property_readonly("n_active_cells", &NPSolver<DIM>::get_n_active_cells)
   .def("set_component",
        py::overload_cast<Ddhdg::Component, const std::string &, bool>(
          &NPSolver<DIM>::set_component),

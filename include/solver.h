@@ -110,6 +110,9 @@ namespace Ddhdg
     virtual unsigned int
     get_n_dofs(bool for_trace) const = 0;
 
+    virtual unsigned int
+    get_n_active_cells() const = 0;
+
     virtual double
     estimate_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,

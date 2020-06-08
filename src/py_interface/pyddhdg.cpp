@@ -366,6 +366,22 @@ namespace pyddhdg
   }
 
 
+  template <int dim>
+  unsigned int
+  NPSolver<dim>::get_n_dofs(const bool for_trace) const
+  {
+    return this->ddhdg_solver->get_n_dofs(for_trace);
+  }
+
+
+  template <int dim>
+  unsigned int
+  NPSolver<dim>::get_n_active_cells() const
+  {
+    return this->ddhdg_solver->get_n_active_cells();
+  }
+
+
 
   template <int dim>
   void
