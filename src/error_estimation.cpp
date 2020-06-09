@@ -1,3 +1,5 @@
+#include <deal.II/numerics/error_estimator.h>
+
 #include "np_solver.h"
 
 namespace Ddhdg
@@ -469,6 +471,49 @@ namespace Ddhdg
     return global_error;
   }
 
+
+
+  template <int dim, class Permittivity>
+  void
+  NPSolver<dim, Permittivity>::estimate_error_per_cell(
+    dealii::Vector<float> &      error,
+    const dealii::ComponentMask &cmp_mask) const
+  {
+    auto quadrature = QGauss<dim - 1>(this->get_number_of_quadrature_points());
+
+    std::map<dealii::types::boundary_id, const Function<dim> *> neumann_bc;
+
+    KellyErrorEstimator<dim>::estimate(this->dof_handler_cell,
+                                       quadrature,
+                                       neumann_bc,
+                                       this->current_solution_cell,
+                                       error,
+                                       cmp_mask);
+  }
+
+
+
+  template <int dim, class Permittivity>
+  void
+  NPSolver<dim, Permittivity>::estimate_error_per_cell(
+    const Component        c,
+    dealii::Vector<float> &error) const
+  {
+    dealii::ComponentMask cmp_mask = this->get_component_mask(c);
+    return this->estimate_error_per_cell(error, cmp_mask);
+  }
+
+
+
+  template <int dim, class Permittivity>
+  void
+  NPSolver<dim, Permittivity>::estimate_error_per_cell(
+    const Displacement     d,
+    dealii::Vector<float> &error) const
+  {
+    dealii::ComponentMask cmp_mask = this->get_component_mask(d);
+    return this->estimate_error_per_cell(error, cmp_mask);
+  }
 
 
   template class NPSolver<1, HomogeneousPermittivity<1>>;

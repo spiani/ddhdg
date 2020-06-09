@@ -194,6 +194,18 @@ namespace Ddhdg
                    Displacement                       d,
                    dealii::VectorTools::NormType      norm) const;
 
+    void
+    estimate_error_per_cell(
+      dealii::Vector<float> &      error,
+      const dealii::ComponentMask &cmp_mask =
+        dealii::ComponentMask(all_components().size() * (dim + 1), true)) const;
+
+    void
+    estimate_error_per_cell(Component c, dealii::Vector<float> &error) const;
+
+    void
+    estimate_error_per_cell(Displacement d, dealii::Vector<float> &error) const;
+
     std::shared_ptr<dealii::Function<dim>>
     get_solution() const override;
 
