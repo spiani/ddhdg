@@ -293,9 +293,6 @@ namespace Ddhdg
                                   bool                    for_trace) const;
 
     void
-    project_cell_function_on_trace();
-
-    void
     setup_overall_system();
 
     void
