@@ -57,6 +57,13 @@ namespace Ddhdg
     void
     refine_grid(unsigned int i, bool preserve_solution) override;
 
+    void
+    refine_and_coarsen_fixed_fraction(
+      const Vector<float> &criteria,
+      double               top_fraction,
+      double               bottom_fraction,
+      unsigned int max_n_cells = std::numeric_limits<unsigned int>::max());
+
     [[nodiscard]] unsigned int
     n_of_triangulation_levels() const
     {

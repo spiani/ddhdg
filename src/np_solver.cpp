@@ -381,40 +381,57 @@ namespace Ddhdg
 
     Vector<float> estimated_error_per_cell(
       this->triangulation->n_active_cells());
+    estimated_error_per_cell = 1;
 
     for (unsigned int k = 0; k < i; k++)
-      {
-        dealii::SolutionTransfer<dim> solution_transfer_cell(
-          this->dof_handler_cell);
-        dealii::SolutionTransfer<dim> solution_transfer_trace(
-          this->dof_handler_trace);
+      this->refine_and_coarsen_fixed_fraction(estimated_error_per_cell, 1, 0);
+  }
 
-        dealii::GridRefinement::refine_and_coarsen_fixed_fraction(
-          *(this->triangulation), estimated_error_per_cell, 1, 0);
 
-        solution_transfer_cell.prepare_for_coarsening_and_refinement(
-          this->current_solution_cell);
-        solution_transfer_trace.prepare_for_coarsening_and_refinement(
-          this->current_solution_trace);
 
-        this->triangulation->execute_coarsening_and_refinement();
+  template <int dim, class Permittivity>
+  void
+  NPSolver<dim, Permittivity>::refine_and_coarsen_fixed_fraction(
+    const Vector<float> &criteria,
+    const double         top_fraction,
+    const double         bottom_fraction,
+    const unsigned int   max_n_cells)
+  {
+    dealii::SolutionTransfer<dim> solution_transfer_cell(
+      this->dof_handler_cell);
+    dealii::SolutionTransfer<dim> solution_transfer_trace(
+      this->dof_handler_trace);
 
-        this->dof_handler_cell.distribute_dofs(*(this->fe_cell));
-        this->dof_handler_trace.distribute_dofs(*(this->fe_trace));
+    dealii::GridRefinement::refine_and_coarsen_fixed_fraction(
+      *(this->triangulation),
+      criteria,
+      top_fraction,
+      bottom_fraction,
+      max_n_cells);
 
-        Vector<double> tmp_cell(this->dof_handler_cell.n_dofs());
-        Vector<double> tmp_trace(this->dof_handler_trace.n_dofs());
+    this->triangulation->prepare_coarsening_and_refinement();
 
-        solution_transfer_cell.interpolate(this->current_solution_cell,
-                                           tmp_cell);
-        solution_transfer_trace.interpolate(this->current_solution_trace,
-                                            tmp_trace);
+    solution_transfer_cell.prepare_for_coarsening_and_refinement(
+      this->current_solution_cell);
+    solution_transfer_trace.prepare_for_coarsening_and_refinement(
+      this->current_solution_trace);
 
-        this->current_solution_cell  = tmp_cell;
-        this->current_solution_trace = tmp_trace;
+    this->triangulation->execute_coarsening_and_refinement();
 
-        this->setup_restricted_trace_system();
-      }
+    this->dof_handler_cell.distribute_dofs(*(this->fe_cell));
+    this->dof_handler_trace.distribute_dofs(*(this->fe_trace));
+
+    Vector<double> tmp_cell(this->dof_handler_cell.n_dofs());
+    Vector<double> tmp_trace(this->dof_handler_trace.n_dofs());
+
+    solution_transfer_cell.interpolate(this->current_solution_cell, tmp_cell);
+    solution_transfer_trace.interpolate(this->current_solution_trace,
+                                        tmp_trace);
+
+    this->current_solution_cell  = tmp_cell;
+    this->current_solution_trace = tmp_trace;
+
+    this->setup_restricted_trace_system();
   }
 
 
