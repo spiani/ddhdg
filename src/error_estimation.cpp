@@ -5,15 +5,16 @@
 namespace Ddhdg
 {
   template <int dim, class Permittivity>
-  double
-  NPSolver<dim, Permittivity>::estimate_error(
+  void
+  NPSolver<dim, Permittivity>::estimate_error_per_cell(
     const std::shared_ptr<const dealii::Function<dim, double>>
                                         expected_solution,
     const Ddhdg::Component              c,
-    const dealii::VectorTools::NormType norm) const
+    const dealii::VectorTools::NormType norm,
+    dealii::Vector<float> &             error) const
   {
     Assert(expected_solution->n_components == 1, FunctionMustBeScalar());
-    Vector<double> difference_per_cell(triangulation->n_active_cells());
+    AssertDimension(error.size(), this->triangulation->n_active_cells());
 
     std::shared_ptr<dealii::Function<dim>> expected_solution_rescaled =
       this->adimensionalizer->template adimensionalize_component_function<dim>(
@@ -35,31 +36,26 @@ namespace Ddhdg
       this->dof_handler_cell,
       this->current_solution_cell,
       expected_solution_multidim,
-      difference_per_cell,
+      error,
       QGauss<dim>(this->get_number_of_quadrature_points() + 2),
       norm,
       &component_selection);
-
-    const double global_error =
-      VectorTools::compute_global_error(*(this->triangulation),
-                                        difference_per_cell,
-                                        norm);
-    return global_error;
   }
 
 
 
   template <int dim, class Permittivity>
-  double
-  NPSolver<dim, Permittivity>::estimate_error(
+  void
+  NPSolver<dim, Permittivity>::estimate_error_per_cell(
     const std::shared_ptr<const dealii::Function<dim, double>>
                                         expected_solution,
     const Ddhdg::Displacement           d,
-    const dealii::VectorTools::NormType norm) const
+    const dealii::VectorTools::NormType norm,
+    dealii::Vector<float> &             error) const
   {
     Assert(expected_solution->n_components == dim,
            FunctionMustHaveDimComponents());
-    Vector<double> difference_per_cell(triangulation->n_active_cells());
+    AssertDimension(error.size(), this->triangulation->n_active_cells());
 
     Component c = displacement2component(d);
 
@@ -91,10 +87,55 @@ namespace Ddhdg
       this->dof_handler_cell,
       this->current_solution_cell,
       expected_solution_multidim,
-      difference_per_cell,
+      error,
       QGauss<dim>(this->get_number_of_quadrature_points() + 2),
       norm,
       &component_selection);
+  }
+
+
+
+  template <int dim, class Permittivity>
+  double
+  NPSolver<dim, Permittivity>::estimate_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                                        expected_solution,
+    const Ddhdg::Component              c,
+    const dealii::VectorTools::NormType norm) const
+  {
+    Assert(expected_solution->n_components == 1, FunctionMustBeScalar());
+    Vector<float> difference_per_cell(triangulation->n_active_cells());
+
+    this->estimate_error_per_cell(expected_solution,
+                                  c,
+                                  norm,
+                                  difference_per_cell);
+
+    const double global_error =
+      VectorTools::compute_global_error(*(this->triangulation),
+                                        difference_per_cell,
+                                        norm);
+    return global_error;
+  }
+
+
+
+  template <int dim, class Permittivity>
+  double
+  NPSolver<dim, Permittivity>::estimate_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                                        expected_solution,
+    const Ddhdg::Displacement           d,
+    const dealii::VectorTools::NormType norm) const
+  {
+    Assert(expected_solution->n_components == dim,
+           FunctionMustHaveDimComponents());
+    Vector<float> difference_per_cell(triangulation->n_active_cells());
+
+    this->estimate_error_per_cell(expected_solution,
+                                  d,
+                                  norm,
+                                  difference_per_cell);
 
     const double global_error =
       VectorTools::compute_global_error(*(this->triangulation),

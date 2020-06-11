@@ -133,6 +133,32 @@ namespace Ddhdg
     unsigned int
     get_n_active_cells() const override;
 
+    void
+    estimate_error_per_cell(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      dealii::VectorTools::NormType                norm,
+      dealii::Vector<float> &                      error) const;
+
+    void
+    estimate_error_per_cell(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d,
+      dealii::VectorTools::NormType                norm,
+      dealii::Vector<float> &                      error) const;
+
+    void
+    estimate_error_per_cell(
+      dealii::Vector<float> &      error,
+      const dealii::ComponentMask &cmp_mask =
+        dealii::ComponentMask(all_components().size() * (dim + 1), true)) const;
+
+    void
+    estimate_error_per_cell(Component c, dealii::Vector<float> &error) const;
+
+    void
+    estimate_error_per_cell(Displacement d, dealii::Vector<float> &error) const;
+
     double
     estimate_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
@@ -200,18 +226,6 @@ namespace Ddhdg
     estimate_error(const NPSolver<dim, Permittivity> &other,
                    Displacement                       d,
                    dealii::VectorTools::NormType      norm) const;
-
-    void
-    estimate_error_per_cell(
-      dealii::Vector<float> &      error,
-      const dealii::ComponentMask &cmp_mask =
-        dealii::ComponentMask(all_components().size() * (dim + 1), true)) const;
-
-    void
-    estimate_error_per_cell(Component c, dealii::Vector<float> &error) const;
-
-    void
-    estimate_error_per_cell(Displacement d, dealii::Vector<float> &error) const;
 
     std::shared_ptr<dealii::Function<dim>>
     get_solution() const override;
