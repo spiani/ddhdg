@@ -204,7 +204,7 @@ namespace pyddhdg
              const Ddhdg::Adimensionalizer &  adimensionalizer);
 
     void
-    refine_grid(unsigned int i = 1);
+    refine_grid(unsigned int i = 1, bool preserve_solution = false);
 
     [[nodiscard]] unsigned int
     n_of_triangulation_levels() const;

@@ -122,7 +122,7 @@ TEST_F(ThermodynamicEquilibriumTest,
        compute_thermodynamic_equilibrium) // NOLINT
 {
   this->set_multithreading(false);
-  this->refine_grid(3);
+  this->refine_grid(3, false);
   this->set_enabled_components(true, false, false);
 
   if (!this->initialized)

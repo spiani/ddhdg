@@ -37,10 +37,10 @@ namespace Ddhdg
              std::make_shared<Adimensionalizer>());
 
     virtual void
-    refine_grid(unsigned int i) = 0;
+    refine_grid(unsigned int i, bool preserve_solution) = 0;
 
     virtual void
-    refine_grid_once();
+    refine_grid_once(bool preserve_solution);
 
     virtual void
     interpolate_component(

@@ -16,9 +16,9 @@ namespace Ddhdg
 
   template <int dim, class Permittivity>
   void
-  Solver<dim, Permittivity>::refine_grid_once()
+  Solver<dim, Permittivity>::refine_grid_once(const bool preserve_solution)
   {
-    return this->refine_grid(1);
+    return this->refine_grid(1, preserve_solution);
   }
 
 

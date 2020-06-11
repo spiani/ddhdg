@@ -172,7 +172,7 @@ TYPED_TEST(LogPotentialTest, LogPotentialTest) // NOLINT
   const auto n_expected_solution = TestFixture::get_expected_solution(Ddhdg::n);
 
   this->set_multithreading(false);
-  this->refine_grid(4 - dim);
+  this->refine_grid(4 - dim, false);
   this->set_current_solution(zero_function,
                              zero_function,
                              zero_function,

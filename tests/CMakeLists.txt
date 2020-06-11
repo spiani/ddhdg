@@ -8,6 +8,7 @@ set(_test_files
         local_charge_neutrality.cpp
         log_potential.cpp
         neumann_boundary_conditions.cpp
+        solution_transfer.cpp
         thermodynamic_equilibrium.cpp
         )
 

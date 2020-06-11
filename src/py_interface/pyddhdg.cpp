@@ -352,9 +352,9 @@ namespace pyddhdg
 
   template <int dim>
   void
-  NPSolver<dim>::refine_grid(const unsigned int i)
+  NPSolver<dim>::refine_grid(const unsigned int i, const bool preserve_solution)
   {
-    this->ddhdg_solver->refine_grid(i);
+    this->ddhdg_solver->refine_grid(i, preserve_solution);
   }
 
 

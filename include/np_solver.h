@@ -55,7 +55,7 @@ namespace Ddhdg
                         std::make_shared<Adimensionalizer>());
 
     void
-    refine_grid(unsigned int i) override;
+    refine_grid(unsigned int i, bool preserve_solution) override;
 
     [[nodiscard]] unsigned int
     n_of_triangulation_levels() const

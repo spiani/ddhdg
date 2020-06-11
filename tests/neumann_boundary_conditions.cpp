@@ -172,7 +172,7 @@ TYPED_TEST(NeumannBCLinearTest, NeumannBCLinearTest) // NOLINT
   const auto expected_solution = TestFixture::get_expected_solution();
 
   this->set_multithreading(false);
-  this->refine_grid(3 - dim);
+  this->refine_grid(3 - dim, false);
   this->set_component(Ddhdg::Component::n, zero_function, false);
   this->set_component(Ddhdg::Component::p, zero_function, false);
 
@@ -379,7 +379,7 @@ TEST_F(NeumannBCTrigonometricTest, NeumannBCTrigonometricTest) // NOLINT
   const auto n_expected_solution = get_n_expected_solution();
 
   this->set_multithreading(false);
-  this->refine_grid(3);
+  this->refine_grid(3, false);
 
   const Ddhdg::NonlinearIterationResults status = this->run();
 

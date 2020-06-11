@@ -214,7 +214,7 @@ TYPED_TEST(SetComponentMethod, interpolation) // NOLINT
     std::make_shared<Ddhdg::Gradient<dim>>(p_expected_solution));
 
   this->set_multithreading(false);
-  this->refine_grid(3);
+  this->refine_grid(3, false);
   this->set_component(Ddhdg::Component::V, V_expected_solution, false);
   this->set_component(Ddhdg::Component::p, p_expected_solution, false);
   this->set_component(Ddhdg::Component::n, n_expected_solution, false);
@@ -279,7 +279,7 @@ TYPED_TEST(SetComponentMethod, projection) // NOLINT
     std::make_shared<Ddhdg::Gradient<dim>>(p_expected_solution));
 
   this->set_multithreading(false);
-  this->refine_grid(3);
+  this->refine_grid(3, false);
   this->set_component(Ddhdg::Component::V, V_expected_solution, true);
   this->set_component(Ddhdg::Component::p, p_expected_solution, true);
   this->set_component(Ddhdg::Component::n, n_expected_solution, true);

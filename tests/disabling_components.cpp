@@ -150,7 +150,7 @@ TEST_F(DisablingComponentsTest, RunWithAll) // NOLINT
   const auto p_expected_solution = get_expected_solution(Ddhdg::Component::p);
 
   this->set_multithreading(false);
-  this->refine_grid(3);
+  this->refine_grid(3, false);
 
   const Ddhdg::NonlinearIterationResults status = this->run();
 
@@ -177,7 +177,7 @@ TEST_F(DisablingComponentsTest, RunForV) // NOLINT
   const auto p_expected_solution = get_expected_solution(Ddhdg::Component::p);
 
   this->set_multithreading(false);
-  this->refine_grid(3);
+  this->refine_grid(3, false);
   this->disable_component(Ddhdg::Component::n);
   this->disable_component(Ddhdg::Component::p);
 
@@ -203,7 +203,7 @@ TEST_F(DisablingComponentsTest, RunForN) // NOLINT
   const auto p_expected_solution = get_expected_solution(Ddhdg::Component::p);
 
   this->set_multithreading(false);
-  this->refine_grid(3);
+  this->refine_grid(3, false);
   this->disable_component(Ddhdg::Component::V);
   this->disable_component(Ddhdg::Component::p);
 
@@ -229,7 +229,7 @@ TEST_F(DisablingComponentsTest, RunForP) // NOLINT
   const auto p_expected_solution = get_expected_solution(Ddhdg::Component::p);
 
   this->set_multithreading(false);
-  this->refine_grid(3);
+  this->refine_grid(3, false);
   this->disable_component(Ddhdg::Component::V);
   this->disable_component(Ddhdg::Component::n);
 
@@ -255,7 +255,7 @@ TEST_F(DisablingComponentsTest, RunForVAndP) // NOLINT
   const auto p_expected_solution = get_expected_solution(Ddhdg::Component::p);
 
   this->set_multithreading(false);
-  this->refine_grid(3);
+  this->refine_grid(3, false);
   this->disable_component(Ddhdg::Component::n);
 
   this->set_component(Ddhdg::Component::n, n_expected_solution, true);

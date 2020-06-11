@@ -4,30 +4,22 @@
 #include <gtest/gtest.h>
 
 template <typename D>
-class LinearPotentialTest
+class SolutionTransferTest
   : public Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousPermittivity<D::value>>,
     public ::testing::Test
 {
 public:
-  LinearPotentialTest()
+  SolutionTransferTest()
     : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousPermittivity<D::value>>(
-        get_problem()){};
+        get_problem(),
+        std::make_shared<Ddhdg::NPSolverParameters>(),
+        std::make_shared<Ddhdg::Adimensionalizer>(1,
+                                                  Ddhdg::Constants::Q /
+                                                    Ddhdg::Constants::KB,
+                                                  1 / Ddhdg::Constants::Q,
+                                                  1)){};
 
 protected:
-  static std::shared_ptr<dealii::FunctionParser<D::value>>
-  get_zero_function()
-  {
-    const unsigned int dim = D::value;
-
-    std::shared_ptr<dealii::FunctionParser<dim>> zero_function =
-      std::make_shared<dealii::FunctionParser<dim>>();
-    zero_function->initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      "0",
-      Ddhdg::Constants::constants);
-    return zero_function;
-  }
-
   static std::shared_ptr<dealii::FunctionParser<D::value>>
   get_expected_solution()
   {
@@ -37,7 +29,7 @@ protected:
       std::make_shared<dealii::FunctionParser<dim>>();
     expected_solution->initialize(
       dealii::FunctionParser<dim>::default_variable_names(),
-      "x",
+      "cos(pi/2 * x)",
       Ddhdg::Constants::constants);
     return expected_solution;
   }
@@ -76,7 +68,7 @@ protected:
     std::shared_ptr<dealii::FunctionParser<dim>> doping =
       std::make_shared<dealii::FunctionParser<dim>>();
     doping->initialize(dealii::FunctionParser<dim>::default_variable_names(),
-                       "0",
+                       "pi^2 / (4 * q) * cos(pi/2 * x) ",
                        Ddhdg::Constants::constants);
     return doping;
   }
@@ -89,20 +81,22 @@ protected:
     std::shared_ptr<Ddhdg::BoundaryConditionHandler<dim>> boundary_handler =
       std::make_shared<Ddhdg::BoundaryConditionHandler<dim>>();
 
-    for (unsigned int i = 0; i < 2; i++)
+    for (unsigned int i = 0; i < 6; i++)
       {
         boundary_handler->add_boundary_condition(i,
                                                  Ddhdg::dirichlet,
                                                  Ddhdg::V,
                                                  get_expected_solution());
-        boundary_handler->add_boundary_condition(i,
-                                                 Ddhdg::dirichlet,
-                                                 Ddhdg::n,
-                                                 get_zero_function());
-        boundary_handler->add_boundary_condition(i,
-                                                 Ddhdg::dirichlet,
-                                                 Ddhdg::p,
-                                                 get_zero_function());
+        boundary_handler->add_boundary_condition(
+          i,
+          Ddhdg::dirichlet,
+          Ddhdg::n,
+          std::make_shared<dealii::Functions::ZeroFunction<dim>>(1));
+        boundary_handler->add_boundary_condition(
+          i,
+          Ddhdg::dirichlet,
+          Ddhdg::p,
+          std::make_shared<dealii::Functions::ZeroFunction<dim>>(1));
       }
 
     return boundary_handler;
@@ -141,21 +135,30 @@ using dimensions = ::testing::Types<std::integral_constant<unsigned int, 1>,
 
 
 
-TYPED_TEST_CASE(LinearPotentialTest, dimensions);
+TYPED_TEST_CASE(SolutionTransferTest, dimensions);
 
 
 
-TYPED_TEST(LinearPotentialTest, LinearPotentialTest) // NOLINT
+TYPED_TEST(SolutionTransferTest, SolutionTransferTest) // NOLINT
 {
-  const unsigned int dim = TypeParam::value;
+  constexpr unsigned int dim       = TypeParam::value;
+  const double           TOLERANCE = pow(1e-1, 4 - dim);
 
-  const auto zero_function     = TestFixture::get_zero_function();
   const auto expected_solution = TestFixture::get_expected_solution();
 
   this->set_multithreading(false);
-  this->refine_grid(3 - dim, false);
-  this->set_component(Ddhdg::Component::n, zero_function, false);
-  this->set_component(Ddhdg::Component::p, zero_function, false);
+  this->refine_grid(4 - dim, false);
+  this->set_component(Ddhdg::Component::V,
+                      std::make_shared<dealii::Functions::ZeroFunction<dim>>(1),
+                      false);
+  this->set_component(Ddhdg::Component::n,
+                      std::make_shared<dealii::Functions::ZeroFunction<dim>>(1),
+                      false);
+  this->set_component(Ddhdg::Component::p,
+                      std::make_shared<dealii::Functions::ZeroFunction<dim>>(1),
+                      false);
+
+  this->set_enabled_components(true, false, false);
 
   const Ddhdg::NonlinearIterationResults status = this->run();
 
@@ -163,11 +166,10 @@ TYPED_TEST(LinearPotentialTest, LinearPotentialTest) // NOLINT
 
   EXPECT_LE(number_of_iterations, 3);
 
+  this->refine_grid(2, true);
+
   const double V_l2_error =
     this->estimate_l2_error(expected_solution, Ddhdg::Component::V);
-  const double n_l2_error =
-    this->estimate_l2_error(zero_function, Ddhdg::Component::n);
 
-  EXPECT_LT(V_l2_error, 1e-10);
-  EXPECT_LT(n_l2_error, 1e-10);
+  EXPECT_LT(V_l2_error, TOLERANCE);
 }

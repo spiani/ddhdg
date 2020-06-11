@@ -125,7 +125,7 @@ TEST_F(LocalChargeNeutralityTest, charge_neutrality) // NOLINT
   constexpr double TOLERANCE = 0.1;
 
   this->set_multithreading(false);
-  this->refine_grid(4);
+  this->refine_grid(4, false);
   this->set_enabled_components(true, false, false);
 
   if (!this->initialized)
