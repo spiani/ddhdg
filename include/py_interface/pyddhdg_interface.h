@@ -110,6 +110,31 @@ py::class_<Problem<DIM>>(m, "Problem")
        py::arg("conduction_band_edge_energy") = 0,
        py::arg("valence_band_edge_energy")    = 0);
 
+py::class_<ErrorPerCell>(m, "ErrorPerCell", py::module_local())
+  .def("as_numpy_array", [](const ErrorPerCell &self) {
+    const size_t size = self.data_vector->size();
+
+    // Copy the data in a new buffer
+    double *data = new double[size];
+    for (size_t i = 0; i < size; i++)
+      {
+        data[i] = (double)((*(self.data_vector))[i]);
+      }
+
+    // Create a Python object that will free the allocated
+    // memory when destroyed:
+    py::capsule free_when_done(data, [](void *f) {
+      double *data = reinterpret_cast<double *>(f);
+      delete[] data;
+    });
+
+    return py::array_t<double>(
+      {size},          // shape
+      {8},             // strides
+      data,            // the data pointer
+      free_when_done); // numpy array references this parent
+  });
+
 py::class_<Ddhdg::NPSolverParameters>(m,
                                       "NPSolverParameters",
                                       py::module_local())
@@ -201,6 +226,12 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        &NPSolver<DIM>::refine_grid,
        py::arg("n")                 = 1,
        py::arg("preserve_solution") = false)
+  .def("refine_and_coarsen_fixed_fraction",
+       &NPSolver<DIM>::refine_and_coarsen_fixed_fraction,
+       py::arg("error_per_cell"),
+       py::arg("top_fraction"),
+       py::arg("bottom_fraction"),
+       py::arg("max_n_cells") = std::numeric_limits<unsigned int>::max())
   .def_property_readonly("n_of_triangulation_levels",
                          &NPSolver<DIM>::n_of_triangulation_levels)
   .def("get_n_dofs", &NPSolver<DIM>::get_n_dofs, py::arg("for_trace") = false)
@@ -247,6 +278,83 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("relative_tol"),
        py::arg("max_number_of_iterations"),
        py::arg("generate_first_guess") = true)
+  .def("estimate_error_per_cell",
+       py::overload_cast<const Ddhdg::Component>(
+         &NPSolver<DIM>::estimate_error_per_cell,
+         py::const_),
+       py::arg("component"))
+  .def("estimate_l2_error_per_cell",
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
+         &NPSolver<DIM>::estimate_l2_error_per_cell,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"))
+  .def("estimate_l2_error_per_cell",
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Displacement>(
+         &NPSolver<DIM>::estimate_l2_error_per_cell,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("displacement"))
+  .def("estimate_l2_error_per_cell",
+       py::overload_cast<const NPSolver<DIM>, const Ddhdg::Component>(
+         &NPSolver<DIM>::estimate_l2_error_per_cell,
+         py::const_),
+       py::arg("solver"),
+       py::arg("component"))
+  .def("estimate_l2_error_per_cell",
+       py::overload_cast<const NPSolver<DIM>, const Ddhdg::Displacement>(
+         &NPSolver<DIM>::estimate_l2_error_per_cell,
+         py::const_),
+       py::arg("solver"),
+       py::arg("displacement"))
+  .def("estimate_h1_error_per_cell",
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
+         &NPSolver<DIM>::estimate_h1_error_per_cell,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"))
+  .def("estimate_h1_error_per_cell",
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Displacement>(
+         &NPSolver<DIM>::estimate_h1_error_per_cell,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("displacement"))
+  .def("estimate_h1_error_per_cell",
+       py::overload_cast<const NPSolver<DIM>, const Ddhdg::Component>(
+         &NPSolver<DIM>::estimate_h1_error_per_cell,
+         py::const_),
+       py::arg("solver"),
+       py::arg("component"))
+  .def("estimate_h1_error_per_cell",
+       py::overload_cast<const NPSolver<DIM>, const Ddhdg::Displacement>(
+         &NPSolver<DIM>::estimate_h1_error_per_cell,
+         py::const_),
+       py::arg("solver"),
+       py::arg("displacement"))
+  .def("estimate_linfty_error_per_cell",
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
+         &NPSolver<DIM>::estimate_linfty_error_per_cell,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"))
+  .def("estimate_linfty_error_per_cell",
+       py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Displacement>(
+         &NPSolver<DIM>::estimate_linfty_error_per_cell,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("displacement"))
+  .def("estimate_linfty_error_per_cell",
+       py::overload_cast<const NPSolver<DIM>, const Ddhdg::Component>(
+         &NPSolver<DIM>::estimate_linfty_error_per_cell,
+         py::const_),
+       py::arg("solver"),
+       py::arg("component"))
+  .def("estimate_linfty_error_per_cell",
+       py::overload_cast<const NPSolver<DIM>, const Ddhdg::Displacement>(
+         &NPSolver<DIM>::estimate_linfty_error_per_cell,
+         py::const_),
+       py::arg("solver"),
+       py::arg("displacement"))
   .def("estimate_l2_error",
        py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_l2_error,

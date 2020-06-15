@@ -337,6 +337,20 @@ namespace pyddhdg
 
 
 
+  ErrorPerCell::ErrorPerCell(const unsigned int size)
+  {
+    this->data_vector = std::make_shared<dealii::Vector<float>>(size);
+  }
+
+
+
+  ErrorPerCell::ErrorPerCell(const ErrorPerCell &other)
+  {
+    this->data_vector = other.data_vector;
+  }
+
+
+
   template <int dim>
   NPSolver<dim>::NPSolver(const Problem<dim> &             problem,
                           const Ddhdg::NPSolverParameters &parameters,
@@ -356,6 +370,24 @@ namespace pyddhdg
   {
     this->ddhdg_solver->refine_grid(i, preserve_solution);
   }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::refine_and_coarsen_fixed_fraction(
+    const ErrorPerCell error_per_cell,
+    const double       top_fraction,
+    const double       bottom_fraction,
+    const unsigned int max_n_cells)
+  {
+    this->ddhdg_solver->refine_and_coarsen_fixed_fraction(
+      *(error_per_cell.data_vector),
+      top_fraction,
+      bottom_fraction,
+      max_n_cells);
+  }
+
 
 
   template <int dim>
@@ -524,6 +556,217 @@ namespace pyddhdg
       relative_tol,
       max_number_of_iterations,
       generate_first_guess);
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_error_per_cell(const Ddhdg::Component c) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(c,
+                                                *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_l2_error_per_cell(
+    const DealIIFunction<dim> expected_solution,
+    const Ddhdg::Component    c) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      expected_solution.get_dealii_function(),
+      c,
+      dealii::VectorTools::NormType::L2_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_l2_error_per_cell(
+    const DealIIFunction<dim> expected_solution,
+    const Ddhdg::Displacement d) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      expected_solution.get_dealii_function(),
+      d,
+      dealii::VectorTools::NormType::L2_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_l2_error_per_cell(const NPSolver<dim>    other,
+                                            const Ddhdg::Component c) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      *(other.ddhdg_solver),
+      c,
+      dealii::VectorTools::NormType::L2_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_l2_error_per_cell(const NPSolver<dim>       other,
+                                            const Ddhdg::Displacement d) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      *(other.ddhdg_solver),
+      d,
+      dealii::VectorTools::NormType::L2_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_h1_error_per_cell(
+    const DealIIFunction<dim> expected_solution,
+    const Ddhdg::Component    c) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      expected_solution.get_dealii_function(),
+      c,
+      dealii::VectorTools::NormType::H1_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_h1_error_per_cell(
+    const DealIIFunction<dim> expected_solution,
+    const Ddhdg::Displacement d) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      expected_solution.get_dealii_function(),
+      d,
+      dealii::VectorTools::NormType::H1_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_h1_error_per_cell(const NPSolver<dim>    other,
+                                            const Ddhdg::Component c) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      *(other.ddhdg_solver),
+      c,
+      dealii::VectorTools::NormType::H1_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_h1_error_per_cell(const NPSolver<dim>       other,
+                                            const Ddhdg::Displacement d) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      *(other.ddhdg_solver),
+      d,
+      dealii::VectorTools::NormType::H1_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_linfty_error_per_cell(
+    const DealIIFunction<dim> expected_solution,
+    const Ddhdg::Component    c) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      expected_solution.get_dealii_function(),
+      c,
+      dealii::VectorTools::NormType::Linfty_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_linfty_error_per_cell(
+    const DealIIFunction<dim> expected_solution,
+    const Ddhdg::Displacement d) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      expected_solution.get_dealii_function(),
+      d,
+      dealii::VectorTools::NormType::Linfty_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_linfty_error_per_cell(const NPSolver<dim>    other,
+                                                const Ddhdg::Component c) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      *(other.ddhdg_solver),
+      c,
+      dealii::VectorTools::NormType::Linfty_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
+  NPSolver<dim>::estimate_linfty_error_per_cell(
+    const NPSolver<dim>       other,
+    const Ddhdg::Displacement d) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(
+      *(other.ddhdg_solver),
+      d,
+      dealii::VectorTools::NormType::Linfty_norm,
+      *(error_per_cell.data_vector));
+    return error_per_cell;
   }
 
 

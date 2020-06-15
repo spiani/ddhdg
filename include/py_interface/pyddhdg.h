@@ -195,6 +195,16 @@ namespace pyddhdg
       ddhdg_problem;
   };
 
+  class ErrorPerCell
+  {
+  public:
+    ErrorPerCell(unsigned int size);
+
+    ErrorPerCell(const ErrorPerCell &other);
+
+    std::shared_ptr<dealii::Vector<float>> data_vector;
+  };
+
   template <int dim>
   class NPSolver
   {
@@ -205,6 +215,13 @@ namespace pyddhdg
 
     void
     refine_grid(unsigned int i = 1, bool preserve_solution = false);
+
+    void
+    refine_and_coarsen_fixed_fraction(
+      ErrorPerCell error_per_cell,
+      double       top_fraction,
+      double       bottom_fraction,
+      unsigned int max_n_cells = std::numeric_limits<unsigned int>::max());
 
     [[nodiscard]] unsigned int
     n_of_triangulation_levels() const;
@@ -257,6 +274,55 @@ namespace pyddhdg
                                       double relative_tol,
                                       int    max_number_of_iterations,
                                       bool   generate_first_guess);
+
+    [[nodiscard]] ErrorPerCell
+    estimate_error_per_cell(Ddhdg::Component c) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_l2_error_per_cell(DealIIFunction<dim> expected_solution,
+                               Ddhdg::Component    c) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_l2_error_per_cell(DealIIFunction<dim> expected_solution,
+                               Ddhdg::Displacement d) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_l2_error_per_cell(NPSolver<dim> solver, Ddhdg::Component c) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_l2_error_per_cell(NPSolver<dim>       solver,
+                               Ddhdg::Displacement d) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_h1_error_per_cell(DealIIFunction<dim> expected_solution,
+                               Ddhdg::Component    c) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_h1_error_per_cell(DealIIFunction<dim> expected_solution,
+                               Ddhdg::Displacement d) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_h1_error_per_cell(NPSolver<dim> solver, Ddhdg::Component c) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_h1_error_per_cell(NPSolver<dim>       solver,
+                               Ddhdg::Displacement d) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_linfty_error_per_cell(DealIIFunction<dim> expected_solution,
+                                   Ddhdg::Component    c) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_linfty_error_per_cell(DealIIFunction<dim> expected_solution,
+                                   Ddhdg::Displacement d) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_linfty_error_per_cell(NPSolver<dim>    solver,
+                                   Ddhdg::Component c) const;
+
+    [[nodiscard]] ErrorPerCell
+    estimate_linfty_error_per_cell(NPSolver<dim>       solver,
+                                   Ddhdg::Displacement d) const;
 
     [[nodiscard]] double
     estimate_l2_error(DealIIFunction<dim> expected_solution,

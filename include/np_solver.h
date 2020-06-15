@@ -148,6 +148,18 @@ namespace Ddhdg
       dealii::Vector<float> &                      error) const;
 
     void
+    estimate_error_per_cell(const NPSolver<dim, Permittivity> &other,
+                            Component                          c,
+                            dealii::VectorTools::NormType      norm,
+                            dealii::Vector<float> &            error) const;
+
+    void
+    estimate_error_per_cell(const NPSolver<dim, Permittivity> &other,
+                            Displacement                       d,
+                            dealii::VectorTools::NormType      norm,
+                            dealii::Vector<float> &            error) const;
+
+    void
     estimate_error_per_cell(
       dealii::Vector<float> &      error,
       const dealii::ComponentMask &cmp_mask =
