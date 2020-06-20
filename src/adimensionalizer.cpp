@@ -33,6 +33,29 @@ namespace Ddhdg
 
 
 
+  double
+  Adimensionalizer::get_neumann_boundary_condition_rescaling_factor(
+    const Component c) const
+  {
+    switch (c)
+      {
+        case Component::V:
+          return this
+            ->get_neumann_boundary_condition_rescaling_factor<Component::V>();
+        case Component::n:
+          return this
+            ->get_neumann_boundary_condition_rescaling_factor<Component::n>();
+        case Component::p:
+          return this
+            ->get_neumann_boundary_condition_rescaling_factor<Component::p>();
+        default:
+          Assert(false, InvalidComponent());
+          return 1;
+      }
+  }
+
+
+
   template <Component c>
   void
   Adimensionalizer::adimensionalize_component(const std::vector<double> &source,
@@ -363,6 +386,25 @@ namespace Ddhdg
 
     for (unsigned int i = 0; i < n_of_elements; i++)
       dr_p[i] /= recombination_rescaling_factor;
+  }
+
+
+
+  double
+  Adimensionalizer::adimensionalize_tau(const double tau, Component c) const
+  {
+    switch (c)
+      {
+        case Component::V:
+          return this->adimensionalize_tau<Component::V>(tau);
+        case Component::n:
+          return this->adimensionalize_tau<Component::n>(tau);
+        case Component::p:
+          return this->adimensionalize_tau<Component::p>(tau);
+        default:
+          Assert(false, InvalidComponent());
+      }
+    return 1.;
   }
 
 

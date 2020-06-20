@@ -370,14 +370,14 @@ namespace Ddhdg
 
         if (prm::is_n_enabled)
           n_einstein_diffusion_coefficient =
-            scratch
-              .template compute_einstein_diffusion_coefficient<Component::n,
-                                                               false>(q);
+            this->template compute_einstein_diffusion_coefficient<Component::n,
+                                                                  false>(
+              scratch, q);
         if (prm::is_p_enabled)
           p_einstein_diffusion_coefficient =
-            scratch
-              .template compute_einstein_diffusion_coefficient<Component::p,
-                                                               false>(q);
+            this->template compute_einstein_diffusion_coefficient<Component::p,
+                                                                  false>(
+              scratch, q);
 
         if (prm::thermodyn_eq)
           {
@@ -507,14 +507,14 @@ namespace Ddhdg
 
         if (prm::is_n_enabled)
           n_einstein_diffusion_coefficient =
-            scratch
-              .template compute_einstein_diffusion_coefficient<Component::n,
-                                                               false>(q);
+            this->template compute_einstein_diffusion_coefficient<Component::n,
+                                                                  false>(
+              scratch, q);
         if (prm::is_p_enabled)
           p_einstein_diffusion_coefficient =
-            scratch
-              .template compute_einstein_diffusion_coefficient<Component::p,
-                                                               false>(q);
+            this->template compute_einstein_diffusion_coefficient<Component::p,
+                                                                  false>(
+              scratch, q);
 
         if (prm::is_n_enabled)
           Jn = n0[q] * (scratch.mu_n_cell[q] * E0[q]) -
@@ -767,21 +767,25 @@ namespace Ddhdg
           scratch.fe_face_values_trace_restricted.normal_vector(q);
 
         if (prm::is_V_enabled)
-          V_tau_stabilized = scratch.permittivity.compute_stabilized_v_tau(
-            q,
-            this->adimensionalizer->template adimensionalize_tau<Component::V>(
-              V_tau),
-            normal);
+          V_tau_stabilized =
+            this->template compute_stabilized_tau<Component::V>(
+              scratch,
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::V>(V_tau),
+              normal,
+              q);
         if (prm::is_n_enabled)
           n_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::n>(
+            this->template compute_stabilized_tau<Component::n>(
+              scratch,
               this->adimensionalizer
                 ->template adimensionalize_tau<Component::n>(n_tau),
               normal,
               q);
         if (prm::is_p_enabled)
           p_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::p>(
+            this->template compute_stabilized_tau<Component::p>(
+              scratch,
               this->adimensionalizer
                 ->template adimensionalize_tau<Component::p>(p_tau),
               normal,
@@ -862,21 +866,25 @@ namespace Ddhdg
           scratch.fe_face_values_trace_restricted.normal_vector(q);
 
         if (prm::is_V_enabled)
-          V_tau_stabilized = scratch.permittivity.compute_stabilized_v_tau(
-            q,
-            this->adimensionalizer->template adimensionalize_tau<Component::V>(
-              V_tau),
-            normal);
+          V_tau_stabilized =
+            this->template compute_stabilized_tau<Component::V>(
+              scratch,
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::V>(V_tau),
+              normal,
+              q);
         if (prm::is_n_enabled)
           n_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::n>(
+            this->template compute_stabilized_tau<Component::n>(
+              scratch,
               this->adimensionalizer
                 ->template adimensionalize_tau<Component::n>(n_tau),
               normal,
               q);
         if (prm::is_p_enabled)
           p_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::p>(
+            this->template compute_stabilized_tau<Component::p>(
+              scratch,
               this->adimensionalizer
                 ->template adimensionalize_tau<Component::p>(p_tau),
               normal,
@@ -976,27 +984,23 @@ namespace Ddhdg
           {
             mu_n_times_previous_E = scratch.mu_n_face[q] * E[q];
             n_einstein_diffusion_coefficient =
-              scratch
-                .template compute_einstein_diffusion_coefficient<Component::n>(
-                  q);
+              this
+                ->template compute_einstein_diffusion_coefficient<Component::n>(
+                  scratch, q);
           }
         if (c == Component::p)
           {
             mu_p_times_previous_E = scratch.mu_p_face[q] * E[q];
             p_einstein_diffusion_coefficient =
-              scratch
-                .template compute_einstein_diffusion_coefficient<Component::p>(
-                  q);
+              this
+                ->template compute_einstein_diffusion_coefficient<Component::p>(
+                  scratch, q);
           }
 
         const double rescaled_tau =
           this->adimensionalizer->template adimensionalize_tau<c>(tau);
-        const double tau_stabilized =
-          (c == Component::V) ?
-            scratch.permittivity.compute_stabilized_v_tau(q,
-                                                          rescaled_tau,
-                                                          normal) :
-            scratch.template compute_stabilized_tau<c>(rescaled_tau, normal, q);
+        const double tau_stabilized = this->template compute_stabilized_tau<c>(
+          scratch, rescaled_tau, normal, q);
 
         const unsigned int trace_dofs_per_face =
           scratch.fe_trace_support_on_face[face].size();
@@ -1105,28 +1109,24 @@ namespace Ddhdg
             mu_n_times_previous_E_times_normal =
               scratch.mu_n_face[q] * E0[q] * normal;
             n_einstein_diffusion_coefficient =
-              scratch
-                .template compute_einstein_diffusion_coefficient<Component::n>(
-                  q);
+              this
+                ->template compute_einstein_diffusion_coefficient<Component::n>(
+                  scratch, q);
           }
         if (c == Component::p)
           {
             mu_p_times_previous_E_times_normal =
               scratch.mu_p_face[q] * E0[q] * normal;
             p_einstein_diffusion_coefficient =
-              scratch
-                .template compute_einstein_diffusion_coefficient<Component::p>(
-                  q);
+              this
+                ->template compute_einstein_diffusion_coefficient<Component::p>(
+                  scratch, q);
           }
 
         const double tau_rescaled =
           this->adimensionalizer->template adimensionalize_tau<c>(tau);
-        const double tau_stabilized =
-          (c == Component::V) ?
-            scratch.permittivity.compute_stabilized_v_tau(q,
-                                                          tau_rescaled,
-                                                          normal) :
-            scratch.template compute_stabilized_tau<c>(tau_rescaled, normal, q);
+        const double tau_stabilized = this->template compute_stabilized_tau<c>(
+          scratch, tau_rescaled, normal, q);
 
         for (unsigned int i = 0;
              i < scratch.fe_trace_support_on_face[face].size();
@@ -1203,7 +1203,10 @@ namespace Ddhdg
             scratch.permittivity.compute_stabilized_v_tau(q,
                                                           tau_rescaled,
                                                           normal) :
-            scratch.template compute_stabilized_tau<c>(tau_rescaled, normal, q);
+            this->template compute_stabilized_tau<c>(scratch,
+                                                     tau_rescaled,
+                                                     normal,
+                                                     q);
 
         // Integrals of trace functions (both test and trial)
         for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
@@ -1259,7 +1262,10 @@ namespace Ddhdg
             scratch.permittivity.compute_stabilized_v_tau(q,
                                                           tau_rescaled,
                                                           normal) :
-            scratch.template compute_stabilized_tau<c>(tau_rescaled, normal, q);
+            this->template compute_stabilized_tau<c>(scratch,
+                                                     tau_rescaled,
+                                                     normal,
+                                                     q);
 
         for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
           {
@@ -1430,30 +1436,34 @@ namespace Ddhdg
 
         if (prm::is_n_enabled)
           n_einstein_diffusion_coefficient =
-            scratch
-              .template compute_einstein_diffusion_coefficient<Component::n>(q);
+            this->template compute_einstein_diffusion_coefficient<Component::n>(
+              scratch, q);
 
         if (prm::is_p_enabled)
           p_einstein_diffusion_coefficient =
-            scratch
-              .template compute_einstein_diffusion_coefficient<Component::p>(q);
+            this->template compute_einstein_diffusion_coefficient<Component::p>(
+              scratch, q);
 
         if (prm::is_V_enabled)
-          V_tau_stabilized = scratch.permittivity.compute_stabilized_v_tau(
-            q,
-            this->adimensionalizer->template adimensionalize_tau<Component::V>(
-              V_tau),
-            normal);
+          V_tau_stabilized =
+            this->template compute_stabilized_tau<Component::V>(
+              scratch,
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::V>(V_tau),
+              normal,
+              q);
         if (prm::is_n_enabled)
           n_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::n>(
+            this->template compute_stabilized_tau<Component::n>(
+              scratch,
               this->adimensionalizer
                 ->template adimensionalize_tau<Component::n>(n_tau),
               normal,
               q);
         if (prm::is_p_enabled)
           p_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::p>(
+            this->template compute_stabilized_tau<Component::p>(
+              scratch,
               this->adimensionalizer
                 ->template adimensionalize_tau<Component::p>(p_tau),
               normal,
@@ -1556,13 +1566,13 @@ namespace Ddhdg
 
         if (prm::is_n_enabled)
           n_einstein_diffusion_coefficient =
-            scratch
-              .template compute_einstein_diffusion_coefficient<Component::n>(q);
+            this->template compute_einstein_diffusion_coefficient<Component::n>(
+              scratch, q);
 
         if (prm::is_p_enabled)
           p_einstein_diffusion_coefficient =
-            scratch
-              .template compute_einstein_diffusion_coefficient<Component::p>(q);
+            this->template compute_einstein_diffusion_coefficient<Component::p>(
+              scratch, q);
 
         if (prm::is_n_enabled)
           Jn_flux = (n0[q] * (scratch.mu_n_face[q] * E0[q]) -
@@ -1575,21 +1585,25 @@ namespace Ddhdg
                     normal;
 
         if (prm::is_V_enabled)
-          V_tau_stabilized = scratch.permittivity.compute_stabilized_v_tau(
-            q,
-            this->adimensionalizer->template adimensionalize_tau<Component::V>(
-              V_tau),
-            normal);
+          V_tau_stabilized =
+            this->template compute_stabilized_tau<Component::V>(
+              scratch,
+              this->adimensionalizer
+                ->template adimensionalize_tau<Component::V>(V_tau),
+              normal,
+              q);
         if (prm::is_n_enabled)
           n_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::n>(
+            this->template compute_stabilized_tau<Component::n>(
+              scratch,
               this->adimensionalizer
                 ->template adimensionalize_tau<Component::n>(n_tau),
               normal,
               q);
         if (prm::is_p_enabled)
           p_tau_stabilized =
-            scratch.template compute_stabilized_tau<Component::p>(
+            this->template compute_stabilized_tau<Component::p>(
+              scratch,
               this->adimensionalizer
                 ->template adimensionalize_tau<Component::p>(p_tau),
               normal,
@@ -1663,15 +1677,17 @@ namespace Ddhdg
               {
                 case Component::V:
                   tau_stabilized =
-                    scratch.permittivity.compute_stabilized_v_tau(
-                      q,
+                    this->template compute_stabilized_tau<Component::V>(
+                      scratch,
                       this->adimensionalizer
                         ->template adimensionalize_tau<Component::V>(tau),
-                      normal);
+                      normal,
+                      q);
                   break;
                 case Component::n:
                   tau_stabilized =
-                    scratch.template compute_stabilized_tau<Component::n>(
+                    this->template compute_stabilized_tau<Component::n>(
+                      scratch,
                       this->adimensionalizer
                         ->template adimensionalize_tau<Component::n>(tau),
                       normal,
@@ -1679,7 +1695,8 @@ namespace Ddhdg
                   break;
                 case Component::p:
                   tau_stabilized =
-                    scratch.template compute_stabilized_tau<Component::p>(
+                    this->template compute_stabilized_tau<Component::p>(
+                      scratch,
                       this->adimensionalizer
                         ->template adimensionalize_tau<Component::p>(tau),
                       normal,

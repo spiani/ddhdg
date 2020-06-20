@@ -13,6 +13,14 @@ namespace Ddhdg
   template <int dim, class Permittivity, unsigned int parameter_mask>
   class TemplatizedParameters;
 
+  enum TraceProjectionStrategy
+  {
+    l2_average,
+    reconstruct_problem_solution,
+  };
+
+  DeclExceptionMsg(InvalidStrategy, "Invalid strategy for trace projection");
+
   struct NPSolverParameters
   {
     explicit NPSolverParameters(
@@ -338,6 +346,11 @@ namespace Ddhdg
                                   bool                    for_trace) const;
 
     void
+    project_cell_function_on_trace(
+      const std::set<Component> &components = all_components(),
+      TraceProjectionStrategy    strategy   = l2_average);
+
+    void
     setup_overall_system();
 
     void
@@ -378,6 +391,28 @@ namespace Ddhdg
       const typename DoFHandler<dim>::active_cell_iterator &cell,
       ScratchData &                                         scratch,
       PerTaskData &                                         task_data);
+
+    template <Component cmp,
+              bool      on_face      = true,
+              class ScratchDataClass = ScratchData>
+    inline dealii::Tensor<2, dim>
+    compute_einstein_diffusion_coefficient(const ScratchDataClass &scratch,
+                                           unsigned int            q) const;
+
+    template <Component cmp, class ScratchDataClass = ScratchData>
+    inline double
+    compute_stabilized_tau(const ScratchDataClass &scratch,
+                           double                  c_tau,
+                           const Tensor<1, dim> &  normal,
+                           unsigned int            q) const;
+
+    template <class ScratchDataClass = ScratchData>
+    inline double
+    compute_stabilized_tau(const ScratchDataClass &scratch,
+                           double                  c_tau,
+                           const Tensor<1, dim> &  normal,
+                           unsigned int            q,
+                           Component               c) const;
 
     void
     prepare_data_on_cell_quadrature_points(ScratchData &scratch);
@@ -490,6 +525,12 @@ namespace Ddhdg
     void
     copy_restricted_to_trace();
 
+    inline const Vector<double> &
+    get_solution_vector() const
+    {
+      return this->current_solution_cell;
+    }
+
     NonlinearIterationResults
     private_run(double absolute_tol,
                 double relative_tol,
@@ -526,6 +567,7 @@ namespace Ddhdg
 
 
     AffineConstraints<double> constraints;
+    AffineConstraints<double> global_constraints;
     SparsityPattern           sparsity_pattern;
     SparseMatrix<double>      system_matrix;
 
@@ -637,47 +679,94 @@ namespace Ddhdg
                 const std::set<Component> &enabled_components);
 
     ScratchData(const ScratchData &sd);
-
-    template <Component cmp, bool on_face = true>
-    inline dealii::Tensor<2, dim>
-    compute_einstein_diffusion_coefficient(const unsigned int q) const
-    {
-      switch (cmp)
-        {
-          case n:
-            if (on_face)
-              return this->U_T_face[q] * this->mu_n_face[q];
-            return this->U_T_cell[q] * this->mu_n_cell[q];
-          case p:
-            if (on_face)
-              return this->U_T_face[q] * this->mu_p_face[q];
-            return this->U_T_cell[q] * this->mu_p_cell[q];
-          default:
-            Assert(false, InvalidComponent());
-            return Tensor<2, dim>();
-        }
-    }
-
-    template <Component cmp>
-    inline double
-    compute_stabilized_tau(const double          c_tau,
-                           const Tensor<1, dim> &normal,
-                           const unsigned int    q) const
-    {
-      switch (cmp)
-        {
-          case Component::n:
-            return this->template compute_einstein_diffusion_coefficient<
-                     Component::n>(q) *
-                   normal * normal * c_tau;
-          case Component::p:
-            return this->template compute_einstein_diffusion_coefficient<
-                     Component::p>(q) *
-                   normal * normal * c_tau;
-          default:
-            Assert(false, InvalidComponent());
-            return 1.;
-        }
-    }
   };
+
+  template <int dim, class Permittivity>
+  template <Component cmp, bool on_face, class ScratchDataClass>
+  dealii::Tensor<2, dim>
+  NPSolver<dim, Permittivity>::compute_einstein_diffusion_coefficient(
+    const ScratchDataClass &scratch,
+    const unsigned int      q) const
+  {
+    switch (cmp)
+      {
+        case n:
+          if (on_face)
+            return scratch.U_T_face[q] * scratch.mu_n_face[q];
+          return scratch.U_T_cell[q] * scratch.mu_n_cell[q];
+        case p:
+          if (on_face)
+            return scratch.U_T_face[q] * scratch.mu_p_face[q];
+          return scratch.U_T_cell[q] * scratch.mu_p_cell[q];
+        default:
+          Assert(false, InvalidComponent());
+          return Tensor<2, dim>();
+      }
+  }
+
+  template <int dim, class Permittivity>
+  template <Component cmp, class ScratchDataClass>
+  double
+  NPSolver<dim, Permittivity>::compute_stabilized_tau(
+    const ScratchDataClass &scratch,
+    const double            c_tau,
+    const Tensor<1, dim> &  normal,
+    const unsigned int      q) const
+  {
+    switch (cmp)
+      {
+        case Component::V:
+          return scratch.permittivity.compute_stabilized_v_tau(q,
+                                                               c_tau,
+                                                               normal);
+        case Component::n:
+          return this->template compute_einstein_diffusion_coefficient<
+                   Component::n,
+                   true,
+                   ScratchDataClass>(scratch, q) *
+                 normal * normal * c_tau;
+        case Component::p:
+          return this->template compute_einstein_diffusion_coefficient<
+                   Component::p,
+                   true,
+                   ScratchDataClass>(scratch, q) *
+                 normal * normal * c_tau;
+        default:
+          Assert(false, InvalidComponent());
+          return 1.;
+      }
+  }
+
+  template <int dim, class Permittivity>
+  template <class ScratchDataClass>
+  double
+  NPSolver<dim, Permittivity>::compute_stabilized_tau(
+    const ScratchDataClass &scratch,
+    const double            c_tau,
+    const Tensor<1, dim> &  normal,
+    const unsigned int      q,
+    const Component         c) const
+  {
+    switch (c)
+      {
+        case Component::V:
+          return this->compute_stabilized_tau<Component::V>(scratch,
+                                                            c_tau,
+                                                            normal,
+                                                            q);
+        case Component::n:
+          return this->compute_stabilized_tau<Component::n>(scratch,
+                                                            c_tau,
+                                                            normal,
+                                                            q);
+        case Component::p:
+          return this->compute_stabilized_tau<Component::p>(scratch,
+                                                            c_tau,
+                                                            normal,
+                                                            q);
+        default:
+          Assert(false, InvalidComponent());
+          return 1.;
+      }
+  }
 } // namespace Ddhdg

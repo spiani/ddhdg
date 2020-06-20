@@ -97,7 +97,7 @@ protected:
       "-1.",
       Ddhdg::Constants::constants);
 
-    // Boundary conditions for n: 0 everywhere
+    // Boundary conditions for n and p: 0 everywhere (Dirichlet)
     for (unsigned int i = 0; i < 6; i++)
       {
         boundary_handler->add_boundary_condition(i,

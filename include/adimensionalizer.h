@@ -38,6 +38,9 @@ namespace Ddhdg
         }
     }
 
+    [[nodiscard]] double
+    get_component_rescaling_factor(Component c) const;
+
     [[nodiscard]] inline double
     get_poisson_equation_density_constant() const
     {
@@ -87,7 +90,7 @@ namespace Ddhdg
     }
 
     [[nodiscard]] double
-    get_component_rescaling_factor(Component c) const;
+    get_neumann_boundary_condition_rescaling_factor(Component c) const;
 
     template <Component c>
     void
@@ -220,6 +223,9 @@ namespace Ddhdg
     {
       return tau * this->scale_length;
     }
+
+    [[nodiscard]] double
+    adimensionalize_tau(const double tau, Component c) const;
 
     const double scale_length;
     const double temperature_magnitude;

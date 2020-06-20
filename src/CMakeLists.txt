@@ -4,6 +4,7 @@ add_library(DDHDG SHARED
         assembling_methods_2d.cpp
         assembling_methods_3d.cpp
         boundary_conditions.cpp
+        copy_on_trace.cpp
         electron_mobility.cpp
         error_estimation.cpp
         function_tools.cpp

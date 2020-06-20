@@ -223,6 +223,9 @@ namespace Ddhdg
 
     virtual ~Solver() = default;
 
+    const std::shared_ptr<const Problem<dim, Permittivity>> problem;
+    const std::shared_ptr<const Adimensionalizer>           adimensionalizer;
+
   protected:
     template <Component c>
     inline double
@@ -329,9 +332,6 @@ namespace Ddhdg
         }
       return 9e99;
     }
-
-    const std::shared_ptr<const Problem<dim, Permittivity>> problem;
-    const std::shared_ptr<const Adimensionalizer>           adimensionalizer;
   };
 
 } // namespace Ddhdg

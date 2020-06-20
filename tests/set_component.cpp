@@ -264,7 +264,7 @@ TYPED_TEST(SetComponentMethod, projection) // NOLINT
 
   constexpr double V_TRACE_TOLERANCE = 5e-1;
   constexpr double N_TRACE_TOLERANCE = 1e-2;
-  constexpr double P_TRACE_TOLERANCE = 1e-2;
+  constexpr double P_TRACE_TOLERANCE = 5e-1;
 
   const auto V_expected_solution =
     TestFixture::get_expected_solution(Ddhdg::Component::V);

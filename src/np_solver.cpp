@@ -383,15 +383,11 @@ namespace Ddhdg
       {
         dealii::SolutionTransfer<dim> solution_transfer_cell(
           this->dof_handler_cell);
-        // dealii::SolutionTransfer<dim> solution_transfer_trace(
-        //  this->dof_handler_trace);
 
         this->triangulation->set_all_refine_flags();
 
         solution_transfer_cell.prepare_for_coarsening_and_refinement(
           this->current_solution_cell);
-        // solution_transfer_trace.prepare_for_coarsening_and_refinement(
-        //   this->current_solution_trace);
 
         this->triangulation->execute_coarsening_and_refinement();
 
@@ -399,16 +395,21 @@ namespace Ddhdg
         this->dof_handler_trace.distribute_dofs(*(this->fe_trace));
 
         Vector<double> tmp_cell(this->dof_handler_cell.n_dofs());
-        // Vector<double> tmp_trace(this->dof_handler_trace.n_dofs());
 
         solution_transfer_cell.interpolate(this->current_solution_cell,
                                            tmp_cell);
-        // solution_transfer_trace.interpolate(this->current_solution_trace,
-        //                                     tmp_trace);
 
         this->current_solution_cell = tmp_cell;
         this->current_solution_trace.reinit(this->dof_handler_trace.n_dofs());
       }
+
+    this->global_constraints.clear();
+    DoFTools::make_hanging_node_constraints(this->dof_handler_trace,
+                                            this->global_constraints);
+    this->global_constraints.close();
+
+    this->project_cell_function_on_trace(
+      all_components(), TraceProjectionStrategy::reconstruct_problem_solution);
 
     this->update_cell.reinit(this->dof_handler_cell.n_dofs());
     this->update_trace.reinit(this->dof_handler_trace.n_dofs());
@@ -425,10 +426,11 @@ namespace Ddhdg
     const double         bottom_fraction,
     const unsigned int   max_n_cells)
   {
+    if (!this->initialized)
+      this->setup_overall_system();
+
     dealii::SolutionTransfer<dim> solution_transfer_cell(
       this->dof_handler_cell);
-    dealii::SolutionTransfer<dim> solution_transfer_trace(
-      this->dof_handler_trace);
 
     dealii::GridRefinement::refine_and_coarsen_fixed_fraction(
       *(this->triangulation),
@@ -441,8 +443,6 @@ namespace Ddhdg
 
     solution_transfer_cell.prepare_for_coarsening_and_refinement(
       this->current_solution_cell);
-    // solution_transfer_trace.prepare_for_coarsening_and_refinement(
-    //   this->current_solution_trace);
 
     this->triangulation->execute_coarsening_and_refinement();
 
@@ -450,14 +450,19 @@ namespace Ddhdg
     this->dof_handler_trace.distribute_dofs(*(this->fe_trace));
 
     Vector<double> tmp_cell(this->dof_handler_cell.n_dofs());
-    // Vector<double> tmp_trace(this->dof_handler_trace.n_dofs());
 
     solution_transfer_cell.interpolate(this->current_solution_cell, tmp_cell);
-    // solution_transfer_trace.interpolate(this->current_solution_trace,
-    //                                     tmp_trace);
 
     this->current_solution_cell = tmp_cell;
     this->current_solution_trace.reinit(this->dof_handler_trace.n_dofs());
+
+    this->global_constraints.clear();
+    DoFTools::make_hanging_node_constraints(this->dof_handler_trace,
+                                            this->global_constraints);
+    this->global_constraints.close();
+
+    this->project_cell_function_on_trace(
+      all_components(), TraceProjectionStrategy::reconstruct_problem_solution);
 
     this->update_cell.reinit(this->dof_handler_cell.n_dofs());
     this->update_trace.reinit(this->dof_handler_trace.n_dofs());
@@ -496,6 +501,11 @@ namespace Ddhdg
 
     this->current_solution_cell.reinit(cell_dofs);
     this->update_cell.reinit(cell_dofs);
+
+    this->global_constraints.clear();
+    DoFTools::make_hanging_node_constraints(this->dof_handler_trace,
+                                            this->global_constraints);
+    this->global_constraints.close();
 
     this->setup_restricted_trace_system();
 
@@ -855,6 +865,7 @@ namespace Ddhdg
           }
         cell->set_dof_values(local_values, this->current_solution_trace);
       }
+    this->global_constraints.distribute(this->current_solution_trace);
   }
 
 
@@ -1026,117 +1037,10 @@ namespace Ddhdg
           cell->set_dof_values(local_values, this->current_solution_cell);
         }
     }
-
-    // This is the part for the trace
-    {
-      const UpdateFlags flags(update_values | update_normal_vectors |
-                              update_quadrature_points | update_JxW_values);
-
-      FEFaceValues<dim>  fe_face_trace_values(*(this->fe_trace),
-                                             face_quadrature_formula,
-                                             flags);
-      const unsigned int n_face_q_points =
-        fe_face_trace_values.get_quadrature().size();
-
-      const unsigned int dofs_per_cell = this->fe_trace->dofs_per_cell;
-
-      const FEValuesExtractors::Scalar c_extractor =
-        this->get_trace_component_extractor(c);
-
-      // Again, we map the dofs that are related to the current component
-      std::vector<unsigned int> on_current_component;
-      for (unsigned int i = 0; i < dofs_per_cell; ++i)
-        {
-          const unsigned int current_index =
-            this->fe_trace->system_to_block_index(i).first;
-          if (current_index == c_index)
-            on_current_component.push_back(i);
-        }
-      const unsigned int dofs_per_component = on_current_component.size();
-
-      std::vector<std::vector<unsigned int>> component_support_on_face(
-        GeometryInfo<dim>::faces_per_cell);
-      for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
-           ++face)
-        for (unsigned int i = 0; i < dofs_per_component; ++i)
-          {
-            const unsigned int dof_index = on_current_component[i];
-            if (this->fe_trace->has_support_on_face(dof_index, face))
-              component_support_on_face[face].push_back(i);
-          }
-      const unsigned int dofs_per_face_on_component =
-        component_support_on_face[0].size();
-
-      std::vector<double> c_bf(dofs_per_face_on_component);
-
-      std::vector<Point<dim>> face_quadrature_points(n_face_q_points);
-
-      std::vector<double> evaluated_c_face(n_face_q_points);
-
-      LAPACKFullMatrix<double> local_trace_matrix(dofs_per_component,
-                                                  dofs_per_component);
-      Vector<double>           local_trace_residual(dofs_per_component);
-      Vector<double>           local_trace_values(dofs_per_cell);
-
-      for (const auto &cell : dof_handler_trace.active_cell_iterators())
-        {
-          local_trace_matrix   = 0;
-          local_trace_residual = 0;
-          for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
-               ++face)
-            {
-              fe_face_trace_values.reinit(cell, face);
-              for (unsigned int q = 0; q < n_face_q_points; ++q)
-                face_quadrature_points[q] =
-                  fe_face_trace_values.quadrature_point(q);
-
-              c_function_rescaled->value_list(face_quadrature_points,
-                                              evaluated_c_face);
-
-              for (unsigned int q = 0; q < n_face_q_points; ++q)
-                {
-                  // Copy data of the shape function
-                  for (unsigned int k = 0; k < dofs_per_face_on_component; ++k)
-                    {
-                      const unsigned int component_index =
-                        component_support_on_face[face][k];
-                      const unsigned int local_index =
-                        on_current_component[component_index];
-                      c_bf[k] =
-                        fe_face_trace_values[c_extractor].value(local_index, q);
-                    }
-
-                  const double JxW = fe_face_trace_values.JxW(q);
-
-                  for (unsigned int i = 0; i < dofs_per_face_on_component; ++i)
-                    {
-                      const unsigned int ii =
-                        component_support_on_face[face][i];
-                      for (unsigned int j = 0; j < dofs_per_face_on_component;
-                           ++j)
-                        {
-                          const unsigned int jj =
-                            component_support_on_face[face][j];
-                          local_trace_matrix(ii, jj) +=
-                            (c_bf[j] * c_bf[i]) * JxW;
-                        }
-                      local_trace_residual[ii] +=
-                        (evaluated_c_face[q] * c_bf[i]) * JxW;
-                    }
-                }
-            }
-          local_trace_matrix.compute_lu_factorization();
-          local_trace_matrix.solve(local_trace_residual);
-
-          cell->get_dof_values(this->current_solution_trace,
-                               local_trace_values);
-          for (unsigned int i = 0; i < dofs_per_component; i++)
-            local_trace_values[on_current_component[i]] =
-              local_trace_residual[i];
-          cell->set_dof_values(local_trace_values,
-                               this->current_solution_trace);
-        }
-    }
+    // Now we need to copy the trace from the values on the cells
+    std::set<Component> current_component_set{c};
+    this->project_cell_function_on_trace(current_component_set,
+                                         TraceProjectionStrategy::l2_average);
   }
 
 

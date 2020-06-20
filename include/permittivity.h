@@ -51,7 +51,7 @@ namespace Ddhdg
     inline double
     compute_stabilized_v_tau(const unsigned int,
                              const double v_tau,
-                             const dealii::Tensor<1, dim> &)
+                             const dealii::Tensor<1, dim> &) const
     {
       return v_tau * this->rescaled_epsilon;
     }

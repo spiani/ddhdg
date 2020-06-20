@@ -2,6 +2,7 @@ set(_target tests)
 
 set(_test_files
         adimensionalizer.cpp
+        copy_on_trace.cpp
         disabling_components.cpp
         set_component.cpp
         linear_potential.cpp
