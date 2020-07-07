@@ -126,6 +126,11 @@ namespace Ddhdg
     NonlinearIterationResults
     run() override;
 
+    void
+    compute_local_charge_neutrality();
+
+    void
+    compute_local_charge_neutrality_on_trace(bool only_at_boundary = false);
     NonlinearIterationResults
     compute_thermodynamic_equilibrium(double absolute_tol,
                                       double relative_tol,
@@ -544,7 +549,7 @@ namespace Ddhdg
       std::vector<double> &      evaluated_potentials);
 
     void
-    compute_local_charge_neutrality();
+    compute_local_charge_neutrality_on_cells();
 
     const std::unique_ptr<Triangulation<dim>> triangulation;
     const std::unique_ptr<NPSolverParameters> parameters;

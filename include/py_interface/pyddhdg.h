@@ -266,6 +266,12 @@ namespace pyddhdg
     Ddhdg::NonlinearIterationResults
     run();
 
+    void
+    compute_local_charge_neutrality_on_trace(bool only_at_boundary = false);
+
+    void
+    compute_local_charge_neutrality();
+
     Ddhdg::NonlinearIterationResults
     compute_thermodynamic_equilibrium(bool generate_first_guess);
 

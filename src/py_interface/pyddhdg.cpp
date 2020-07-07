@@ -535,6 +535,26 @@ namespace pyddhdg
 
 
   template <int dim>
+  void
+  NPSolver<dim>::compute_local_charge_neutrality_on_trace(
+    const bool only_at_boundary)
+  {
+    return this->ddhdg_solver->compute_local_charge_neutrality_on_trace(
+      only_at_boundary);
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::compute_local_charge_neutrality()
+  {
+    return this->ddhdg_solver->compute_local_charge_neutrality();
+  }
+
+
+
+  template <int dim>
   Ddhdg::NonlinearIterationResults
   NPSolver<dim>::compute_thermodynamic_equilibrium(bool generate_first_guess)
   {

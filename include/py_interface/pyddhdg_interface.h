@@ -267,6 +267,11 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("n_enabled"),
        py::arg("p_enabled"))
   .def("run", &NPSolver<DIM>::run)
+  .def("compute_local_charge_neutrality_on_trace",
+       &NPSolver<DIM>::compute_local_charge_neutrality_on_trace,
+       py::arg("only_at_boundary") = false)
+  .def("compute_local_charge_neutrality",
+       &NPSolver<DIM>::compute_local_charge_neutrality)
   .def(
     "compute_thermodynamic_equilibrium",
     py::overload_cast<bool>(&NPSolver<DIM>::compute_thermodynamic_equilibrium),
