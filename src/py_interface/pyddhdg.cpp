@@ -526,6 +526,24 @@ namespace pyddhdg
 
 
   template <int dim>
+  void
+  NPSolver<dim>::copy_triangulation_from(NPSolver<dim> other)
+  {
+    this->ddhdg_solver->copy_triangulation_from(*(other.ddhdg_solver));
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::copy_solution_from(NPSolver<dim> other)
+  {
+    this->ddhdg_solver->copy_solution_from(*(other.ddhdg_solver));
+  }
+
+
+
+  template <int dim>
   Ddhdg::NonlinearIterationResults
   NPSolver<dim>::run()
   {

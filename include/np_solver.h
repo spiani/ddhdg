@@ -62,6 +62,35 @@ namespace Ddhdg
                       std::shared_ptr<const Adimensionalizer> adimensionalizer =
                         std::make_shared<Adimensionalizer>());
 
+    template <class OtherPermittivity>
+    void
+    copy_triangulation_from(const NPSolver<dim, OtherPermittivity> &other)
+    {
+      this->triangulation = std::make_unique<dealii::Triangulation<dim>>();
+      this->triangulation->copy_triangulation(*(other.triangulation));
+      this->dof_handler_cell.initialize(*(this->triangulation),
+                                        *(this->fe_cell));
+      this->dof_handler_trace.initialize(*(this->triangulation),
+                                         *(this->fe_trace));
+      this->dof_handler_trace_restricted.initialize(
+        *(this->triangulation), *(this->fe_trace_restricted));
+      this->initialized = false;
+    }
+
+    template <class OtherPermittivity>
+    void
+    copy_solution_from(const NPSolver<dim, OtherPermittivity> &other)
+    {
+      if (!this->initialized)
+        this->setup_overall_system();
+
+      dealii::VectorTools::interpolate_to_different_mesh(
+        other.dof_handler_cell,
+        other.current_solution_cell,
+        this->dof_handler_cell,
+        this->current_solution_cell);
+    }
+
     void
     refine_grid(unsigned int i, bool preserve_solution) override;
 
@@ -376,8 +405,6 @@ namespace Ddhdg
     struct PerTaskData;
     struct ScratchData;
 
-    struct ChargeNeutralityScratchData;
-
     dealii::Threads::Mutex inversion_mutex;
 
     typedef void (
@@ -551,7 +578,7 @@ namespace Ddhdg
     void
     compute_local_charge_neutrality_on_cells();
 
-    const std::unique_ptr<Triangulation<dim>> triangulation;
+    std::unique_ptr<Triangulation<dim>>       triangulation;
     const std::unique_ptr<NPSolverParameters> parameters;
 
     const std::shared_ptr<const dealii::Function<dim>> rescaled_doping;

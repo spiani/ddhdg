@@ -214,6 +214,12 @@ namespace pyddhdg
              const Ddhdg::Adimensionalizer &  adimensionalizer);
 
     void
+    copy_triangulation_from(NPSolver other);
+
+    void
+    copy_solution_from(NPSolver other);
+
+    void
     refine_grid(unsigned int i = 1, bool preserve_solution = false);
 
     void
