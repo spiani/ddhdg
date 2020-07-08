@@ -1391,7 +1391,7 @@ namespace Ddhdg
         Ainv.initialize(this->system_matrix);
         Ainv.vmult(this->system_solution, this->system_rhs);
       }
-    constraints.distribute(this->system_solution);
+    this->constraints.distribute(this->system_solution);
   }
 
 

@@ -271,20 +271,22 @@ namespace Ddhdg
     std::vector<double> evaluated_temperature(n_face_q_points);
     std::vector<double> evaluated_potentials(n_face_q_points);
 
-    LAPACKFullMatrix<double> local_trace_matrix(dofs_per_component,
-                                                dofs_per_component);
-    Vector<double>           local_trace_residual(dofs_per_component);
+    LAPACKFullMatrix<double> local_trace_matrix(dofs_per_face_on_component,
+                                                dofs_per_face_on_component);
+    Vector<double>           local_trace_residual(dofs_per_face_on_component);
     Vector<double>           local_trace_values(dofs_per_cell);
 
     for (const auto &cell : dof_handler_trace.active_cell_iterators())
       {
-        local_trace_matrix   = 0;
-        local_trace_residual = 0;
+        cell->get_dof_values(this->current_solution_trace, local_trace_values);
         for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
              ++face)
           {
             if (only_at_boundary && !cell->face(face)->at_boundary())
               continue;
+
+            local_trace_matrix   = 0;
+            local_trace_residual = 0;
 
             fe_face_trace_values.reinit(cell, face);
             for (unsigned int q = 0; q < n_face_q_points; ++q)
@@ -316,27 +318,26 @@ namespace Ddhdg
 
                 for (unsigned int i = 0; i < dofs_per_face_on_component; ++i)
                   {
-                    const unsigned int ii = component_support_on_face[face][i];
                     for (unsigned int j = 0; j < dofs_per_face_on_component;
                          ++j)
-                      {
-                        const unsigned int jj =
-                          component_support_on_face[face][j];
-                        local_trace_matrix(ii, jj) += (c_bf[j] * c_bf[i]) * JxW;
-                      }
-                    local_trace_residual[ii] +=
+                      local_trace_matrix(i, j) += (c_bf[j] * c_bf[i]) * JxW;
+                    local_trace_residual[i] +=
                       (evaluated_potentials[q] * c_bf[i]) * JxW;
                   }
               }
-          }
-        local_trace_matrix.compute_lu_factorization();
-        local_trace_matrix.solve(local_trace_residual);
+            local_trace_matrix.compute_lu_factorization();
+            local_trace_matrix.solve(local_trace_residual);
 
-        cell->get_dof_values(this->current_solution_trace, local_trace_values);
-        for (unsigned int i = 0; i < dofs_per_component; i++)
-          local_trace_values[on_current_component[i]] = local_trace_residual[i];
+            for (unsigned int i = 0; i < dofs_per_face_on_component; i++)
+              {
+                const unsigned int ii = component_support_on_face[face][i];
+                local_trace_values[on_current_component[ii]] =
+                  local_trace_residual[i];
+              }
+          }
         cell->set_dof_values(local_trace_values, this->current_solution_trace);
       }
+    this->constraints.distribute(this->current_solution_trace);
   }
 
 
