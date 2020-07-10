@@ -310,7 +310,8 @@ TYPED_TEST(CopyTrace, project_trace_only_on_some_components) // NOLINT
 }
 
 
-TYPED_TEST(CopyTrace, DISABLED_project_trace_local_refinement) // NOLINT
+
+TYPED_TEST(CopyTrace, project_trace_local_refinement) // NOLINT
 {
   constexpr double   TOLERANCE = 1e-12;
   const unsigned int dim       = TypeParam::value;
@@ -357,7 +358,7 @@ TYPED_TEST(CopyTrace, DISABLED_project_trace_local_refinement) // NOLINT
   if (dim == 1)
     p_function = TestFixture::get_function("x^2 / q");
   else
-    p_function = TestFixture::get_function("5 / q");
+    p_function = TestFixture::get_function("(x^2 + y^2) / q");
 
   this->set_current_solution(V_function, n_function, p_function, false);
 

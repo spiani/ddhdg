@@ -1,8 +1,7 @@
 #include "deal.II/base/exceptions.h"
+#include <deal.II/base/work_stream.h>
 
 #include <deal.II/grid/tria_accessor.h>
-
-#include "deal.II/meshworker/mesh_loop.h"
 
 #include "np_solver.h"
 
@@ -860,13 +859,378 @@ namespace Ddhdg
   } // namespace CopyTraceInternalTools
 
 
+
+  template <int dim, class Permittivity>
+  template <typename CTScratchData>
+  void
+  NPSolver<dim, Permittivity>::copy_trace_compute_tau(
+    CTScratchData &scratch) const
+  {
+    for (const auto c : scratch.active_components)
+      {
+        const double tau_rescaled = this->adimensionalizer->adimensionalize_tau(
+          this->parameters->tau.at(c), c);
+        auto &stb_tau = scratch.stabilized_tau.at(c);
+
+        const unsigned int n_q_points =
+          scratch.fe_face_values_cell.get_quadrature().size();
+
+        for (unsigned int q = 0; q < n_q_points; q++)
+          stb_tau[q] = this->template compute_stabilized_tau(
+            scratch,
+            tau_rescaled,
+            scratch.fe_face_values_cell.normal_vector(q),
+            q,
+            c);
+      }
+  }
+
+
+
+  template <int dim, class Permittivity>
+  template <typename CTScratchData>
+  void
+  NPSolver<dim, Permittivity>::copy_trace_compute_D_n_and_D_p(
+    CTScratchData &scratch) const
+  {
+    for (unsigned int q = 0;
+         q < scratch.fe_face_values_cell.get_quadrature().size();
+         q++)
+      {
+        scratch.D_n[q] =
+          this->template compute_einstein_diffusion_coefficient<Component::n>(
+            scratch, q);
+        scratch.D_p[q] =
+          this->template compute_einstein_diffusion_coefficient<Component::p>(
+            scratch, q);
+      }
+  }
+
+
+
+  template <int dim, class Permittivity>
+  template <typename IteratorType1,
+            typename IteratorType2,
+            typename CTScratchData,
+            typename CTCopyData>
+  void
+  NPSolver<dim, Permittivity>::copy_trace_face_worker(
+    const IteratorType1 &         cell1,
+    const unsigned int            face1,
+    const IteratorType2 &         cell2,
+    const unsigned int            face2,
+    CTScratchData &               scratch,
+    CTCopyData &                  copy_data,
+    const TraceProjectionStrategy strategy) const
+  {
+    // Initialize the fe_face_values for the trace; it will be
+    // initialized just once per face, so it is enough to find one
+    // direction for which the face is not a subface
+    typename DoFHandler<dim>::active_cell_iterator trace_cell(
+      &(*(this->triangulation)),
+      cell1->level(),
+      cell1->index(),
+      &(this->dof_handler_trace));
+    scratch.fe_face_values_trace.reinit(trace_cell, face1);
+    trace_cell->get_dof_indices(scratch.trace_global_dofs);
+
+    // Now we assemble the matrix
+    scratch.assemble_matrix(face1);
+
+    // Let us set to zero the rhs
+    scratch.clean_rhs();
+
+    // Now we load the scratch data with the data from cell 1
+    scratch.template copy_data_for_cell<IteratorType1>(
+      cell1,
+      face1,
+      dealii::numbers::invalid_unsigned_int,
+      *(this->problem),
+      *(this->adimensionalizer),
+      this->get_solution_vector());
+
+    this->copy_trace_compute_tau(scratch);
+    this->copy_trace_compute_D_n_and_D_p(scratch);
+
+    scratch.assemble_rhs(face1, strategy, true);
+
+    // The same, but for face 2
+    scratch.template copy_data_for_cell<IteratorType2>(
+      cell2,
+      face2,
+      dealii::numbers::invalid_unsigned_int,
+      *(this->problem),
+      *(this->adimensionalizer),
+      this->get_solution_vector());
+
+    this->copy_trace_compute_tau(scratch);
+    this->copy_trace_compute_D_n_and_D_p(scratch);
+
+    // Here we have "face1" and not "face2" because, in this function,
+    // the face is related with the FeValues for the trace, that has
+    // been initialized on face1
+    scratch.assemble_rhs(face1, strategy, true);
+
+    scratch.solve_system();
+
+    scratch.copy_solution(face1, copy_data);
+  }
+
+
+
+  template <int dim, class Permittivity>
+  template <typename IteratorType, typename CTScratchData, typename CTCopyData>
+  void
+  NPSolver<dim, Permittivity>::copy_trace_boundary_worker(
+    const IteratorType &          cell,
+    const unsigned int            face,
+    CTScratchData &               scratch,
+    CTCopyData &                  copy_data,
+    const TraceProjectionStrategy strategy) const
+  {
+    typename DoFHandler<dim>::active_cell_iterator trace_cell(
+      &(*(this->triangulation)),
+      cell->level(),
+      cell->index(),
+      &(this->dof_handler_trace));
+    scratch.fe_face_values_trace.reinit(trace_cell, face);
+    trace_cell->get_dof_indices(scratch.trace_global_dofs);
+
+    // Now we assemble the matrix
+    scratch.assemble_matrix(face);
+
+    // Let us set to zero the rhs
+    scratch.clean_rhs();
+
+    scratch.copy_data_for_cell(cell,
+                               face,
+                               dealii::numbers::invalid_unsigned_int,
+                               *(this->problem),
+                               *(this->adimensionalizer),
+                               this->get_solution_vector());
+
+    this->copy_trace_compute_tau(scratch);
+    this->copy_trace_compute_D_n_and_D_p(scratch);
+
+    const unsigned int q_points =
+      scratch.fe_face_values_trace.get_quadrature().size();
+
+    switch (strategy)
+      {
+          case l2_average: {
+            // This case is easy! Just assemble the residual like it was a
+            // internal cell and multiply it by 2 (because it is like
+            // there was another cell with the very same values attached
+            // on the other side of this cell
+            scratch.template assemble_rhs<l2_average, true>(face);
+            scratch.multiply_rhs(2.);
+            break;
+          }
+          case reconstruct_problem_solution: {
+            // This, instead, is the not so easy case. Indeed, here we
+            // have three cases: no boundary conditions (then we are in
+            // the same case we were before), Dirichlet BC or Neumann BC
+            // In any case, we build the standard residual. This is a
+            // waste of times for the component that have Dirichlet
+            // boundary conditions, but otherwise I would have to write
+            // an ad-hoc function again
+            scratch.template assemble_rhs<reconstruct_problem_solution, true>(
+              face);
+            scratch.multiply_rhs(2.);
+
+            const types::boundary_id face_boundary_id =
+              cell->face(face)->boundary_id();
+
+            for (const Component cmp : scratch.active_components)
+              {
+                auto & c_rhs = scratch.rhs.at(cmp);
+                double bc_value;
+
+                unsigned int dofs_per_face =
+                  scratch.dofs_per_component_on_face.at(cmp);
+                const auto &dofs_per_face_indices =
+                  scratch.fe_trace_support_on_face.at(cmp)[face];
+                const auto c_extractor = scratch.trace_extractors.at(cmp);
+
+                const bool has_dirichlet_bc =
+                  this->problem->boundary_handler
+                    ->has_dirichlet_boundary_conditions(face_boundary_id, cmp);
+                if (has_dirichlet_bc)
+                  {
+                    const double rescaling_factor =
+                      this->adimensionalizer->get_component_rescaling_factor(
+                        cmp);
+
+                    // Reset the previous values
+                    c_rhs = 0.;
+
+                    const auto dbc =
+                      this->problem->boundary_handler
+                        ->get_dirichlet_conditions_for_id(face_boundary_id,
+                                                          cmp);
+
+                    for (unsigned int q = 0; q < q_points; ++q)
+                      {
+                        const double JxW = scratch.fe_face_values_cell.JxW(q);
+
+                        bc_value = dbc.evaluate(scratch.quadrature_points[q]) /
+                                   rescaling_factor;
+
+                        for (unsigned int i = 0; i < dofs_per_face; i++)
+                          {
+                            const unsigned int ii = dofs_per_face_indices[i];
+                            c_rhs[i] +=
+                              scratch.fe_face_values_trace[c_extractor].value(
+                                ii, q) *
+                              bc_value * JxW;
+                          }
+                      }
+                    continue;
+                  }
+
+                const bool has_neumann_bc =
+                  this->problem->boundary_handler
+                    ->has_neumann_boundary_conditions(face_boundary_id, cmp);
+                if (has_neumann_bc)
+                  {
+                    const double rescaling_factor =
+                      this->adimensionalizer
+                        ->get_neumann_boundary_condition_rescaling_factor(cmp);
+
+                    const auto nbc =
+                      this->problem->boundary_handler
+                        ->get_neumann_conditions_for_id(face_boundary_id, cmp);
+                    for (unsigned int q = 0; q < q_points; ++q)
+                      {
+                        const double JxW = scratch.fe_face_values_cell.JxW(q);
+
+                        bc_value = nbc.evaluate(scratch.quadrature_points[q]) /
+                                   rescaling_factor;
+
+                        for (unsigned int i = 0; i < dofs_per_face; i++)
+                          {
+                            const unsigned int ii = dofs_per_face_indices[i];
+                            c_rhs[i] +=
+                              scratch.fe_face_values_trace[c_extractor].value(
+                                ii, q) *
+                              bc_value * JxW;
+                          }
+                      }
+                    continue;
+                  }
+              }
+            break;
+          }
+        default:
+          Assert(false, InvalidStrategy());
+      }
+
+    scratch.solve_system();
+
+    scratch.copy_solution(face, copy_data);
+  }
+
+
+
+  template <int dim, class Permittivity>
+  template <typename CTCopyData>
+  void
+  NPSolver<dim, Permittivity>::copy_trace_copier(const CTCopyData &copy_data)
+  {
+    const unsigned int faces_per_cell =
+      dealii::GeometryInfo<dim>::faces_per_cell;
+    const unsigned int dofs_per_face = copy_data.dof_indices[0].size();
+    for (unsigned int face = 0; face < faces_per_cell; face++)
+      if (copy_data.examined_faces[face])
+        for (unsigned int i = 0; i < dofs_per_face; i++)
+          {
+            this->current_solution_trace[copy_data.dof_indices[face][i]] =
+              copy_data.dof_values[face][i];
+          }
+  }
+
+
+
+  template <int dim, class Permittivity>
+  template <typename IteratorType,
+            typename CTScratchData,
+            typename CTCopyData,
+            TraceProjectionStrategy strategy>
+  void
+  NPSolver<dim, Permittivity>::copy_trace_cell_worker(const IteratorType &cell,
+                                                      CTScratchData &scratch,
+                                                      CTCopyData &   copy_data)
+  {
+    const unsigned int faces_per_cell =
+      dealii::GeometryInfo<dim>::faces_per_cell;
+
+    // Reset the copy_data
+    for (unsigned int face = 0; face < faces_per_cell; face++)
+      copy_data.examined_faces[face] = false;
+
+    // We examine each face one by one
+    for (unsigned int face = 0; face < faces_per_cell; face++)
+      {
+        // First of all, let us check if the face is on the boundary
+        if (cell->face(face)->at_boundary())
+          {
+            // If this is the case, we are done! It is enough to call the
+            // boundary worker
+            this->copy_trace_boundary_worker(
+              cell, face, scratch, copy_data, strategy);
+            continue;
+          }
+
+        auto neighbor              = cell->neighbor(face);
+        using NeighborIteratorType = decltype(neighbor);
+
+        // If we are on a small cell, we continue; this face will be
+        // handled when we will be on the coarser cell
+        if (cell->neighbor_is_coarser(face))
+          continue;
+
+        const unsigned int neighbor_face = cell->neighbor_of_neighbor(face);
+
+        // Now we are in the regular case (I do not care about the
+        // anisotropic refinements). If dim == 1, we are always in the
+        // regular case, because faces are points which can not be divided
+        // in subfaces
+        if (dim == 1 || !neighbor->has_children())
+          {
+            // This ensures that we perform this computation just once for
+            // each face
+            if (face < neighbor_face)
+              this->copy_trace_face_worker<
+                IteratorType,
+                NeighborIteratorType,
+                CopyTraceInternalTools::CTScratchData<dim, Permittivity>,
+                CopyTraceInternalTools::CTCopyData<dim>>(cell,
+                                                         face,
+                                                         neighbor,
+                                                         neighbor_face,
+                                                         scratch,
+                                                         copy_data,
+                                                         strategy);
+            continue;
+          }
+
+        this->copy_trace_face_worker<
+          IteratorType,
+          NeighborIteratorType,
+          CopyTraceInternalTools::CTScratchData<dim, Permittivity>,
+          CopyTraceInternalTools::CTCopyData<dim>>(
+          cell, face, neighbor, neighbor_face, scratch, copy_data, strategy);
+      }
+  }
+
+
+
   template <int dim, class Permittivity>
   void
   NPSolver<dim, Permittivity>::project_cell_function_on_trace(
     const std::set<Component> &components,
     TraceProjectionStrategy    strategy)
   {
-    using CellIteratorType = decltype(this->dof_handler_cell.begin());
     using ActiveCellIteratorType =
       decltype(this->dof_handler_cell.begin_active());
 
@@ -891,65 +1255,6 @@ namespace Ddhdg
                               this->get_displacement_extractor(d)};
       }
 
-    // The following code will be called several times. I put it here because
-    // it needs access to some private methods of this object
-    std::function<
-      void(CopyTraceInternalTools::CTScratchData<dim, Permittivity> & scratch,
-           const bool regular_face)>
-      compute_tau =
-        [&](CopyTraceInternalTools::CTScratchData<dim, Permittivity> &scratch,
-            const bool regular_face) {
-          for (const auto c : scratch.active_components)
-            {
-              const double tau_rescaled =
-                this->adimensionalizer->adimensionalize_tau(
-                  this->parameters->tau.at(c), c);
-              auto &stb_tau = scratch.stabilized_tau.at(c);
-              if (regular_face)
-                {
-                  for (unsigned int q = 0;
-                       q < scratch.fe_face_values_cell.get_quadrature().size();
-                       q++)
-                    stb_tau[q] = this->template compute_stabilized_tau(
-                      scratch,
-                      tau_rescaled,
-                      scratch.fe_face_values_cell.normal_vector(q),
-                      q,
-                      c);
-                }
-              else
-                {
-                  const double n_q_points =
-                    scratch.fe_subface_values_cell.get_quadrature().size();
-                  for (unsigned int q = 0; q < n_q_points; q++)
-                    stb_tau[q] = this->template compute_stabilized_tau(
-                      scratch,
-                      tau_rescaled,
-                      scratch.fe_subface_values_cell.normal_vector(q),
-                      q,
-                      c);
-                }
-            }
-        };
-
-    // The same for D_d and D_p
-    std::function<void(
-      CopyTraceInternalTools::CTScratchData<dim, Permittivity> & scratch)>
-      compute_D_n_and_D_p =
-        [&](CopyTraceInternalTools::CTScratchData<dim, Permittivity> &scratch) {
-          for (unsigned int q = 0;
-               q < scratch.fe_face_values_cell.get_quadrature().size();
-               q++)
-            {
-              scratch.D_n[q] =
-                this->template compute_einstein_diffusion_coefficient<
-                  Component::n>(scratch, q);
-              scratch.D_p[q] =
-                this->template compute_einstein_diffusion_coefficient<
-                  Component::p>(scratch, q);
-            }
-        };
-
     CopyTraceInternalTools::CTScratchData<dim, Permittivity> scratch(
       *(this->fe_cell),
       *(this->fe_trace),
@@ -964,371 +1269,44 @@ namespace Ddhdg
     CopyTraceInternalTools::CTCopyData<dim> copy_data(
       scratch.total_dofs_per_face());
 
-    std::function<
-      void(const ActiveCellIteratorType &,
-           CopyTraceInternalTools::CTScratchData<dim, Permittivity> &,
-           CopyTraceInternalTools::CTCopyData<dim> &)>
-      empty_cell_worker;
+    typedef void (NPSolver<dim, Permittivity>::*copy_trace_worker_pointer_type)(
+      const ActiveCellIteratorType &                            cell,
+      CopyTraceInternalTools::CTScratchData<dim, Permittivity> &scratch,
+      CopyTraceInternalTools::CTCopyData<dim> &                 task_data);
 
-    std::function<
-      void(const ActiveCellIteratorType &,
-           const unsigned int,
-           const unsigned int,
-           const ActiveCellIteratorType &,
-           const unsigned int,
-           const unsigned int,
-           CopyTraceInternalTools::CTScratchData<dim, Permittivity> &,
-           CopyTraceInternalTools::CTCopyData<dim> &)>
-      face_worker =
-        [this, strategy, &compute_tau, &compute_D_n_and_D_p](
-          const ActiveCellIteratorType &                            cell1,
-          const unsigned int                                        face1,
-          const unsigned int                                        subface1,
-          const ActiveCellIteratorType &                            cell2,
-          const unsigned int                                        face2,
-          const unsigned int                                        subface2,
-          CopyTraceInternalTools::CTScratchData<dim, Permittivity> &scratch,
-          CopyTraceInternalTools::CTCopyData<dim> &                 copy_data) {
-          const bool face1_is_regular =
-            (subface1 == dealii::numbers::invalid_unsigned_int);
-          const bool face2_is_regular =
-            (subface2 == dealii::numbers::invalid_unsigned_int);
-          Assert(face1_is_regular || face2_is_regular,
-                 dealii::ExcMessage(
-                   "Current face is a subface for all the two cells"));
+    copy_trace_worker_pointer_type copy_trace_worker_pointer;
 
-          const bool regular_face = face1_is_regular && face2_is_regular;
+    // Get the right pointer to the copy_trace_cell_worker function
+    switch (strategy)
+      {
+        case TraceProjectionStrategy::l2_average:
+          copy_trace_worker_pointer =
+            &NPSolver<dim, Permittivity>::template copy_trace_cell_worker<
+              ActiveCellIteratorType,
+              CopyTraceInternalTools::template CTScratchData<dim, Permittivity>,
+              CopyTraceInternalTools::template CTCopyData<dim>,
+              TraceProjectionStrategy::l2_average>;
+          break;
+        case TraceProjectionStrategy::reconstruct_problem_solution:
+          copy_trace_worker_pointer =
+            &NPSolver<dim, Permittivity>::template copy_trace_cell_worker<
+              ActiveCellIteratorType,
+              CopyTraceInternalTools::template CTScratchData<dim, Permittivity>,
+              CopyTraceInternalTools::template CTCopyData<dim>,
+              TraceProjectionStrategy::reconstruct_problem_solution>;
+          break;
+        default:
+          Assert(false, InvalidStrategy());
+      }
 
-          // If the face is not regular, (i.e. this face is a subface for some
-          // cell), then we will compute it only if the subface has index 0.
-          // Indeed, we will not compute it but its parent, i.e. the face this
-          // subface is a subface of.
-          if (not regular_face)
-            {
-              unsigned int subface_index =
-                (subface1 == dealii::numbers::invalid_unsigned_int) ? subface2 :
-                                                                      subface1;
-              if (subface_index != 0)
-                return;
-            }
-
-          // This is easy! Just integrate on both parts
-          if (regular_face)
-            {
-              // Initialize the fe_face_values for the trace; it will be
-              // initialized just once per face, so it is enough to find one
-              // direction for which the face is not a subface
-              typename DoFHandler<dim>::active_cell_iterator trace_cell(
-                &(*(this->triangulation)),
-                cell1->level(),
-                cell1->index(),
-                &(this->dof_handler_trace));
-              scratch.fe_face_values_trace.reinit(trace_cell, face1);
-              trace_cell->get_dof_indices(scratch.trace_global_dofs);
-
-              // Now we assemble the matrix
-              scratch.assemble_matrix(face1);
-
-              // Let us set to zero the rhs
-              scratch.clean_rhs();
-
-              // Now we load the scratch data with the data from cell 1
-              scratch.template copy_data_for_cell<ActiveCellIteratorType>(
-                cell1,
-                face1,
-                dealii::numbers::invalid_unsigned_int,
-                *(this->problem),
-                *(this->adimensionalizer),
-                this->get_solution_vector());
-
-              compute_tau(scratch, true);
-              compute_D_n_and_D_p(scratch);
-
-              scratch.assemble_rhs(face1, strategy, true);
-
-              // The same, but for face 2
-              scratch.template copy_data_for_cell<ActiveCellIteratorType>(
-                cell2,
-                face2,
-                dealii::numbers::invalid_unsigned_int,
-                *(this->problem),
-                *(this->adimensionalizer),
-                this->get_solution_vector());
-
-              compute_tau(scratch, true);
-              compute_D_n_and_D_p(scratch);
-
-              // Here we have "face1" and not "face2" because, in this function,
-              // the face is related with the FeValues for the trace, that has
-              // been initialized on face1
-              scratch.assemble_rhs(face1, strategy, true);
-
-              scratch.solve_system();
-
-              scratch.copy_solution(face1, copy_data);
-              return;
-            }
-
-          // Now we are going to forget about the subface (i.e. the small face)
-          // and get the values for its parent. For one side, we are good to go:
-          // indeed we can just ignore the subface argument and we are on the
-          // face we are looking for. On the other side, instead, we need to
-          // move to the parent cell to get the face that we want
-          ActiveCellIteratorType coarse_cell;
-          CellIteratorType       parent_cell;
-          unsigned int           coarse_face;
-          unsigned int           parent_face;
-
-          if (face1_is_regular)
-            {
-              coarse_cell = cell2;
-              coarse_face = face2;
-
-              parent_cell = cell1->parent();
-              parent_face = face1;
-            }
-          else
-            {
-              coarse_cell = cell1;
-              coarse_face = face1;
-
-              parent_cell = cell2->parent();
-              parent_face = face2;
-            }
-
-          // We initialize the FEValues for the trace using the coarse cell
-          typename DoFHandler<dim>::active_cell_iterator trace_cell(
-            &(*(this->triangulation)),
-            coarse_cell->level(),
-            coarse_cell->index(),
-            &(this->dof_handler_trace));
-          scratch.fe_face_values_trace.reinit(trace_cell, coarse_face);
-          trace_cell->get_dof_indices(scratch.trace_global_dofs);
-
-          scratch.assemble_matrix(coarse_face);
-
-          scratch.clean_rhs();
-
-          // Get the data for the coarse cell
-          scratch.template copy_data_for_cell<ActiveCellIteratorType>(
-            coarse_cell,
-            coarse_face,
-            dealii::numbers::invalid_unsigned_int,
-            *(this->problem),
-            *(this->adimensionalizer),
-            this->get_solution_vector());
-
-          compute_tau(scratch, true);
-          compute_D_n_and_D_p(scratch);
-
-          scratch.assemble_rhs(coarse_face, strategy, true);
-
-          // Now, instead, we copy the data for the parent cell
-          scratch.template copy_data_for_cell<CellIteratorType>(
-            parent_cell,
-            parent_face,
-            dealii::numbers::invalid_unsigned_int,
-            *(this->problem),
-            *(this->adimensionalizer),
-            this->get_solution_vector());
-
-          compute_tau(scratch, true);
-          compute_D_n_and_D_p(scratch);
-
-          scratch.assemble_rhs(coarse_face, strategy, true);
-
-          scratch.solve_system();
-
-          scratch.copy_solution(face1, copy_data);
-        };
-
-    std::function<
-      void(const ActiveCellIteratorType &,
-           const unsigned int,
-           CopyTraceInternalTools::CTScratchData<dim, Permittivity> &,
-           CopyTraceInternalTools::CTCopyData<dim> &)>
-      boundary_worker =
-        [this, strategy, &compute_tau, &compute_D_n_and_D_p](
-          const ActiveCellIteratorType &                            cell,
-          const unsigned int                                        face_number,
-          CopyTraceInternalTools::CTScratchData<dim, Permittivity> &scratch,
-          CopyTraceInternalTools::CTCopyData<dim> &                 copy_data) {
-          typename DoFHandler<dim>::active_cell_iterator trace_cell(
-            &(*(this->triangulation)),
-            cell->level(),
-            cell->index(),
-            &(this->dof_handler_trace));
-          scratch.fe_face_values_trace.reinit(trace_cell, face_number);
-          trace_cell->get_dof_indices(scratch.trace_global_dofs);
-
-          // Now we assemble the matrix
-          scratch.assemble_matrix(face_number);
-
-          // Let us set to zero the rhs
-          scratch.clean_rhs();
-
-          scratch.copy_data_for_cell(cell,
-                                     face_number,
-                                     dealii::numbers::invalid_unsigned_int,
-                                     *(this->problem),
-                                     *(this->adimensionalizer),
-                                     this->get_solution_vector());
-
-          compute_tau(scratch, true);
-          compute_D_n_and_D_p(scratch);
-
-          const unsigned int q_points =
-            scratch.fe_face_values_trace.get_quadrature().size();
-
-          switch (strategy)
-            {
-                case l2_average: {
-                  // This case is easy! Just assemble the residual like it was a
-                  // internal cell and multiply it by 2 (because it is like
-                  // there was another cell with the very same values attached
-                  // on the other side of this cell
-                  scratch.template assemble_rhs<l2_average, true>(face_number);
-                  scratch.multiply_rhs(2.);
-                  break;
-                }
-                case reconstruct_problem_solution: {
-                  // This, instead, is the not so easy case. Indeed, here we
-                  // have three cases: no boundary conditions (then we are in
-                  // the same case we were before), Dirichlet BC or Neumann BC
-                  // In any case, we build the standard residual. This is a
-                  // waste of times for the component that have Dirichlet
-                  // boundary conditions, but otherwise I would have to write
-                  // an ad-hoc function again
-                  scratch
-                    .template assemble_rhs<reconstruct_problem_solution, true>(
-                      face_number);
-                  scratch.multiply_rhs(2.);
-
-                  const types::boundary_id face_boundary_id =
-                    cell->face(face_number)->boundary_id();
-
-                  for (const Component cmp : scratch.active_components)
-                    {
-                      auto & c_rhs = scratch.rhs.at(cmp);
-                      double bc_value;
-
-                      unsigned int dofs_per_face =
-                        scratch.dofs_per_component_on_face.at(cmp);
-                      const auto &dofs_per_face_indices =
-                        scratch.fe_trace_support_on_face.at(cmp)[face_number];
-                      const auto c_extractor = scratch.trace_extractors.at(cmp);
-
-                      const bool has_dirichlet_bc =
-                        this->problem->boundary_handler
-                          ->has_dirichlet_boundary_conditions(face_boundary_id,
-                                                              cmp);
-                      if (has_dirichlet_bc)
-                        {
-                          const double rescaling_factor =
-                            this->adimensionalizer
-                              ->get_component_rescaling_factor(cmp);
-
-                          // Reset the previous values
-                          c_rhs = 0.;
-
-                          const auto dbc = this->problem->boundary_handler
-                                             ->get_dirichlet_conditions_for_id(
-                                               face_boundary_id, cmp);
-
-                          for (unsigned int q = 0; q < q_points; ++q)
-                            {
-                              const double JxW =
-                                scratch.fe_face_values_cell.JxW(q);
-
-                              bc_value =
-                                dbc.evaluate(scratch.quadrature_points[q]) /
-                                rescaling_factor;
-
-                              for (unsigned int i = 0; i < dofs_per_face; i++)
-                                {
-                                  const unsigned int ii =
-                                    dofs_per_face_indices[i];
-                                  c_rhs[i] +=
-                                    scratch.fe_face_values_trace[c_extractor]
-                                      .value(ii, q) *
-                                    bc_value * JxW;
-                                }
-                            }
-                          continue;
-                        }
-
-                      const bool has_neumann_bc =
-                        this->problem->boundary_handler
-                          ->has_neumann_boundary_conditions(face_boundary_id,
-                                                            cmp);
-                      if (has_neumann_bc)
-                        {
-                          const double rescaling_factor =
-                            this->adimensionalizer
-                              ->get_neumann_boundary_condition_rescaling_factor(
-                                cmp);
-
-                          const auto nbc =
-                            this->problem->boundary_handler
-                              ->get_neumann_conditions_for_id(face_boundary_id,
-                                                              cmp);
-                          for (unsigned int q = 0; q < q_points; ++q)
-                            {
-                              const double JxW =
-                                scratch.fe_face_values_cell.JxW(q);
-
-                              bc_value =
-                                nbc.evaluate(scratch.quadrature_points[q]) /
-                                rescaling_factor;
-
-                              for (unsigned int i = 0; i < dofs_per_face; i++)
-                                {
-                                  const unsigned int ii =
-                                    dofs_per_face_indices[i];
-                                  c_rhs[i] +=
-                                    scratch.fe_face_values_trace[c_extractor]
-                                      .value(ii, q) *
-                                    bc_value * JxW;
-                                }
-                            }
-                          continue;
-                        }
-                    }
-                  break;
-                }
-              default:
-                Assert(false, InvalidStrategy());
-            }
-
-          scratch.solve_system();
-
-          scratch.copy_solution(face_number, copy_data);
-        };
-
-    std::function<void(const CopyTraceInternalTools::CTCopyData<dim> &)>
-      copier =
-        [this](const CopyTraceInternalTools::CTCopyData<dim> &copy_data) {
-          const unsigned int faces_per_cell =
-            dealii::GeometryInfo<dim>::faces_per_cell;
-          const unsigned int dofs_per_face = copy_data.dof_indices[0].size();
-          for (unsigned int face = 0; face < faces_per_cell; face++)
-            if (copy_data.examined_faces[face])
-              for (unsigned int i = 0; i < dofs_per_face; i++)
-                {
-                  this->current_solution_trace[copy_data.dof_indices[face][i]] =
-                    copy_data.dof_values[face][i];
-                }
-        };
-
-    MeshWorker::mesh_loop(this->dof_handler_cell.active_cell_iterators(),
-                          empty_cell_worker,
-                          copier,
-                          scratch,
-                          copy_data,
-                          MeshWorker::assemble_own_interior_faces_once |
-                            MeshWorker::assemble_boundary_faces,
-                          boundary_worker,
-                          face_worker);
+    WorkStream::run(this->dof_handler_cell.begin_active(),
+                    this->dof_handler_cell.end(),
+                    *this,
+                    copy_trace_worker_pointer,
+                    &NPSolver<dim, Permittivity>::template copy_trace_copier<
+                      CopyTraceInternalTools::CTCopyData<dim>>,
+                    scratch,
+                    copy_data);
 
     this->global_constraints.distribute(this->current_solution_trace);
   }

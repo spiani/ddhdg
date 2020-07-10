@@ -578,6 +578,50 @@ namespace Ddhdg
     void
     compute_local_charge_neutrality_on_cells();
 
+    template <typename CTScratchData>
+    inline void
+    copy_trace_compute_tau(CTScratchData &scratch) const;
+
+    template <typename CTScratchData>
+    inline void
+    copy_trace_compute_D_n_and_D_p(CTScratchData &scratch) const;
+
+    template <typename IteratorType1,
+              typename IteratorType2,
+              typename CTScratchData,
+              typename CTCopyData>
+    void
+    copy_trace_face_worker(const IteratorType1 &   cell1,
+                           unsigned int            face1,
+                           const IteratorType2 &   cell2,
+                           unsigned int            face2,
+                           CTScratchData &         scratch,
+                           CTCopyData &            copy_data,
+                           TraceProjectionStrategy strategy) const;
+
+    template <typename IteratorType,
+              typename CTScratchData,
+              typename CTCopyData>
+    void
+    copy_trace_boundary_worker(const IteratorType &    cell,
+                               unsigned int            face,
+                               CTScratchData &         scratch,
+                               CTCopyData &            copy_data,
+                               TraceProjectionStrategy strategy) const;
+
+    template <typename CTCopyData>
+    void
+    copy_trace_copier(const CTCopyData &copy_data);
+
+    template <typename IteratorType,
+              typename CTScratchData,
+              typename CTCopyData,
+              TraceProjectionStrategy strategy>
+    void
+    copy_trace_cell_worker(const IteratorType &cell,
+                           CTScratchData &     scratch,
+                           CTCopyData &        copy_data);
+
     std::unique_ptr<Triangulation<dim>>       triangulation;
     const std::unique_ptr<NPSolverParameters> parameters;
 
