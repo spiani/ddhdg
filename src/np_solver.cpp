@@ -400,8 +400,8 @@ namespace Ddhdg
                                            tmp_cell);
 
         this->current_solution_cell = tmp_cell;
-        this->current_solution_trace.reinit(this->dof_handler_trace.n_dofs());
       }
+    this->current_solution_trace.reinit(this->dof_handler_trace.n_dofs());
 
     this->global_constraints.clear();
     DoFTools::make_hanging_node_constraints(this->dof_handler_trace,

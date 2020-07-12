@@ -285,6 +285,16 @@ namespace Ddhdg
             if (only_at_boundary && !cell->face(face)->at_boundary())
               continue;
 
+            if (only_at_boundary)
+              {
+                const auto &boundary_handler = this->problem->boundary_handler;
+                const types::boundary_id face_boundary_id =
+                  cell->face(face)->boundary_id();
+                if (!boundary_handler->has_dirichlet_boundary_conditions(
+                      face_boundary_id, Component::V))
+                  continue;
+              }
+
             local_trace_matrix   = 0;
             local_trace_residual = 0;
 
