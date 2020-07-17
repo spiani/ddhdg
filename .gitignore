@@ -1,4 +1,5 @@
 build/
+venv/
 cmake-build-*/
 internal_tests/*
 */__pycache__/*

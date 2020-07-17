@@ -17,7 +17,7 @@ add_library(DDHDG SHARED
         )
 
 if (WITH_PYTHON_INTERFACE)
-    add_subdirectory(py_interface)
+    add_subdirectory(pyddhdg)
 endif ()
 
 DEAL_II_SETUP_TARGET(DDHDG)

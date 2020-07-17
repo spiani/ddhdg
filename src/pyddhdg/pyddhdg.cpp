@@ -1,4 +1,4 @@
-#include "py_interface/pyddhdg.h"
+#include "pyddhdg/pyddhdg.h"
 
 #include <utility>
 

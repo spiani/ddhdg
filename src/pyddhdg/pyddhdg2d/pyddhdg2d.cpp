@@ -1,7 +1,6 @@
-#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
-#include "py_interface/pyddhdg.h"
+#include "pyddhdg/pyddhdg.h"
 
 namespace py = pybind11;
 
@@ -15,6 +14,6 @@ namespace pyddhdg
 
     py::class_<dealii::Point<DIM>>(m, "Point").def(py::init<double, double>());
 
-#include "py_interface/pyddhdg_interface.h"
+#include "pyddhdg/pyddhdg_interface.h"
   }
 } // namespace pyddhdg
