@@ -3,6 +3,12 @@
 #include "dof_types.h"
 #include "solver.h"
 
+namespace pyddhdg
+{
+  template <int dim>
+  class NPSolver;
+}
+
 namespace Ddhdg
 {
   using namespace dealii;
@@ -657,6 +663,8 @@ namespace Ddhdg
 
     template <int d, class p, unsigned int parameter_mask>
     friend class TemplatizedParameters;
+
+    friend class pyddhdg::NPSolver<dim>;
   };
 
   template <int dim, class Permittivity>

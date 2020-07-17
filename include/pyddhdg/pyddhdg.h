@@ -1,5 +1,7 @@
 #pragma once
 
+#include <deal.II/base/geometry_info.h>
+
 #include <deal.II/grid/grid_generator.h>
 
 #include "boundary_conditions.h"
@@ -237,6 +239,9 @@ namespace pyddhdg
 
     [[nodiscard]] unsigned int
     get_n_active_cells() const;
+
+    void
+    get_cell_vertices(double vertices[]) const;
 
     void
     set_component(Ddhdg::Component   c,

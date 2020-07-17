@@ -414,6 +414,33 @@ namespace pyddhdg
   }
 
 
+  template <int dim>
+  void
+  NPSolver<dim>::get_cell_vertices(double vertices[]) const
+  {
+    const unsigned int vertices_per_cell =
+      dealii::GeometryInfo<dim>::vertices_per_cell;
+    dealii::Point<dim> *p;
+    unsigned int        cell_number = 0;
+    for (const auto &cell :
+         this->ddhdg_solver->dof_handler_cell.active_cell_iterators())
+      {
+        for (unsigned int v = 0; v < vertices_per_cell; v++)
+          {
+            p = &(cell->vertex(v));
+            for (unsigned int i = 0; i < dim; i++)
+              {
+                const double       p_i = (*p)[i];
+                const unsigned int k =
+                  cell_number * (vertices_per_cell * dim) + v * dim + i;
+                vertices[k] = p_i;
+              }
+          }
+        ++cell_number;
+      }
+  }
+
+
 
   template <int dim>
   void

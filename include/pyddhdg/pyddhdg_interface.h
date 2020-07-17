@@ -106,6 +106,34 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
                          &NPSolver<DIM>::n_of_triangulation_levels)
   .def("get_n_dofs", &NPSolver<DIM>::get_n_dofs, py::arg("for_trace") = false)
   .def_property_readonly("n_active_cells", &NPSolver<DIM>::get_n_active_cells)
+  .def("get_cell_vertices",
+       [](const NPSolver<DIM> &self) {
+         const unsigned int active_cells = self.get_n_active_cells();
+         const unsigned int vertices_per_cell =
+           dealii::GeometryInfo<DIM>::vertices_per_cell;
+         const size_t size = active_cells * vertices_per_cell * DIM;
+         // Copy the data in a new buffer
+         auto *data = new double[size];
+         self.get_cell_vertices(data);
+
+         // Create a Python object that will free the allocated
+         // memory when destroyed:
+         py::capsule free_when_done(data, [](void *f) {
+           auto *data = reinterpret_cast<double *>(f);
+           delete[] data;
+         });
+
+         const auto vector_shape =
+           std::vector<long>{active_cells, vertices_per_cell, DIM};
+         const auto vector_stride =
+           std::vector<long>{vertices_per_cell * DIM * 8, DIM * 8, 8};
+
+         return py::array_t<double, py::array::c_style>(
+           vector_shape,    // shape
+           vector_stride,   // strides
+           data,            // the data pointer
+           free_when_done); // numpy array references this parent
+       })
   .def("set_component",
        py::overload_cast<Ddhdg::Component, const std::string &, bool>(
          &NPSolver<DIM>::set_component),
