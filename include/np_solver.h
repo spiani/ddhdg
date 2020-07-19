@@ -338,7 +338,7 @@ namespace Ddhdg
     copy_triangulation(
       std::shared_ptr<const dealii::Triangulation<dim>> triangulation);
 
-    static dealii::FESystem<dim>
+    static dealii::FESystem<dim> const *
     generate_fe_system(const std::map<Component, unsigned int> &degree,
                        bool on_trace = false);
 

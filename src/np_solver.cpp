@@ -306,7 +306,7 @@ namespace Ddhdg
 
 
   template <int dim, class Permittivity>
-  FESystem<dim>
+  FESystem<dim> const *
   NPSolver<dim, Permittivity>::generate_fe_system(
     const std::map<Component, unsigned int> &degree,
     const bool                               on_trace)
@@ -329,8 +329,7 @@ namespace Ddhdg
           multiplicities.push_back(1);
         }
 
-
-    const FESystem<dim> output(fe_systems, multiplicities);
+    const auto output = new FESystem<dim>(fe_systems, multiplicities);
 
     for (const FiniteElement<dim> *fe : fe_systems)
       delete (fe);
@@ -351,12 +350,12 @@ namespace Ddhdg
     , rescaled_doping(
         this->adimensionalizer->template adimensionalize_doping_function<dim>(
           this->problem->doping))
-    , fe_cell(std::make_unique<dealii::FESystem<dim>>(
+    , fe_cell(std::unique_ptr<const dealii::FESystem<dim>>(
         generate_fe_system(parameters->degree, false)))
     , dof_handler_cell(*triangulation)
-    , fe_trace(std::make_unique<dealii::FESystem<dim>>(
+    , fe_trace(std::unique_ptr<const dealii::FESystem<dim>>(
         generate_fe_system(parameters->degree, true)))
-    , fe_trace_restricted(std::make_unique<dealii::FESystem<dim>>(
+    , fe_trace_restricted(std::unique_ptr<const dealii::FESystem<dim>>(
         generate_fe_system(parameters->degree, true)))
     , dof_handler_trace(*triangulation)
     , dof_handler_trace_restricted(*triangulation)
@@ -517,8 +516,8 @@ namespace Ddhdg
   void
   NPSolver<dim, Permittivity>::setup_restricted_trace_system()
   {
-    this->fe_trace_restricted.reset(new FESystem<dim>(
-      generate_fe_system(restrict_degrees_on_enabled_component(), true)));
+    this->fe_trace_restricted.reset(
+      generate_fe_system(restrict_degrees_on_enabled_component(), true));
 
     this->dof_handler_trace_restricted.distribute_dofs(
       *(this->fe_trace_restricted));
