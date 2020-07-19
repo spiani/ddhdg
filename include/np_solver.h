@@ -1,5 +1,7 @@
 #pragma once
 
+#include <deal.II/numerics/vector_tools.h>
+
 #include "dof_types.h"
 #include "solver.h"
 
