@@ -161,7 +161,7 @@ using dimensions = ::testing::Types<std::integral_constant<unsigned int, 1>,
                                     std::integral_constant<unsigned int, 3>>;
 
 
-TYPED_TEST_CASE(NeumannBCLinearTest, dimensions);
+TYPED_TEST_SUITE(NeumannBCLinearTest, dimensions,);
 
 
 TYPED_TEST(NeumannBCLinearTest, NeumannBCLinearTest) // NOLINT

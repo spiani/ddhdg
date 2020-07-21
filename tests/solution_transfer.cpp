@@ -135,7 +135,7 @@ using dimensions = ::testing::Types<std::integral_constant<unsigned int, 1>,
 
 
 
-TYPED_TEST_CASE(SolutionTransferTest, dimensions);
+TYPED_TEST_SUITE(SolutionTransferTest, dimensions,);
 
 
 

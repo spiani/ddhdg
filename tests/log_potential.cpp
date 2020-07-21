@@ -155,7 +155,7 @@ using dimensions = ::testing::Types<std::integral_constant<unsigned int, 1>,
 
 
 
-TYPED_TEST_CASE(LogPotentialTest, dimensions);
+TYPED_TEST_SUITE(LogPotentialTest, dimensions,);
 
 
 

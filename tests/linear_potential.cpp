@@ -141,7 +141,7 @@ using dimensions = ::testing::Types<std::integral_constant<unsigned int, 1>,
 
 
 
-TYPED_TEST_CASE(LinearPotentialTest, dimensions);
+TYPED_TEST_SUITE(LinearPotentialTest, dimensions,);
 
 
 
