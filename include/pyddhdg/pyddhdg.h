@@ -221,6 +221,9 @@ namespace pyddhdg
     void
     copy_solution_from(NPSolver other);
 
+    Ddhdg::NPSolverParameters
+    get_parameters() const;
+
     void
     refine_grid(unsigned int i = 1, bool preserve_solution = false);
 

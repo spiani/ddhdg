@@ -167,6 +167,7 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
   .def("run", &NPSolver<DIM>::run)
   .def("copy_triangulation_from", &NPSolver<DIM>::copy_triangulation_from)
   .def("copy_solution_from", &NPSolver<DIM>::copy_solution_from)
+  .def("get_parameters", &NPSolver<DIM>::get_parameters)
   .def("compute_local_charge_neutrality_on_trace",
        &NPSolver<DIM>::compute_local_charge_neutrality_on_trace,
        py::arg("only_at_boundary") = false)

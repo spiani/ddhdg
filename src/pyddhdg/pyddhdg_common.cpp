@@ -80,18 +80,10 @@ namespace pyddhdg
            py::arg("p_tau")                    = 1.,
            py::arg("iterative_linear_solver")  = false,
            py::arg("multithreading")           = true)
-      .def_property_readonly("v_degree",
-                             [](const Ddhdg::NPSolverParameters &a) {
-                               return a.degree.at(Ddhdg::Component::V);
-                             })
-      .def_property_readonly("n_degree",
-                             [](const Ddhdg::NPSolverParameters &a) {
-                               return a.degree.at(Ddhdg::Component::n);
-                             })
-      .def_property_readonly("p_degree",
-                             [](const Ddhdg::NPSolverParameters &a) {
-                               return a.degree.at(Ddhdg::Component::p);
-                             })
+      .def("degree",
+           [](const Ddhdg::NPSolverParameters &a, const Ddhdg::Component c) {
+             return a.degree.at(c);
+           })
       .def_readonly(
         "abs_tolerance",
         &Ddhdg::NPSolverParameters::nonlinear_solver_absolute_tolerance)

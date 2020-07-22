@@ -571,6 +571,15 @@ namespace pyddhdg
 
 
   template <int dim>
+  Ddhdg::NPSolverParameters
+  NPSolver<dim>::get_parameters() const
+  {
+    return *(this->ddhdg_solver->parameters);
+  }
+
+
+
+  template <int dim>
   Ddhdg::NonlinearIterationResults
   NPSolver<dim>::run()
   {

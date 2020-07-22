@@ -182,7 +182,7 @@ using dimensions = ::testing::Types<std::integral_constant<unsigned int, 1>,
                                     std::integral_constant<unsigned int, 3>>;
 
 
-TYPED_TEST_SUITE(SetComponentMethod, dimensions,);
+TYPED_TEST_SUITE(SetComponentMethod, dimensions, );
 
 
 
