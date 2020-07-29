@@ -892,9 +892,7 @@ namespace Ddhdg
 
     // In this scope, the code takes care of project the right solution in the
     // FEM space of the cells. After that, we will project the solution on the
-    // trace. I split the code in two parts because, in this way, it is
-    // possible to handle the situations in which the space of the cell is
-    // different from the space of the trace (for example, for HDG(A))
+    // trace using the project_cell_function_on_trace method
     {
       const UpdateFlags flags_cell(update_values | update_gradients |
                                    update_JxW_values |
