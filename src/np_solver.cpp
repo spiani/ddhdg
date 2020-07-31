@@ -1699,6 +1699,143 @@ namespace Ddhdg
 
 
   template <int dim, class Permittivity>
+  template <Component cmp>
+  void
+  NPSolver<dim, Permittivity>::compute_current(
+    const dealii::DoFHandler<dim> &dof,
+    dealii::Vector<double> &       data) const
+  {
+    const QGauss<dim> quadrature_formula(
+      this->get_number_of_quadrature_points());
+    const auto &      fe = dof.get_fe();
+    const UpdateFlags flags(update_values | update_JxW_values |
+                            update_quadrature_points);
+    const UpdateFlags flags_cell(update_values | update_JxW_values);
+    FEValues<dim>     fe_values(fe, quadrature_formula, flags);
+    FEValues<dim>     fe_values_cell(*(this->fe_cell),
+                                 quadrature_formula,
+                                 flags_cell);
+
+    data.reinit(dof.n_dofs());
+
+    const unsigned int       dofs_per_cell = fe.dofs_per_cell;
+    LAPACKFullMatrix<double> projection_matrix(dofs_per_cell, dofs_per_cell);
+    dealii::Vector<double>   rhs(dofs_per_cell);
+
+    const unsigned int  n_q_points = quadrature_formula.size();
+    std::vector<double> c_values(n_q_points);
+    std::vector<dealii::Tensor<1, dim, double>> E_values(n_q_points);
+    std::vector<dealii::Tensor<1, dim, double>> W_values(n_q_points);
+    std::vector<double>                         temperature(n_q_points);
+
+    std::vector<dealii::Point<dim>>     cell_quadrature_points(n_q_points);
+    std::vector<dealii::Tensor<2, dim>> mu_values(n_q_points);
+
+    const auto c_extractor = (cmp == Component::n) ?
+                               this->get_component_extractor(Component::n) :
+                               this->get_component_extractor(Component::p);
+    const auto E_extractor = this->get_displacement_extractor(Displacement::E);
+    const auto W_extractor =
+      (cmp == Component::n) ?
+        this->get_displacement_extractor(Displacement::Wn) :
+        this->get_displacement_extractor(Displacement::Wp);
+
+    const double V_rescale =
+      this->adimensionalizer
+        ->template get_component_rescaling_factor<Component::V>();
+    const double c_rescale =
+      (cmp == Component::n) ?
+        this->adimensionalizer
+          ->template get_component_rescaling_factor<Component::n>() :
+        this->adimensionalizer
+          ->template get_component_rescaling_factor<Component::p>();
+
+    for (const auto &cell : dof.active_cell_iterators())
+      {
+        typename DoFHandler<dim>::active_cell_iterator system_cell(
+          &(*triangulation),
+          cell->level(),
+          cell->index(),
+          &(this->dof_handler_cell));
+
+        fe_values.reinit(cell);
+        fe_values_cell.reinit(system_cell);
+
+        projection_matrix = 0.;
+        rhs               = 0.;
+
+        for (unsigned int q = 0; q < n_q_points; ++q)
+          cell_quadrature_points[q] = fe_values.quadrature_point(q);
+
+        fe_values_cell[c_extractor].get_function_values(
+          this->current_solution_cell, c_values);
+        fe_values_cell[E_extractor].get_function_values(
+          this->current_solution_cell, E_values);
+        fe_values_cell[W_extractor].get_function_values(
+          this->current_solution_cell, W_values);
+
+        if (cmp == Component::n)
+          this->adimensionalizer
+            ->template inplace_redimensionalize_component<Component::n>(
+              c_values);
+        else
+          this->adimensionalizer
+            ->template inplace_redimensionalize_component<Component::p>(
+              c_values);
+
+        for (unsigned int q = 0; q < n_q_points; ++q)
+          E_values[q] *= V_rescale;
+        for (unsigned int q = 0; q < n_q_points; ++q)
+          W_values[q] *= c_rescale;
+
+        if (cmp == Component::n)
+          {
+            this->problem->n_electron_mobility->compute_electron_mobility(
+              cell_quadrature_points, mu_values);
+            this->adimensionalizer
+              ->template adimensionalize_electron_mobility<dim>(mu_values);
+          }
+        else
+          {
+            this->problem->p_electron_mobility->compute_electron_mobility(
+              cell_quadrature_points, mu_values);
+            this->adimensionalizer
+              ->template adimensionalize_electron_mobility<dim>(mu_values);
+          }
+
+        this->problem->temperature->value_list(cell_quadrature_points,
+                                               temperature);
+
+        for (unsigned int q = 0; q < n_q_points; ++q)
+          {
+            const double JxW = fe_values.JxW(q);
+
+            for (unsigned int i = 0; i < dofs_per_cell; ++i)
+              {
+                const unsigned int current_component =
+                  fe.system_to_component_index(i).first;
+                const double xi = fe_values.shape_value(i, q);
+                for (unsigned int j = 0; j < dofs_per_cell; ++j)
+                  {
+                    const double J = fe_values.shape_value(j, q);
+                    projection_matrix(i, j) += J * xi * JxW;
+                  }
+                const auto D =
+                  temperature[q] * Constants::KB / Constants::Q * mu_values[q];
+                const auto all_components_J =
+                  c_values[q] * (mu_values[q] * E_values[q]) - D * W_values[q];
+                rhs[i] += all_components_J[current_component] * xi * JxW;
+              }
+          }
+        projection_matrix.compute_lu_factorization();
+        projection_matrix.solve(rhs);
+        cell->set_dof_values(rhs, data);
+      }
+  }
+
+
+
+  template <int dim, class Permittivity>
   void
   NPSolver<dim, Permittivity>::output_results(
     const std::string &solution_filename,
@@ -1775,6 +1912,38 @@ namespace Ddhdg
                                  update_names,
                                  component_interpretation);
       }
+
+    dealii::DoFHandler<dim> n_current_dofs(*(this->triangulation));
+    dealii::DoFHandler<dim> p_current_dofs(*(this->triangulation));
+
+    const unsigned int V_degree = this->parameters->degree.at(Component::V);
+    const unsigned int n_degree = this->parameters->degree.at(Component::n);
+    const unsigned int p_degree = this->parameters->degree.at(Component::p);
+
+    const unsigned int Jn_degree = (V_degree < n_degree) ? V_degree : n_degree;
+    const unsigned int Jp_degree = (V_degree < p_degree) ? V_degree : p_degree;
+
+    n_current_dofs.distribute_dofs(FESystem(FE_DGQ<dim>(Jn_degree), dim));
+    p_current_dofs.distribute_dofs(FESystem(FE_DGQ<dim>(Jp_degree), dim));
+
+    dealii::Vector<double> Jn_data;
+    dealii::Vector<double> Jp_data;
+
+    this->compute_current<Component::n>(n_current_dofs, Jn_data);
+    this->compute_current<Component::p>(p_current_dofs, Jp_data);
+
+    std::vector<DataComponentInterpretation::DataComponentInterpretation>
+      J_component_interpretation(
+        dim, DataComponentInterpretation::component_is_part_of_vector);
+
+    data_out.add_data_vector(n_current_dofs,
+                             Jn_data,
+                             std::vector<std::string>(dim, "electron_current"),
+                             J_component_interpretation);
+    data_out.add_data_vector(p_current_dofs,
+                             Jp_data,
+                             std::vector<std::string>(dim, "hole_current"),
+                             J_component_interpretation);
 
     data_out.build_patches(StaticMappingQ1<dim>::mapping,
                            this->fe_cell->degree,

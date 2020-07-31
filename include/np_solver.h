@@ -303,6 +303,11 @@ namespace Ddhdg
     get_solution_on_a_point(const dealii::Point<dim> &p,
                             Displacement              d) const override;
 
+    template <Component cmp>
+    void
+    compute_current(const dealii::DoFHandler<dim> &dof,
+                    dealii::Vector<double> &       data) const;
+
     void
     output_results(const std::string &solution_filename,
                    bool               save_update) const override;
