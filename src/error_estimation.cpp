@@ -22,8 +22,9 @@ namespace Ddhdg
 
     unsigned int component_index = get_component_index(c) * (1 + dim) + dim;
 
-    const unsigned int n_of_components = (dim + 1) * all_components().size();
-    const auto         component_selection =
+    const unsigned int n_of_components =
+      (dim + 1) * all_primary_components().size();
+    const auto component_selection =
       dealii::ComponentSelectFunction<dim>(component_index, n_of_components);
 
     std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
@@ -64,7 +65,8 @@ namespace Ddhdg
         expected_solution, c);
 
     unsigned int       component_index = get_component_index(c);
-    const unsigned int n_of_components = (dim + 1) * all_components().size();
+    const unsigned int n_of_components =
+      (dim + 1) * all_primary_components().size();
 
     const std::pair<const unsigned int, const unsigned int> selection_interval =
       {component_index * (dim + 1), component_index * (dim + 1) + dim};
@@ -117,8 +119,9 @@ namespace Ddhdg
 
     unsigned int component_index = get_component_index(c) * (1 + dim) + dim;
 
-    const unsigned int n_of_components = (dim + 1) * all_components().size();
-    const auto         component_selection =
+    const unsigned int n_of_components =
+      (dim + 1) * all_primary_components().size();
+    const auto component_selection =
       dealii::ComponentSelectFunction<dim>(component_index, n_of_components);
 
     VectorTools::integrate_difference(
@@ -155,7 +158,8 @@ namespace Ddhdg
     tmp -= this->current_solution_cell;
 
     unsigned int       component_index = get_component_index(c);
-    const unsigned int n_of_components = (dim + 1) * all_components().size();
+    const unsigned int n_of_components =
+      (dim + 1) * all_primary_components().size();
 
     const std::pair<const unsigned int, const unsigned int> selection_interval =
       {component_index * (dim + 1), component_index * (dim + 1) + dim};

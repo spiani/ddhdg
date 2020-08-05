@@ -71,7 +71,7 @@ namespace Ddhdg
     const unsigned int n)
   {
     std::map<Component, std::vector<double>> m;
-    for (const auto c : Ddhdg::all_components())
+    for (const auto c : Ddhdg::all_primary_components())
       {
         m.insert({c, std::vector<double>(n)});
       }
@@ -86,7 +86,7 @@ namespace Ddhdg
     const unsigned int n)
   {
     std::map<Component, std::vector<Tensor<1, dim>>> m;
-    for (const auto c : Ddhdg::all_components())
+    for (const auto c : Ddhdg::all_primary_components())
       {
         m.insert({c, std::vector<Tensor<1, dim>>(n)});
       }
@@ -407,7 +407,8 @@ namespace Ddhdg
     this->global_constraints.close();
 
     this->project_cell_function_on_trace(
-      all_components(), TraceProjectionStrategy::reconstruct_problem_solution);
+      all_primary_components(),
+      TraceProjectionStrategy::reconstruct_problem_solution);
 
     this->update_cell.reinit(this->dof_handler_cell.n_dofs());
     this->update_trace.reinit(this->dof_handler_trace.n_dofs());
@@ -460,7 +461,8 @@ namespace Ddhdg
     this->global_constraints.close();
 
     this->project_cell_function_on_trace(
-      all_components(), TraceProjectionStrategy::reconstruct_problem_solution);
+      all_primary_components(),
+      TraceProjectionStrategy::reconstruct_problem_solution);
 
     this->update_cell.reinit(this->dof_handler_cell.n_dofs());
     this->update_trace.reinit(this->dof_handler_trace.n_dofs());
@@ -764,6 +766,9 @@ namespace Ddhdg
     const Component                                    c,
     const std::shared_ptr<const dealii::Function<dim>> c_function)
   {
+    Assert(c == Component::V || c == Component::n || c == Component::p,
+           InvalidComponent());
+
     if (!this->initialized)
       this->setup_overall_system();
 
@@ -870,179 +875,6 @@ namespace Ddhdg
 
   template <int dim, class Permittivity>
   void
-  NPSolver<dim, Permittivity>::project_component(
-    const Component                                    c,
-    const std::shared_ptr<const dealii::Function<dim>> c_function)
-  {
-    if (!this->initialized)
-      this->setup_overall_system();
-
-    const Displacement d = component2displacement(c);
-
-    const QGauss<dim> quadrature_formula(
-      this->get_number_of_quadrature_points());
-    const QGauss<dim - 1> face_quadrature_formula(
-      this->get_number_of_quadrature_points());
-
-    const unsigned int c_index = get_component_index(c);
-
-    std::shared_ptr<dealii::Function<dim>> c_function_rescaled =
-      this->adimensionalizer->template adimensionalize_component_function<dim>(
-        c_function, c);
-
-    // In this scope, the code takes care of project the right solution in the
-    // FEM space of the cells. After that, we will project the solution on the
-    // trace using the project_cell_function_on_trace method
-    {
-      const UpdateFlags flags_cell(update_values | update_gradients |
-                                   update_JxW_values |
-                                   update_quadrature_points);
-      const UpdateFlags flags_trace(update_values | update_normal_vectors |
-                                    update_quadrature_points |
-                                    update_JxW_values);
-
-      FEValues<dim>     fe_values_cell(*(this->fe_cell),
-                                   quadrature_formula,
-                                   flags_cell);
-      FEFaceValues<dim> fe_face_values(*(this->fe_cell),
-                                       face_quadrature_formula,
-                                       flags_trace);
-
-      const unsigned int n_q_points = fe_values_cell.get_quadrature().size();
-      const unsigned int n_face_q_points =
-        fe_face_values.get_quadrature().size();
-
-      // Now we need to map the dofs that are related to the current component
-      std::vector<unsigned int> on_current_component;
-      for (unsigned int i = 0; i < this->fe_cell->dofs_per_cell; ++i)
-        {
-          const unsigned int current_index =
-            this->fe_cell->system_to_block_index(i).first;
-          if (current_index == c_index)
-            on_current_component.push_back(i);
-        }
-      const unsigned int dofs_per_component = on_current_component.size();
-
-      std::vector<std::vector<unsigned int>> component_support_on_face(
-        GeometryInfo<dim>::faces_per_cell);
-      for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
-           ++face)
-        for (unsigned int i = 0; i < dofs_per_component; ++i)
-          {
-            const unsigned int dof_index = on_current_component[i];
-            if (this->fe_cell->has_support_on_face(dof_index, face))
-              component_support_on_face[face].push_back(i);
-          }
-      const unsigned int dofs_per_face_on_component =
-        component_support_on_face[0].size();
-
-      const FEValuesExtractors::Vector d_extractor =
-        this->get_displacement_extractor(d);
-      const FEValuesExtractors::Scalar c_extractor =
-        this->get_component_extractor(c);
-
-      LAPACKFullMatrix<double> local_matrix(dofs_per_component,
-                                            dofs_per_component);
-      Vector<double>           local_residual(dofs_per_component);
-      Vector<double>           local_values(fe_values_cell.dofs_per_cell);
-
-      // Temporary buffer for the values of the local base function on a
-      // quadrature point
-      std::vector<double>         c_bf(dofs_per_component);
-      std::vector<Tensor<1, dim>> d_bf(dofs_per_component);
-      std::vector<double>         d_div_bf(dofs_per_component);
-
-      std::vector<Point<dim>> cell_quadrature_points(n_q_points);
-      std::vector<Point<dim>> face_quadrature_points(n_face_q_points);
-
-      std::vector<double> evaluated_c(n_q_points);
-      std::vector<double> evaluated_c_face(n_face_q_points);
-
-      for (const auto &cell : this->dof_handler_cell.active_cell_iterators())
-        {
-          local_matrix   = 0.;
-          local_residual = 0.;
-
-          fe_values_cell.reinit(cell);
-
-          // Get the position of the quadrature points
-          for (unsigned int q = 0; q < n_q_points; ++q)
-            cell_quadrature_points[q] = fe_values_cell.quadrature_point(q);
-
-          // Evaluated the analytic functions over the quadrature points
-          c_function_rescaled->value_list(cell_quadrature_points, evaluated_c);
-
-          for (unsigned int q = 0; q < n_q_points; ++q)
-            {
-              // Copy data of the shape function
-              for (unsigned int k = 0; k < dofs_per_component; ++k)
-                {
-                  const unsigned int i = on_current_component[k];
-                  c_bf[k]     = fe_values_cell[c_extractor].value(i, q);
-                  d_bf[k]     = fe_values_cell[d_extractor].value(i, q);
-                  d_div_bf[k] = fe_values_cell[d_extractor].divergence(i, q);
-                }
-
-              const double JxW = fe_values_cell.JxW(q);
-
-              for (unsigned int i = 0; i < dofs_per_component; ++i)
-                {
-                  for (unsigned int j = 0; j < dofs_per_component; ++j)
-                    {
-                      local_matrix(i, j) +=
-                        (c_bf[j] * c_bf[i] + d_bf[i] * d_bf[j]) * JxW;
-                    }
-                  local_residual[i] +=
-                    (evaluated_c[q] * (c_bf[i] + d_div_bf[i])) * JxW;
-                }
-            }
-          for (unsigned int face_number = 0;
-               face_number < GeometryInfo<dim>::faces_per_cell;
-               ++face_number)
-            {
-              fe_face_values.reinit(cell, face_number);
-
-              for (unsigned int q = 0; q < n_face_q_points; ++q)
-                face_quadrature_points[q] = fe_face_values.quadrature_point(q);
-
-              c_function_rescaled->value_list(face_quadrature_points,
-                                              evaluated_c_face);
-
-              for (unsigned int q = 0; q < n_face_q_points; ++q)
-                {
-                  const double JxW    = fe_face_values.JxW(q);
-                  const auto   normal = fe_face_values.normal_vector(q);
-
-                  for (unsigned int k = 0; k < dofs_per_face_on_component; ++k)
-                    {
-                      const auto kk = component_support_on_face[face_number][k];
-                      const auto kkk = on_current_component[kk];
-                      const auto f_bf_face =
-                        fe_face_values[d_extractor].value(kkk, q);
-                      local_residual[kk] +=
-                        (-evaluated_c_face[q] * (f_bf_face * normal)) * JxW;
-                    }
-                }
-            }
-          local_matrix.compute_lu_factorization();
-          local_matrix.solve(local_residual);
-
-          cell->get_dof_values(this->current_solution_cell, local_values);
-          for (unsigned int i = 0; i < dofs_per_component; i++)
-            local_values[on_current_component[i]] = local_residual[i];
-          cell->set_dof_values(local_values, this->current_solution_cell);
-        }
-    }
-    // Now we need to copy the trace from the values on the cells
-    std::set<Component> current_component_set{c};
-    this->project_cell_function_on_trace(current_component_set,
-                                         TraceProjectionStrategy::l2_average);
-  }
-
-
-
-  template <int dim, class Permittivity>
-  void
   NPSolver<dim, Permittivity>::set_multithreading(const bool multithreading)
   {
     this->parameters->multithreading = multithreading;
@@ -1139,7 +971,7 @@ namespace Ddhdg
                                               {Component::n, n_enabled},
                                               {Component::p, p_enabled}};
 
-    for (const Component c : all_components())
+    for (const Component c : all_primary_components())
       {
         const bool c_enabled = target_state.at(c);
         if (c_enabled && !this->is_enabled(c))
@@ -1253,14 +1085,14 @@ namespace Ddhdg
     std::vector<dealii::types::global_dof_index> global_indices(dofs_per_cell);
 
     std::map<unsigned int, Component> component_from_index;
-    for (const Component c : Ddhdg::all_components())
+    for (const Component c : Ddhdg::all_primary_components())
       component_from_index.insert({get_component_index(c), c});
 
     // Create a map that associates to each component its FESystem
     std::map<const Component, const dealii::FiniteElement<dim> &>
       component_to_fe_system;
     if (!for_trace)
-      for (const auto c : all_components())
+      for (const auto c : all_primary_components())
         {
           const Displacement          d          = component2displacement(c);
           const dealii::ComponentMask c_mask     = this->get_component_mask(c);
@@ -1404,7 +1236,7 @@ namespace Ddhdg
       this->dof_handler_trace_restricted.n_dofs());
 
     std::map<unsigned int, Component> component_index;
-    for (const Component c : Ddhdg::all_components())
+    for (const Component c : Ddhdg::all_primary_components())
       component_index.insert({get_component_index(c), c});
 
     std::map<unsigned int, Component> restricted_component_index;
@@ -1679,7 +1511,7 @@ namespace Ddhdg
     const Component    c                = displacement2component(d);
     const unsigned int c_index          = get_component_index(c);
     const unsigned int dealii_component = (dim + 1) * c_index;
-    const unsigned int n_of_components  = all_components().size();
+    const unsigned int n_of_components  = all_primary_components().size();
     const double       rescaling_factor =
       this->adimensionalizer->get_component_rescaling_factor(c);
 
@@ -1851,7 +1683,7 @@ namespace Ddhdg
         data_out.set_flags(flags);
       }
 
-    const std::set<Component> components      = all_components();
+    const std::set<Component> components      = all_primary_components();
     const unsigned int        n_of_components = components.size();
 
     std::vector<std::string> names;
@@ -1980,7 +1812,7 @@ namespace Ddhdg
     std::ofstream     face_output(trace_filename);
     DataOutFaces<dim> data_out_face(false);
 
-    const std::set<Component> components      = all_components();
+    const std::set<Component> components      = all_primary_components();
     const unsigned int        n_of_components = components.size();
 
     std::vector<std::string> face_names;

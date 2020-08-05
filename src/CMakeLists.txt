@@ -11,6 +11,7 @@ add_library(DDHDG SHARED
         nonlinear_iteration_results.cpp
         np_solver.cpp
         problem.cpp
+        project_component.cpp
         recombination_term.cpp
         solver.cpp
         thermodynamic_equilibrium.cpp

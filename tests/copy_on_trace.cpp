@@ -217,7 +217,7 @@ TYPED_TEST(CopyTrace, project_trace_reconstruct_solution) // NOLINT
     this->current_solution_trace[i] = 2 / (i + 1);
 
   // And now we try to retrieve it back from the cells
-  this->project_cell_function_on_trace(Ddhdg::all_components(),
+  this->project_cell_function_on_trace(Ddhdg::all_primary_components(),
                                        Ddhdg::reconstruct_problem_solution);
 
   // Now we compute the error

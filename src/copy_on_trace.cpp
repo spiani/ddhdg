@@ -36,7 +36,7 @@ namespace Ddhdg
       static std::map<Component, std::vector<std::vector<unsigned int>>>
       check_dofs_on_faces(
         const FiniteElement<dim> & fe,
-        const std::set<Component> &components = all_components());
+        const std::set<Component> &components = all_primary_components());
 
       static std::map<Component, unsigned int>
       count_dofs_per_component(
@@ -47,7 +47,7 @@ namespace Ddhdg
       static std::map<Component, data_type>
       initialize_map_on_components(
         unsigned int               n,
-        const std::set<Component> &components = all_components());
+        const std::set<Component> &components = all_primary_components());
 
       template <class data_type>
       static std::map<Component, data_type>
@@ -1247,7 +1247,7 @@ namespace Ddhdg
              std::pair<dealii::FEValuesExtractors::Scalar,
                        dealii::FEValuesExtractors::Vector>>
       cell_extractors;
-    for (const auto c : all_components())
+    for (const auto c : all_primary_components())
       {
         const auto d        = component2displacement(c);
         trace_extractors[c] = this->get_trace_component_extractor(c);

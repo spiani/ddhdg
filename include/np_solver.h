@@ -213,7 +213,8 @@ namespace Ddhdg
     estimate_error_per_cell(
       dealii::Vector<float> &      error,
       const dealii::ComponentMask &cmp_mask =
-        dealii::ComponentMask(all_components().size() * (dim + 1), true)) const;
+        dealii::ComponentMask(all_primary_components().size() * (dim + 1),
+                              true)) const;
 
     void
     estimate_error_per_cell(Component c, dealii::Vector<float> &error) const;
@@ -394,8 +395,24 @@ namespace Ddhdg
 
     void
     project_cell_function_on_trace(
-      const std::set<Component> &components = all_components(),
+      const std::set<Component> &components = all_primary_components(),
       TraceProjectionStrategy    strategy   = l2_average);
+
+    template <typename PCScratchData, typename PCCopyData, Component c>
+    void
+    project_component_one_cell(
+      const typename DoFHandler<dim>::active_cell_iterator &cell,
+      PCScratchData &                                       scratch,
+      PCCopyData &                                          copy_data) const;
+
+    template <typename PCCopyData>
+    void
+    project_component_copier(PCCopyData &copy_data);
+
+    template <Component c>
+    void
+    project_component_private(
+      std::shared_ptr<const dealii::Function<dim>> c_function);
 
     void
     setup_overall_system();

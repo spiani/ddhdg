@@ -60,7 +60,7 @@ protected:
     std::shared_ptr<Ddhdg::BoundaryConditionHandler<dim>> boundary_handler =
       std::make_shared<Ddhdg::BoundaryConditionHandler<dim>>();
 
-    for (const Ddhdg::Component c : Ddhdg::all_components())
+    for (const Ddhdg::Component c : Ddhdg::all_primary_components())
       {
         for (unsigned int i = 0; i < 2; i++)
           {

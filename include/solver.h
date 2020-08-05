@@ -231,7 +231,7 @@ namespace Ddhdg
     inline double
     compute_quasi_fermi_potential(const double density,
                                   const double potential,
-                                  const double temperature)
+                                  const double temperature) const
     {
       constexpr double q         = Constants::Q;
       constexpr double Kb_over_q = Constants::KB / Constants::Q;
@@ -266,7 +266,7 @@ namespace Ddhdg
     inline double
     compute_density(const double qf_potential,
                     const double potential,
-                    const double temperature)
+                    const double temperature) const
     {
       constexpr double q   = Constants::Q;
       constexpr double eV  = Constants::EV;
@@ -302,7 +302,7 @@ namespace Ddhdg
     inline double
     compute_potential(const double density,
                       const double qf_potential,
-                      const double temperature)
+                      const double temperature) const
     {
       constexpr double q         = Constants::Q;
       constexpr double Kb_over_q = Constants::KB / Constants::Q;

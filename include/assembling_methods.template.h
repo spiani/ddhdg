@@ -142,7 +142,7 @@ namespace Ddhdg
     // Copy the values of the previous solution regarding the previous cell in
     // the scratch. This must be done for every component because, for
     // example, the equation in n requires the data from p and so on
-    for (const auto c : Ddhdg::all_components())
+    for (const auto c : Ddhdg::all_primary_components())
       {
         const Displacement d = component2displacement(c);
 
@@ -610,7 +610,7 @@ namespace Ddhdg
       scratch.face_quadrature_points[q] =
         scratch.fe_face_values_trace_restricted.quadrature_point(q);
 
-    for (const auto c : Ddhdg::all_components())
+    for (const auto c : Ddhdg::all_primary_components())
       {
         const Displacement d = component2displacement(c);
 
@@ -1871,7 +1871,7 @@ namespace Ddhdg
         // this cell
         if (task_data.trace_reconstruct)
           {
-            for (const auto c : Ddhdg::all_components())
+            for (const auto c : Ddhdg::all_primary_components())
               {
                 const FEValuesExtractors::Scalar extractor =
                   this->get_trace_component_extractor(c);

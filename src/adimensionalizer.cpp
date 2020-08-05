@@ -410,6 +410,26 @@ namespace Ddhdg
 
 
   // Instantiation of the template methods
+  template void
+  Adimensionalizer::inplace_adimensionalize_component<Component::V>(
+    std::vector<double> &data) const;
+  template void
+  Adimensionalizer::inplace_adimensionalize_component<Component::n>(
+    std::vector<double> &data) const;
+  template void
+  Adimensionalizer::inplace_adimensionalize_component<Component::p>(
+    std::vector<double> &data) const;
+
+  template void
+  Adimensionalizer::inplace_redimensionalize_component<Component::V>(
+    std::vector<double> &data) const;
+  template void
+  Adimensionalizer::inplace_redimensionalize_component<Component::n>(
+    std::vector<double> &data) const;
+  template void
+  Adimensionalizer::inplace_redimensionalize_component<Component::p>(
+    std::vector<double> &data) const;
+
   template std::shared_ptr<dealii::Function<1>>
   Adimensionalizer::adimensionalize_component_function<1>(
     std::shared_ptr<const dealii::Function<1>> f,
