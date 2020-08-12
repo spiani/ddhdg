@@ -1624,15 +1624,11 @@ namespace Ddhdg
           {
             this->problem->n_electron_mobility->compute_electron_mobility(
               cell_quadrature_points, mu_values);
-            this->adimensionalizer
-              ->template adimensionalize_electron_mobility<dim>(mu_values);
           }
         else
           {
             this->problem->p_electron_mobility->compute_electron_mobility(
               cell_quadrature_points, mu_values);
-            this->adimensionalizer
-              ->template adimensionalize_electron_mobility<dim>(mu_values);
           }
 
         this->problem->temperature->value_list(cell_quadrature_points,
@@ -1655,8 +1651,13 @@ namespace Ddhdg
                 const auto D =
                   temperature[q] * Constants::KB / Constants::Q * mu_values[q];
                 const auto all_components_J =
-                  c_values[q] * (mu_values[q] * E_values[q]) - D * W_values[q];
-                rhs[i] += all_components_J[current_component] * xi * JxW;
+                  (cmp == Component::n) ?
+                    c_values[q] * (mu_values[q] * E_values[q]) -
+                      D * W_values[q] :
+                    c_values[q] * (mu_values[q] * E_values[q]) +
+                      D * W_values[q];
+                rhs[i] +=
+                  all_components_J[current_component] * Constants::Q * xi * JxW;
               }
           }
         projection_matrix.compute_lu_factorization();
