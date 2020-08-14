@@ -241,195 +241,229 @@ namespace Ddhdg
   NPSolver<dim, Permittivity>::add_cell_products_to_cc_matrix(
     Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch)
   {
-    const unsigned int n_q_points =
-      scratch.fe_values_cell.get_quadrature().size();
-    const unsigned int loc_dofs_per_cell =
-      scratch.fe_values_cell.get_fe().dofs_per_cell;
+    constexpr bool something_enabled =
+      prm::is_V_enabled || prm::is_n_enabled || prm::is_p_enabled;
 
-    const FEValuesExtractors::Vector electric_field =
-      this->get_displacement_extractor(Displacement::E);
-    const FEValuesExtractors::Scalar electric_potential =
-      this->get_component_extractor(Component::V);
-    const FEValuesExtractors::Vector electron_displacement =
-      this->get_displacement_extractor(Displacement::Wn);
-    const FEValuesExtractors::Scalar electron_density =
-      this->get_component_extractor(Component::n);
-    const FEValuesExtractors::Vector hole_displacement =
-      this->get_displacement_extractor(Displacement::Wp);
-    const FEValuesExtractors::Scalar hole_density =
-      this->get_component_extractor(Component::p);
-
-    // The following are just aliases (and some of them refer to the same
-    // vector). These may seem useless, but the make the code that assemble
-    // the matrix a lot more understandable
-    auto &E = scratch.d.at(Component::V);
-    auto &V = scratch.c.at(Component::V);
-
-    auto &Wn = scratch.d.at(Component::n);
-    auto &n  = scratch.c.at(Component::n);
-
-    auto &Wp = scratch.d.at(Component::p);
-    auto &p  = scratch.c.at(Component::p);
-
-    auto &q1      = scratch.d.at(Component::V);
-    auto &q1_div  = scratch.d_div.at(Component::V);
-    auto &z1      = scratch.c.at(Component::V);
-    auto &z1_grad = scratch.c_grad.at(Component::V);
-
-    auto &q2      = scratch.d.at(Component::n);
-    auto &q2_div  = scratch.d_div.at(Component::n);
-    auto &z2      = scratch.c.at(Component::n);
-    auto &z2_grad = scratch.c_grad.at(Component::n);
-
-    auto &q3      = scratch.d.at(Component::p);
-    auto &q3_div  = scratch.d_div.at(Component::p);
-    auto &z3      = scratch.c.at(Component::p);
-    auto &z3_grad = scratch.c_grad.at(Component::p);
-
-    const auto &V0 = scratch.previous_c_cell.at(Component::V);
-    const auto &n0 = scratch.previous_c_cell.at(Component::n);
-    const auto &p0 = scratch.previous_c_cell.at(Component::p);
-    const auto &E0 = scratch.previous_d_cell.at(Component::V);
-
-    const unsigned int dofs_per_component =
-      scratch.enabled_component_indices.size();
-
-    dealii::Tensor<1, dim> epsilon_times_E;
-
-    dealii::Tensor<1, dim> mu_n_times_previous_E;
-    dealii::Tensor<1, dim> mu_p_times_previous_E;
-
-    dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
-    dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
-
-    const std::vector<double> &dr_n = scratch.dr_cell.at(Component::n);
-    const std::vector<double> &dr_p = scratch.dr_cell.at(Component::p);
-
-    const double nc = this->problem->band_density.at(Component::n);
-    const double nv = this->problem->band_density.at(Component::p);
-    const double ec =
-      this->problem->band_edge_energy.at(Component::n) * Constants::EV;
-    const double ev =
-      this->problem->band_edge_energy.at(Component::p) * Constants::EV;
-
-    const double V_rescale =
-      this->adimensionalizer
-        ->template get_component_rescaling_factor<Component::V>();
-    const double n_rescale =
-      this->adimensionalizer
-        ->template get_component_rescaling_factor<Component::n>();
-
-    double thermodynamic_equilibrium_der = 0.;
-
-    const double Q =
-      this->adimensionalizer->get_poisson_equation_density_constant();
-
-    for (unsigned int q = 0; q < n_q_points; ++q)
+    // I had to use this if to prevent a lot of "unused variables" warnings
+    if constexpr (something_enabled)
       {
-        const double JxW = scratch.fe_values_cell.JxW(q);
-        for (unsigned int k = 0; k < loc_dofs_per_cell; ++k)
+        const unsigned int n_q_points =
+          scratch.fe_values_cell.get_quadrature().size();
+        const unsigned int loc_dofs_per_cell =
+          scratch.fe_values_cell.get_fe().dofs_per_cell;
+
+        const FEValuesExtractors::Vector electric_field =
+          this->get_displacement_extractor(Displacement::E);
+        const FEValuesExtractors::Scalar electric_potential =
+          this->get_component_extractor(Component::V);
+        const FEValuesExtractors::Vector electron_displacement =
+          this->get_displacement_extractor(Displacement::Wn);
+        const FEValuesExtractors::Scalar electron_density =
+          this->get_component_extractor(Component::n);
+        const FEValuesExtractors::Vector hole_displacement =
+          this->get_displacement_extractor(Displacement::Wp);
+        const FEValuesExtractors::Scalar hole_density =
+          this->get_component_extractor(Component::p);
+
+        // Prevent warnings about unused variables
+        if constexpr (!prm::is_V_enabled)
           {
-            if (prm::is_V_enabled)
-              {
-                q1[k] = scratch.fe_values_cell[electric_field].value(k, q);
-                q1_div[k] =
-                  scratch.fe_values_cell[electric_field].divergence(k, q);
-                z1[k] = scratch.fe_values_cell[electric_potential].value(k, q);
-                z1_grad[k] =
-                  scratch.fe_values_cell[electric_potential].gradient(k, q);
-              }
-
-            if (prm::is_n_enabled)
-              {
-                q2[k] =
-                  scratch.fe_values_cell[electron_displacement].value(k, q);
-                q2_div[k] =
-                  scratch.fe_values_cell[electron_displacement].divergence(k,
-                                                                           q);
-                z2[k] = scratch.fe_values_cell[electron_density].value(k, q);
-                z2_grad[k] =
-                  scratch.fe_values_cell[electron_density].gradient(k, q);
-              }
-
-            if (prm::is_p_enabled)
-              {
-                q3[k] = scratch.fe_values_cell[hole_displacement].value(k, q);
-                q3_div[k] =
-                  scratch.fe_values_cell[hole_displacement].divergence(k, q);
-                z3[k] = scratch.fe_values_cell[hole_density].value(k, q);
-                z3_grad[k] =
-                  scratch.fe_values_cell[hole_density].gradient(k, q);
-              }
+            (void)electric_potential;
+            (void)electric_field;
+          }
+        if constexpr (!prm::is_n_enabled)
+          {
+            (void)electron_density;
+            (void)electron_displacement;
+          }
+        if constexpr (!prm::is_p_enabled)
+          {
+            (void)hole_density;
+            (void)hole_displacement;
           }
 
-        if (prm::is_n_enabled)
-          mu_n_times_previous_E = scratch.mu_n_cell[q] * E0[q];
+        // The following are just aliases (and some of them refer to the same
+        // vector). These may seem useless, but the make the code that assemble
+        // the matrix a lot more understandable
+        auto &E = scratch.d.at(Component::V);
+        auto &V = scratch.c.at(Component::V);
 
-        if (prm::is_p_enabled)
-          mu_p_times_previous_E = scratch.mu_p_cell[q] * E0[q];
+        auto &Wn = scratch.d.at(Component::n);
+        auto &n  = scratch.c.at(Component::n);
 
-        if (prm::is_n_enabled)
-          n_einstein_diffusion_coefficient =
-            this->template compute_einstein_diffusion_coefficient<Component::n,
-                                                                  false>(
-              scratch, q);
-        if (prm::is_p_enabled)
-          p_einstein_diffusion_coefficient =
-            this->template compute_einstein_diffusion_coefficient<Component::p,
-                                                                  false>(
-              scratch, q);
+        auto &Wp = scratch.d.at(Component::p);
+        auto &p  = scratch.c.at(Component::p);
 
-        if (prm::thermodyn_eq)
+        auto &q1      = scratch.d.at(Component::V);
+        auto &q1_div  = scratch.d_div.at(Component::V);
+        auto &z1      = scratch.c.at(Component::V);
+        auto &z1_grad = scratch.c_grad.at(Component::V);
+
+        auto &q2      = scratch.d.at(Component::n);
+        auto &q2_div  = scratch.d_div.at(Component::n);
+        auto &z2      = scratch.c.at(Component::n);
+        auto &z2_grad = scratch.c_grad.at(Component::n);
+
+        auto &q3      = scratch.d.at(Component::p);
+        auto &q3_div  = scratch.d_div.at(Component::p);
+        auto &z3      = scratch.c.at(Component::p);
+        auto &z3_grad = scratch.c_grad.at(Component::p);
+
+        const auto &V0 = scratch.previous_c_cell.at(Component::V);
+        const auto &n0 = scratch.previous_c_cell.at(Component::n);
+        const auto &p0 = scratch.previous_c_cell.at(Component::p);
+        const auto &E0 = scratch.previous_d_cell.at(Component::V);
+
+        const unsigned int dofs_per_component =
+          scratch.enabled_component_indices.size();
+
+        dealii::Tensor<1, dim> epsilon_times_E;
+
+        dealii::Tensor<1, dim> mu_n_times_previous_E;
+        dealii::Tensor<1, dim> mu_p_times_previous_E;
+
+        dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
+        dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
+
+        const std::vector<double> &dr_n = scratch.dr_cell.at(Component::n);
+        const std::vector<double> &dr_p = scratch.dr_cell.at(Component::p);
+
+        const double nc = this->problem->band_density.at(Component::n);
+        const double nv = this->problem->band_density.at(Component::p);
+        const double ec =
+          this->problem->band_edge_energy.at(Component::n) * Constants::EV;
+        const double ev =
+          this->problem->band_edge_energy.at(Component::p) * Constants::EV;
+
+        const double V_rescale =
+          this->adimensionalizer
+            ->template get_component_rescaling_factor<Component::V>();
+        const double n_rescale =
+          this->adimensionalizer
+            ->template get_component_rescaling_factor<Component::n>();
+
+        double thermodynamic_equilibrium_der = 0.;
+
+        double Q =
+          this->adimensionalizer->get_poisson_equation_density_constant();
+
+        for (unsigned int q = 0; q < n_q_points; ++q)
           {
-            const double KbT_over_q =
-              Constants::KB * scratch.T_cell[q] / (Constants::Q * V_rescale);
-            const double ev_rescaled = ev / (Constants::Q * V_rescale);
-            const double ec_rescaled = ec / (Constants::Q * V_rescale);
-
-            thermodynamic_equilibrium_der =
-              -Q / n_rescale *
-              (nv / KbT_over_q * exp((ev_rescaled - V0[q]) / KbT_over_q) +
-               nc / KbT_over_q * exp((V0[q] - ec_rescaled) / KbT_over_q));
-          }
-
-        for (unsigned int i = 0; i < dofs_per_component; ++i)
-          {
-            const unsigned int ii = scratch.enabled_component_indices[i];
-            for (unsigned int j = 0; j < dofs_per_component; ++j)
+            const double JxW = scratch.fe_values_cell.JxW(q);
+            for (unsigned int k = 0; k < loc_dofs_per_cell; ++k)
               {
-                const unsigned int jj = scratch.enabled_component_indices[j];
-                if (prm::is_V_enabled)
+                if constexpr (prm::is_V_enabled)
                   {
-                    scratch.permittivity.epsilon_operator_on_cell(
-                      q, E[jj], epsilon_times_E);
-                    scratch.cc_matrix(i, j) +=
-                      (-V[jj] * q1_div[ii] + E[jj] * q1[ii] -
-                       epsilon_times_E * z1_grad[ii]) *
-                      JxW;
-
-                    if (prm::thermodyn_eq)
-                      scratch.cc_matrix(i, j) +=
-                        -thermodynamic_equilibrium_der * V[jj] * z1[ii] * JxW;
-                    else
-                      scratch.cc_matrix(i, j) +=
-                        Q * (n[jj] - p[jj]) * z1[ii] * JxW;
+                    q1[k] = scratch.fe_values_cell[electric_field].value(k, q);
+                    q1_div[k] =
+                      scratch.fe_values_cell[electric_field].divergence(k, q);
+                    z1[k] =
+                      scratch.fe_values_cell[electric_potential].value(k, q);
+                    z1_grad[k] =
+                      scratch.fe_values_cell[electric_potential].gradient(k, q);
                   }
-                if (prm::is_n_enabled)
-                  scratch.cc_matrix(i, j) +=
-                    (-n[jj] * q2_div[ii] + Wn[jj] * q2[ii] -
-                     n[jj] * (mu_n_times_previous_E * z2_grad[ii]) +
-                     n0[q] * ((scratch.mu_n_cell[q] * E[jj]) * z2_grad[ii]) +
-                     (n_einstein_diffusion_coefficient * Wn[jj]) * z2_grad[ii] -
-                     (dr_n[q] * n[jj] + dr_p[q] * p[jj]) * z2[ii]) *
-                    JxW;
-                if (prm::is_p_enabled)
-                  scratch.cc_matrix(i, j) +=
-                    (-p[jj] * q3_div[ii] + Wp[jj] * q3[ii] +
-                     p[jj] * (mu_p_times_previous_E * z3_grad[ii]) -
-                     p0[q] * ((scratch.mu_p_cell[q] * E[jj]) * z3_grad[ii]) +
-                     (p_einstein_diffusion_coefficient * Wp[jj]) * z3_grad[ii] -
-                     (dr_n[q] * n[jj] + dr_p[q] * p[jj]) * z3[ii]) *
-                    JxW;
+
+                if constexpr (prm::is_n_enabled)
+                  {
+                    q2[k] =
+                      scratch.fe_values_cell[electron_displacement].value(k, q);
+                    q2_div[k] =
+                      scratch.fe_values_cell[electron_displacement].divergence(
+                        k, q);
+                    z2[k] =
+                      scratch.fe_values_cell[electron_density].value(k, q);
+                    z2_grad[k] =
+                      scratch.fe_values_cell[electron_density].gradient(k, q);
+                  }
+
+                if constexpr (prm::is_p_enabled)
+                  {
+                    q3[k] =
+                      scratch.fe_values_cell[hole_displacement].value(k, q);
+                    q3_div[k] =
+                      scratch.fe_values_cell[hole_displacement].divergence(k,
+                                                                           q);
+                    z3[k] = scratch.fe_values_cell[hole_density].value(k, q);
+                    z3_grad[k] =
+                      scratch.fe_values_cell[hole_density].gradient(k, q);
+                  }
+              }
+
+            if constexpr (prm::is_n_enabled)
+              mu_n_times_previous_E = scratch.mu_n_cell[q] * E0[q];
+
+            if constexpr (prm::is_p_enabled)
+              mu_p_times_previous_E = scratch.mu_p_cell[q] * E0[q];
+
+            if constexpr (prm::is_n_enabled)
+              n_einstein_diffusion_coefficient =
+                this->template compute_einstein_diffusion_coefficient<
+                  Component::n,
+                  false>(scratch, q);
+            if constexpr (prm::is_p_enabled)
+              p_einstein_diffusion_coefficient =
+                this->template compute_einstein_diffusion_coefficient<
+                  Component::p,
+                  false>(scratch, q);
+
+            if constexpr (prm::thermodyn_eq)
+              {
+                const double KbT_over_q = Constants::KB * scratch.T_cell[q] /
+                                          (Constants::Q * V_rescale);
+                const double ev_rescaled = ev / (Constants::Q * V_rescale);
+                const double ec_rescaled = ec / (Constants::Q * V_rescale);
+
+                thermodynamic_equilibrium_der =
+                  -Q / n_rescale *
+                  (nv / KbT_over_q * exp((ev_rescaled - V0[q]) / KbT_over_q) +
+                   nc / KbT_over_q * exp((V0[q] - ec_rescaled) / KbT_over_q));
+              }
+
+            for (unsigned int i = 0; i < dofs_per_component; ++i)
+              {
+                const unsigned int ii = scratch.enabled_component_indices[i];
+                for (unsigned int j = 0; j < dofs_per_component; ++j)
+                  {
+                    const unsigned int jj =
+                      scratch.enabled_component_indices[j];
+                    if constexpr (prm::is_V_enabled)
+                      {
+                        scratch.permittivity.epsilon_operator_on_cell(
+                          q, E[jj], epsilon_times_E);
+                        scratch.cc_matrix(i, j) +=
+                          (-V[jj] * q1_div[ii] + E[jj] * q1[ii] -
+                           epsilon_times_E * z1_grad[ii]) *
+                          JxW;
+
+                        if constexpr (prm::thermodyn_eq)
+                          scratch.cc_matrix(i, j) +=
+                            -thermodynamic_equilibrium_der * V[jj] * z1[ii] *
+                            JxW;
+                        else
+                          scratch.cc_matrix(i, j) +=
+                            Q * (n[jj] - p[jj]) * z1[ii] * JxW;
+                      }
+                    if constexpr (prm::is_n_enabled)
+                      scratch.cc_matrix(i, j) +=
+                        (-n[jj] * q2_div[ii] + Wn[jj] * q2[ii] -
+                         n[jj] * (mu_n_times_previous_E * z2_grad[ii]) +
+                         n0[q] *
+                           ((scratch.mu_n_cell[q] * E[jj]) * z2_grad[ii]) +
+                         (n_einstein_diffusion_coefficient * Wn[jj]) *
+                           z2_grad[ii] -
+                         (dr_n[q] * n[jj] + dr_p[q] * p[jj]) * z2[ii]) *
+                        JxW;
+                    if constexpr (prm::is_p_enabled)
+                      scratch.cc_matrix(i, j) +=
+                        (-p[jj] * q3_div[ii] + Wp[jj] * q3[ii] +
+                         p[jj] * (mu_p_times_previous_E * z3_grad[ii]) -
+                         p0[q] *
+                           ((scratch.mu_p_cell[q] * E[jj]) * z3_grad[ii]) +
+                         (p_einstein_diffusion_coefficient * Wp[jj]) *
+                           z3_grad[ii] -
+                         (dr_n[q] * n[jj] + dr_p[q] * p[jj]) * z3[ii]) *
+                        JxW;
+                  }
               }
           }
       }
@@ -443,154 +477,189 @@ namespace Ddhdg
   NPSolver<dim, Permittivity>::add_cell_products_to_cc_rhs(
     Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch)
   {
-    const unsigned int n_q_points =
-      scratch.fe_values_cell.get_quadrature().size();
-    const unsigned int dofs_per_component =
-      scratch.enabled_component_indices.size();
+    constexpr bool something_enabled =
+      prm::is_V_enabled || prm::is_n_enabled || prm::is_p_enabled;
 
-    const FEValuesExtractors::Vector electric_field =
-      this->get_displacement_extractor(Displacement::E);
-    const FEValuesExtractors::Scalar electric_potential =
-      this->get_component_extractor(Component::V);
-    const FEValuesExtractors::Vector electron_displacement =
-      this->get_displacement_extractor(Displacement::Wn);
-    const FEValuesExtractors::Scalar electron_density =
-      this->get_component_extractor(Component::n);
-    const FEValuesExtractors::Vector hole_displacement =
-      this->get_displacement_extractor(Displacement::Wp);
-    const FEValuesExtractors::Scalar hole_density =
-      this->get_component_extractor(Component::p);
-
-    const auto &V0  = scratch.previous_c_cell.at(Component::V);
-    const auto &E0  = scratch.previous_d_cell.at(Component::V);
-    const auto &n0  = scratch.previous_c_cell.at(Component::n);
-    const auto &Wn0 = scratch.previous_d_cell.at(Component::n);
-    const auto &p0  = scratch.previous_c_cell.at(Component::p);
-    const auto &Wp0 = scratch.previous_d_cell.at(Component::p);
-
-    const auto &c0 = scratch.doping_cell;
-
-    dealii::Tensor<1, dim> epsilon_times_E;
-
-    dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
-    dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
-
-    dealii::Tensor<1, dim> Jn;
-    dealii::Tensor<1, dim> Jp;
-
-    const double nc = this->problem->band_density.at(Component::n);
-    const double nv = this->problem->band_density.at(Component::p);
-    const double ec =
-      this->problem->band_edge_energy.at(Component::n) * Constants::EV;
-    const double ev =
-      this->problem->band_edge_energy.at(Component::p) * Constants::EV;
-
-    double thermodynamic_equilibrium_rhs = 0.;
-
-    const double V_rescale =
-      this->adimensionalizer
-        ->template get_component_rescaling_factor<Component::V>();
-    const double n_rescale =
-      this->adimensionalizer
-        ->template get_component_rescaling_factor<Component::n>();
-    const double Q =
-      this->adimensionalizer->get_poisson_equation_density_constant();
-
-    for (unsigned int q = 0; q < n_q_points; ++q)
+    if constexpr (something_enabled)
       {
-        const double JxW = scratch.fe_values_cell.JxW(q);
+        const unsigned int n_q_points =
+          scratch.fe_values_cell.get_quadrature().size();
+        const unsigned int dofs_per_component =
+          scratch.enabled_component_indices.size();
 
-        if (prm::is_V_enabled)
-          scratch.permittivity.epsilon_operator_on_cell(q,
-                                                        E0[q],
-                                                        epsilon_times_E);
+        const FEValuesExtractors::Vector electric_field =
+          this->get_displacement_extractor(Displacement::E);
+        const FEValuesExtractors::Scalar electric_potential =
+          this->get_component_extractor(Component::V);
+        const FEValuesExtractors::Vector electron_displacement =
+          this->get_displacement_extractor(Displacement::Wn);
+        const FEValuesExtractors::Scalar electron_density =
+          this->get_component_extractor(Component::n);
+        const FEValuesExtractors::Vector hole_displacement =
+          this->get_displacement_extractor(Displacement::Wp);
+        const FEValuesExtractors::Scalar hole_density =
+          this->get_component_extractor(Component::p);
 
-        if (prm::is_n_enabled)
-          n_einstein_diffusion_coefficient =
-            this->template compute_einstein_diffusion_coefficient<Component::n,
-                                                                  false>(
-              scratch, q);
-        if (prm::is_p_enabled)
-          p_einstein_diffusion_coefficient =
-            this->template compute_einstein_diffusion_coefficient<Component::p,
-                                                                  false>(
-              scratch, q);
-
-        if (prm::is_n_enabled)
-          Jn = n0[q] * (scratch.mu_n_cell[q] * E0[q]) -
-               (n_einstein_diffusion_coefficient * Wn0[q]);
-        if (prm::is_p_enabled)
-          Jp = -p0[q] * (scratch.mu_p_cell[q] * E0[q]) -
-               (p_einstein_diffusion_coefficient * Wp0[q]);
-
-        if (prm::thermodyn_eq)
+        // Prevent warnings about unused variables
+        if constexpr (!prm::is_V_enabled)
           {
-            const double KbT_over_q =
-              Constants::KB * scratch.T_cell[q] / (Constants::Q * V_rescale);
-            const double ev_rescaled = ev / (Constants::Q * V_rescale);
-            const double ec_rescaled = ec / (Constants::Q * V_rescale);
-            thermodynamic_equilibrium_rhs =
-              Q / n_rescale *
-              (nv * exp((ev_rescaled - V0[q]) / KbT_over_q) -
-               nc * exp((V0[q] - ec_rescaled) / KbT_over_q));
+            (void)electric_potential;
+            (void)electric_field;
+          }
+        if constexpr (!prm::is_n_enabled)
+          {
+            (void)electron_density;
+            (void)electron_displacement;
+          }
+        if constexpr (!prm::is_p_enabled)
+          {
+            (void)hole_density;
+            (void)hole_displacement;
           }
 
-        for (unsigned int i = 0; i < dofs_per_component; ++i)
+        const auto &V0  = scratch.previous_c_cell.at(Component::V);
+        const auto &E0  = scratch.previous_d_cell.at(Component::V);
+        const auto &n0  = scratch.previous_c_cell.at(Component::n);
+        const auto &Wn0 = scratch.previous_d_cell.at(Component::n);
+        const auto &p0  = scratch.previous_c_cell.at(Component::p);
+        const auto &Wp0 = scratch.previous_d_cell.at(Component::p);
+
+        const auto &c0 = scratch.doping_cell;
+
+        dealii::Tensor<1, dim> epsilon_times_E;
+
+        dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
+        dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
+
+        dealii::Tensor<1, dim> Jn;
+        dealii::Tensor<1, dim> Jp;
+
+        const double nc = this->problem->band_density.at(Component::n);
+        const double nv = this->problem->band_density.at(Component::p);
+        const double ec =
+          this->problem->band_edge_energy.at(Component::n) * Constants::EV;
+        const double ev =
+          this->problem->band_edge_energy.at(Component::p) * Constants::EV;
+
+        if constexpr (!prm::thermodyn_eq)
           {
-            const unsigned int ii = scratch.enabled_component_indices[i];
-            if (prm::is_V_enabled)
+            (void)nc;
+            (void)nv;
+          }
+
+        double thermodynamic_equilibrium_rhs = 0.;
+
+        const double V_rescale =
+          this->adimensionalizer
+            ->template get_component_rescaling_factor<Component::V>();
+        const double n_rescale =
+          this->adimensionalizer
+            ->template get_component_rescaling_factor<Component::n>();
+        const double Q =
+          this->adimensionalizer->get_poisson_equation_density_constant();
+
+        for (unsigned int q = 0; q < n_q_points; ++q)
+          {
+            const double JxW = scratch.fe_values_cell.JxW(q);
+
+            if constexpr (prm::is_V_enabled)
+              scratch.permittivity.epsilon_operator_on_cell(q,
+                                                            E0[q],
+                                                            epsilon_times_E);
+
+            if constexpr (prm::is_n_enabled)
+              n_einstein_diffusion_coefficient =
+                this->template compute_einstein_diffusion_coefficient<
+                  Component::n,
+                  false>(scratch, q);
+            if constexpr (prm::is_p_enabled)
+              p_einstein_diffusion_coefficient =
+                this->template compute_einstein_diffusion_coefficient<
+                  Component::p,
+                  false>(scratch, q);
+
+            if constexpr (prm::is_n_enabled)
+              Jn = n0[q] * (scratch.mu_n_cell[q] * E0[q]) -
+                   (n_einstein_diffusion_coefficient * Wn0[q]);
+            if constexpr (prm::is_p_enabled)
+              Jp = -p0[q] * (scratch.mu_p_cell[q] * E0[q]) -
+                   (p_einstein_diffusion_coefficient * Wp0[q]);
+
+            if constexpr (prm::thermodyn_eq)
               {
-                const dealii::Tensor<1, dim> q1 =
-                  scratch.fe_values_cell[electric_field].value(ii, q);
-                const double q1_div =
-                  scratch.fe_values_cell[electric_field].divergence(ii, q);
-                const double z1 =
-                  scratch.fe_values_cell[electric_potential].value(ii, q);
-                const dealii::Tensor<1, dim> z1_grad =
-                  scratch.fe_values_cell[electric_potential].gradient(ii, q);
-
-                scratch.cc_rhs[i] +=
-                  (V0[q] * q1_div - E0[q] * q1 + epsilon_times_E * z1_grad +
-                   Q * c0[q] * z1) *
-                  JxW;
-
-                if (prm::thermodyn_eq)
-                  scratch.cc_rhs[i] += thermodynamic_equilibrium_rhs * z1 * JxW;
-                else
-                  scratch.cc_rhs[i] += Q * (-n0[q] + p0[q]) * z1 * JxW;
+                const double KbT_over_q = Constants::KB * scratch.T_cell[q] /
+                                          (Constants::Q * V_rescale);
+                const double ev_rescaled = ev / (Constants::Q * V_rescale);
+                const double ec_rescaled = ec / (Constants::Q * V_rescale);
+                thermodynamic_equilibrium_rhs =
+                  Q / n_rescale *
+                  (nv * exp((ev_rescaled - V0[q]) / KbT_over_q) -
+                   nc * exp((V0[q] - ec_rescaled) / KbT_over_q));
               }
 
-            if (prm::is_n_enabled)
+            for (unsigned int i = 0; i < dofs_per_component; ++i)
               {
-                const dealii::Tensor<1, dim> q2 =
-                  scratch.fe_values_cell[electron_displacement].value(ii, q);
-                const double q2_div =
-                  scratch.fe_values_cell[electron_displacement].divergence(ii,
+                const unsigned int ii = scratch.enabled_component_indices[i];
+                if constexpr (prm::is_V_enabled)
+                  {
+                    const dealii::Tensor<1, dim> q1 =
+                      scratch.fe_values_cell[electric_field].value(ii, q);
+                    const double q1_div =
+                      scratch.fe_values_cell[electric_field].divergence(ii, q);
+                    const double z1 =
+                      scratch.fe_values_cell[electric_potential].value(ii, q);
+                    const dealii::Tensor<1, dim> z1_grad =
+                      scratch.fe_values_cell[electric_potential].gradient(ii,
+                                                                          q);
+
+                    scratch.cc_rhs[i] +=
+                      (V0[q] * q1_div - E0[q] * q1 + epsilon_times_E * z1_grad +
+                       Q * c0[q] * z1) *
+                      JxW;
+
+                    if (prm::thermodyn_eq)
+                      scratch.cc_rhs[i] +=
+                        thermodynamic_equilibrium_rhs * z1 * JxW;
+                    else
+                      scratch.cc_rhs[i] += Q * (-n0[q] + p0[q]) * z1 * JxW;
+                  }
+
+                if constexpr (prm::is_n_enabled)
+                  {
+                    const dealii::Tensor<1, dim> q2 =
+                      scratch.fe_values_cell[electron_displacement].value(ii,
+                                                                          q);
+                    const double q2_div =
+                      scratch.fe_values_cell[electron_displacement].divergence(
+                        ii, q);
+                    const double z2 =
+                      scratch.fe_values_cell[electron_density].value(ii, q);
+                    const dealii::Tensor<1, dim> z2_grad =
+                      scratch.fe_values_cell[electron_density].gradient(ii, q);
+
+                    scratch.cc_rhs[i] +=
+                      (n0[q] * q2_div - Wn0[q] * q2 + scratch.r_cell[q] * z2 +
+                       Jn * z2_grad) *
+                      JxW;
+                  }
+
+                if constexpr (prm::is_p_enabled)
+                  {
+                    const dealii::Tensor<1, dim> q3 =
+                      scratch.fe_values_cell[hole_displacement].value(ii, q);
+                    const double q3_div =
+                      scratch.fe_values_cell[hole_displacement].divergence(ii,
                                                                            q);
-                const double z2 =
-                  scratch.fe_values_cell[electron_density].value(ii, q);
-                const dealii::Tensor<1, dim> z2_grad =
-                  scratch.fe_values_cell[electron_density].gradient(ii, q);
+                    const double z3 =
+                      scratch.fe_values_cell[hole_density].value(ii, q);
+                    const dealii::Tensor<1, dim> z3_grad =
+                      scratch.fe_values_cell[hole_density].gradient(ii, q);
 
-                scratch.cc_rhs[i] += (n0[q] * q2_div - Wn0[q] * q2 +
-                                      scratch.r_cell[q] * z2 + Jn * z2_grad) *
-                                     JxW;
-              }
-
-            if (prm::is_p_enabled)
-              {
-                const dealii::Tensor<1, dim> q3 =
-                  scratch.fe_values_cell[hole_displacement].value(ii, q);
-                const double q3_div =
-                  scratch.fe_values_cell[hole_displacement].divergence(ii, q);
-                const double z3 =
-                  scratch.fe_values_cell[hole_density].value(ii, q);
-                const dealii::Tensor<1, dim> z3_grad =
-                  scratch.fe_values_cell[hole_density].gradient(ii, q);
-
-                scratch.cc_rhs[i] += (p0[q] * q3_div - Wp0[q] * q3 +
-                                      +scratch.r_cell[q] * z3 + Jp * z3_grad) *
-                                     JxW;
+                    scratch.cc_rhs[i] +=
+                      (p0[q] * q3_div - Wp0[q] * q3 + +scratch.r_cell[q] * z3 +
+                       Jp * z3_grad) *
+                      JxW;
+                  }
               }
           }
       }
@@ -729,94 +798,120 @@ namespace Ddhdg
     Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
     const unsigned int                               face)
   {
-    const unsigned int n_face_q_points =
-      scratch.fe_face_values_cell.get_quadrature().size();
+    constexpr bool something_enabled =
+      prm::is_V_enabled || prm::is_n_enabled || prm::is_p_enabled;
 
-    const unsigned int cell_dofs_on_face =
-      scratch.fe_cell_support_on_face[face].size();
-    const unsigned int trace_dofs_on_face =
-      scratch.fe_trace_support_on_face[face].size();
+    if constexpr (!something_enabled)
+      (void)face;
 
-    auto &q1   = scratch.d.at(Component::V);
-    auto &z1   = scratch.c.at(Component::V);
-    auto &tr_V = scratch.tr_c.at(Component::V);
-
-    auto &q2   = scratch.d.at(Component::n);
-    auto &z2   = scratch.c.at(Component::n);
-    auto &tr_n = scratch.tr_c.at(Component::n);
-
-    auto &q3   = scratch.d.at(Component::p);
-    auto &z3   = scratch.c.at(Component::p);
-    auto &tr_p = scratch.tr_c.at(Component::p);
-
-    const double V_tau = this->parameters->tau.at(Component::V);
-    const double n_tau = this->parameters->tau.at(Component::n);
-    const double p_tau = this->parameters->tau.at(Component::p);
-
-    double V_tau_stabilized = 0.;
-    double n_tau_stabilized = 0.;
-    double p_tau_stabilized = 0.;
-
-    for (unsigned int q = 0; q < n_face_q_points; ++q)
+    if constexpr (something_enabled)
       {
-        copy_fe_values_on_scratch(scratch, face, q);
-        copy_fe_values_for_trace(scratch, face, q);
+        const unsigned int n_face_q_points =
+          scratch.fe_face_values_cell.get_quadrature().size();
 
-        const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
-        const Tensor<1, dim> normal =
-          scratch.fe_face_values_trace_restricted.normal_vector(q);
+        const unsigned int cell_dofs_on_face =
+          scratch.fe_cell_support_on_face[face].size();
+        const unsigned int trace_dofs_on_face =
+          scratch.fe_trace_support_on_face[face].size();
 
-        if (prm::is_V_enabled)
-          V_tau_stabilized =
-            this->template compute_stabilized_tau<Component::V>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::V>(V_tau),
-              normal,
-              q);
-        if (prm::is_n_enabled)
-          n_tau_stabilized =
-            this->template compute_stabilized_tau<Component::n>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::n>(n_tau),
-              normal,
-              q);
-        if (prm::is_p_enabled)
-          p_tau_stabilized =
-            this->template compute_stabilized_tau<Component::p>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::p>(p_tau),
-              normal,
-              q);
+        auto &q1   = scratch.d.at(Component::V);
+        auto &z1   = scratch.c.at(Component::V);
+        auto &tr_V = scratch.tr_c.at(Component::V);
 
-        for (unsigned int i = 0; i < cell_dofs_on_face; ++i)
+        auto &q2   = scratch.d.at(Component::n);
+        auto &z2   = scratch.c.at(Component::n);
+        auto &tr_n = scratch.tr_c.at(Component::n);
+
+        auto &q3   = scratch.d.at(Component::p);
+        auto &z3   = scratch.c.at(Component::p);
+        auto &tr_p = scratch.tr_c.at(Component::p);
+
+        const double V_tau = this->parameters->tau.at(Component::V);
+        const double n_tau = this->parameters->tau.at(Component::n);
+        const double p_tau = this->parameters->tau.at(Component::p);
+
+        double V_tau_stabilized = 0.;
+        double n_tau_stabilized = 0.;
+        double p_tau_stabilized = 0.;
+
+        if constexpr (!prm::is_V_enabled)
           {
-            const unsigned int ii = scratch.fe_cell_support_on_face[face][i];
-            for (unsigned int j = 0; j < trace_dofs_on_face; ++j)
-              {
-                const unsigned int jj =
-                  scratch.fe_trace_support_on_face[face][j];
+            (void)V_tau;
+            (void)V_tau_stabilized;
+          }
+        if constexpr (!prm::is_n_enabled)
+          {
+            (void)n_tau;
+            (void)n_tau_stabilized;
+          }
+        if constexpr (!prm::is_p_enabled)
+          {
+            (void)p_tau;
+            (void)p_tau_stabilized;
+          }
 
-                // Integrals of trace functions using as test function
-                // the restriction of cell test function on the border
-                // i is the index of the test function
-                if (prm::is_V_enabled)
-                  scratch.ct_matrix(ii, jj) +=
-                    (tr_V[j] * (q1[i] * normal) -
-                     V_tau_stabilized * tr_V[j] * z1[i]) *
-                    JxW;
-                if (prm::is_n_enabled)
-                  scratch.ct_matrix(ii, jj) +=
-                    (tr_n[j] * (q2[i] * normal) +
-                     n_tau_stabilized * (tr_n[j] * z2[i])) *
-                    JxW;
-                if (prm::is_p_enabled)
-                  scratch.ct_matrix(ii, jj) +=
-                    (tr_p[j] * (q3[i] * normal) +
-                     p_tau_stabilized * (tr_p[j] * z3[i])) *
-                    JxW;
+        for (unsigned int q = 0; q < n_face_q_points; ++q)
+          {
+            copy_fe_values_on_scratch(scratch, face, q);
+            copy_fe_values_for_trace(scratch, face, q);
+
+            const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
+            const Tensor<1, dim> normal =
+              scratch.fe_face_values_trace_restricted.normal_vector(q);
+
+            if constexpr (prm::is_V_enabled)
+              V_tau_stabilized =
+                this->template compute_stabilized_tau<Component::V>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::V>(V_tau),
+                  normal,
+                  q);
+            if constexpr (prm::is_n_enabled)
+              n_tau_stabilized =
+                this->template compute_stabilized_tau<Component::n>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::n>(n_tau),
+                  normal,
+                  q);
+            if constexpr (prm::is_p_enabled)
+              p_tau_stabilized =
+                this->template compute_stabilized_tau<Component::p>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::p>(p_tau),
+                  normal,
+                  q);
+
+            for (unsigned int i = 0; i < cell_dofs_on_face; ++i)
+              {
+                const unsigned int ii =
+                  scratch.fe_cell_support_on_face[face][i];
+                for (unsigned int j = 0; j < trace_dofs_on_face; ++j)
+                  {
+                    const unsigned int jj =
+                      scratch.fe_trace_support_on_face[face][j];
+
+                    // Integrals of trace functions using as test function
+                    // the restriction of cell test function on the border
+                    // i is the index of the test function
+                    if constexpr (prm::is_V_enabled)
+                      scratch.ct_matrix(ii, jj) +=
+                        (tr_V[j] * (q1[i] * normal) -
+                         V_tau_stabilized * tr_V[j] * z1[i]) *
+                        JxW;
+                    if constexpr (prm::is_n_enabled)
+                      scratch.ct_matrix(ii, jj) +=
+                        (tr_n[j] * (q2[i] * normal) +
+                         n_tau_stabilized * (tr_n[j] * z2[i])) *
+                        JxW;
+                    if constexpr (prm::is_p_enabled)
+                      scratch.ct_matrix(ii, jj) +=
+                        (tr_p[j] * (q3[i] * normal) +
+                         p_tau_stabilized * (tr_p[j] * z3[i])) *
+                        JxW;
+                  }
               }
           }
       }
@@ -831,107 +926,152 @@ namespace Ddhdg
     Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
     const unsigned int                               face)
   {
-    const unsigned int n_face_q_points =
-      scratch.fe_face_values_cell.get_quadrature().size();
+    constexpr bool something_enabled =
+      prm::is_V_enabled || prm::is_n_enabled || prm::is_p_enabled;
 
-    const FEValuesExtractors::Vector electric_field =
-      this->get_displacement_extractor(Displacement::E);
-    const FEValuesExtractors::Scalar electric_potential =
-      this->get_component_extractor(Component::V);
-    const FEValuesExtractors::Vector electron_displacement =
-      this->get_displacement_extractor(Displacement::Wn);
-    const FEValuesExtractors::Scalar electron_density =
-      this->get_component_extractor(Component::n);
-    const FEValuesExtractors::Vector hole_displacement =
-      this->get_displacement_extractor(Displacement::Wp);
-    const FEValuesExtractors::Scalar hole_density =
-      this->get_component_extractor(Component::p);
+    if constexpr (!something_enabled)
+      (void)face;
 
-    const auto &tr_V0 = scratch.previous_tr_c_face.at(Component::V);
-    const auto &tr_n0 = scratch.previous_tr_c_face.at(Component::n);
-    const auto &tr_p0 = scratch.previous_tr_c_face.at(Component::p);
-
-    const double V_tau = this->parameters->tau.at(Component::V);
-    const double n_tau = this->parameters->tau.at(Component::n);
-    const double p_tau = this->parameters->tau.at(Component::p);
-
-    double V_tau_stabilized = 0.;
-    double n_tau_stabilized = 0.;
-    double p_tau_stabilized = 0.;
-
-    for (unsigned int q = 0; q < n_face_q_points; ++q)
+    if constexpr (something_enabled)
       {
-        const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
-        const Tensor<1, dim> normal =
-          scratch.fe_face_values_trace_restricted.normal_vector(q);
+        const unsigned int n_face_q_points =
+          scratch.fe_face_values_cell.get_quadrature().size();
 
-        if (prm::is_V_enabled)
-          V_tau_stabilized =
-            this->template compute_stabilized_tau<Component::V>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::V>(V_tau),
-              normal,
-              q);
-        if (prm::is_n_enabled)
-          n_tau_stabilized =
-            this->template compute_stabilized_tau<Component::n>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::n>(n_tau),
-              normal,
-              q);
-        if (prm::is_p_enabled)
-          p_tau_stabilized =
-            this->template compute_stabilized_tau<Component::p>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::p>(p_tau),
-              normal,
-              q);
+        const FEValuesExtractors::Vector electric_field =
+          this->get_displacement_extractor(Displacement::E);
+        const FEValuesExtractors::Scalar electric_potential =
+          this->get_component_extractor(Component::V);
+        const FEValuesExtractors::Vector electron_displacement =
+          this->get_displacement_extractor(Displacement::Wn);
+        const FEValuesExtractors::Scalar electron_density =
+          this->get_component_extractor(Component::n);
+        const FEValuesExtractors::Vector hole_displacement =
+          this->get_displacement_extractor(Displacement::Wp);
+        const FEValuesExtractors::Scalar hole_density =
+          this->get_component_extractor(Component::p);
 
-        for (unsigned int i = 0;
-             i < scratch.fe_cell_support_on_face[face].size();
-             ++i)
+        if constexpr (!prm::is_V_enabled)
           {
-            const unsigned int ii  = scratch.fe_cell_support_on_face[face][i];
-            const unsigned int iii = scratch.enabled_component_indices[ii];
+            (void)electric_field;
+            (void)electric_potential;
+          }
+        if constexpr (!prm::is_n_enabled)
+          {
+            (void)electron_displacement;
+            (void)electron_density;
+          }
+        if constexpr (!prm::is_p_enabled)
+          {
+            (void)hole_displacement;
+            (void)hole_density;
+          }
 
-            if (prm::is_V_enabled)
+        const auto &tr_V0 = scratch.previous_tr_c_face.at(Component::V);
+        const auto &tr_n0 = scratch.previous_tr_c_face.at(Component::n);
+        const auto &tr_p0 = scratch.previous_tr_c_face.at(Component::p);
+
+        const double V_tau = this->parameters->tau.at(Component::V);
+        const double n_tau = this->parameters->tau.at(Component::n);
+        const double p_tau = this->parameters->tau.at(Component::p);
+
+        double V_tau_stabilized = 0.;
+        double n_tau_stabilized = 0.;
+        double p_tau_stabilized = 0.;
+
+        if constexpr (!prm::is_V_enabled)
+          {
+            (void)V_tau;
+            (void)V_tau_stabilized;
+          }
+        if constexpr (!prm::is_n_enabled)
+          {
+            (void)n_tau;
+            (void)n_tau_stabilized;
+          }
+        if constexpr (!prm::is_p_enabled)
+          {
+            (void)p_tau;
+            (void)p_tau_stabilized;
+          }
+
+        for (unsigned int q = 0; q < n_face_q_points; ++q)
+          {
+            const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
+            const Tensor<1, dim> normal =
+              scratch.fe_face_values_trace_restricted.normal_vector(q);
+
+            if constexpr (prm::is_V_enabled)
+              V_tau_stabilized =
+                this->template compute_stabilized_tau<Component::V>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::V>(V_tau),
+                  normal,
+                  q);
+            if constexpr (prm::is_n_enabled)
+              n_tau_stabilized =
+                this->template compute_stabilized_tau<Component::n>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::n>(n_tau),
+                  normal,
+                  q);
+            if constexpr (prm::is_p_enabled)
+              p_tau_stabilized =
+                this->template compute_stabilized_tau<Component::p>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::p>(p_tau),
+                  normal,
+                  q);
+
+            for (unsigned int i = 0;
+                 i < scratch.fe_cell_support_on_face[face].size();
+                 ++i)
               {
-                const dealii::Tensor<1, dim> q1 =
-                  scratch.fe_face_values_cell[electric_field].value(iii, q);
-                const double z1 =
-                  scratch.fe_face_values_cell[electric_potential].value(iii, q);
+                const unsigned int ii =
+                  scratch.fe_cell_support_on_face[face][i];
+                const unsigned int iii = scratch.enabled_component_indices[ii];
 
-                scratch.cc_rhs(ii) += (-tr_V0[q] * (q1 * normal) +
-                                       V_tau_stabilized * tr_V0[q] * z1) *
-                                      JxW;
-              }
+                if constexpr (prm::is_V_enabled)
+                  {
+                    const dealii::Tensor<1, dim> q1 =
+                      scratch.fe_face_values_cell[electric_field].value(iii, q);
+                    const double z1 =
+                      scratch.fe_face_values_cell[electric_potential].value(iii,
+                                                                            q);
 
-            if (prm::is_n_enabled)
-              {
-                const dealii::Tensor<1, dim> q2 =
-                  scratch.fe_face_values_cell[electron_displacement].value(iii,
+                    scratch.cc_rhs(ii) += (-tr_V0[q] * (q1 * normal) +
+                                           V_tau_stabilized * tr_V0[q] * z1) *
+                                          JxW;
+                  }
+
+                if constexpr (prm::is_n_enabled)
+                  {
+                    const dealii::Tensor<1, dim> q2 =
+                      scratch.fe_face_values_cell[electron_displacement].value(
+                        iii, q);
+                    const double z2 =
+                      scratch.fe_face_values_cell[electron_density].value(iii,
+                                                                          q);
+
+                    scratch.cc_rhs(ii) += (-tr_n0[q] * (q2 * normal) -
+                                           n_tau_stabilized * tr_n0[q] * z2) *
+                                          JxW;
+                  }
+
+                if constexpr (prm::is_p_enabled)
+                  {
+                    const dealii::Tensor<1, dim> q3 =
+                      scratch.fe_face_values_cell[hole_displacement].value(iii,
                                                                            q);
-                const double z2 =
-                  scratch.fe_face_values_cell[electron_density].value(iii, q);
+                    const double z3 =
+                      scratch.fe_face_values_cell[hole_density].value(iii, q);
 
-                scratch.cc_rhs(ii) += (-tr_n0[q] * (q2 * normal) -
-                                       n_tau_stabilized * tr_n0[q] * z2) *
-                                      JxW;
-              }
-
-            if (prm::is_p_enabled)
-              {
-                const dealii::Tensor<1, dim> q3 =
-                  scratch.fe_face_values_cell[hole_displacement].value(iii, q);
-                const double z3 =
-                  scratch.fe_face_values_cell[hole_density].value(iii, q);
-
-                scratch.cc_rhs(ii) += (-tr_p0[q] * (q3 * normal) -
-                                       p_tau_stabilized * tr_p0[q] * z3) *
-                                      JxW;
+                    scratch.cc_rhs(ii) += (-tr_p0[q] * (q3 * normal) -
+                                           p_tau_stabilized * tr_p0[q] * z3) *
+                                          JxW;
+                  }
               }
           }
       }
@@ -946,7 +1086,7 @@ namespace Ddhdg
     Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
     const unsigned int                               face)
   {
-    if (c != V && c != n && c != p)
+    if constexpr (c != Component::V && c != Component::n && c != Component::p)
       AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
@@ -980,7 +1120,7 @@ namespace Ddhdg
         const Tensor<1, dim> normal =
           scratch.fe_face_values_trace_restricted.normal_vector(q);
 
-        if (c == Component::n)
+        if constexpr (c == Component::n)
           {
             mu_n_times_previous_E = scratch.mu_n_face[q] * E[q];
             n_einstein_diffusion_coefficient =
@@ -988,7 +1128,7 @@ namespace Ddhdg
                 ->template compute_einstein_diffusion_coefficient<Component::n>(
                   scratch, q);
           }
-        if (c == Component::p)
+        if constexpr (c == Component::p)
           {
             mu_p_times_previous_E = scratch.mu_p_face[q] * E[q];
             p_einstein_diffusion_coefficient =
@@ -1020,7 +1160,7 @@ namespace Ddhdg
                 // Schur complement (and therefore this is the
                 // opposite of the right matrix that describes the
                 // problem on this cell)
-                if (c == V)
+                if constexpr (c == Component::V)
                   {
                     scratch.permittivity.epsilon_operator_on_face(
                       q, f[j], epsilon_times_E);
@@ -1028,7 +1168,7 @@ namespace Ddhdg
                       (epsilon_times_E * normal + tau_stabilized * c_[j]) *
                       xi[i] * JxW;
                   }
-                if (c == n)
+                if constexpr (c == Component::n)
                   {
                     const dealii::Tensor<1, dim> mu_n_times_E =
                       scratch.mu_n_face[q] * scratch.d[Component::V][j];
@@ -1040,7 +1180,7 @@ namespace Ddhdg
                        tau_stabilized * c_[j]) *
                       xi[i] * JxW;
                   }
-                if (c == p)
+                if constexpr (c == Component::p)
                   {
                     const dealii::Tensor<1, dim> mu_p_times_E =
                       scratch.mu_p_face[q] * scratch.d[Component::V][j];
@@ -1067,7 +1207,7 @@ namespace Ddhdg
     Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
     const unsigned int                               face)
   {
-    if (c != V && c != n && c != p)
+    if constexpr (c != Component::V && c != Component::n && c != Component::p)
       AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
@@ -1086,6 +1226,14 @@ namespace Ddhdg
     double                 mu_n_times_previous_E_times_normal    = 0.;
     double                 mu_p_times_previous_E_times_normal    = 0.;
 
+    // Avoid warnings with GCC
+    if constexpr (c != Component::V)
+      (void)epsilon_times_previous_E_times_normal;
+    if constexpr (c != Component::n)
+      (void)mu_n_times_previous_E_times_normal;
+    if constexpr (c != Component::p)
+      (void)mu_p_times_previous_E_times_normal;
+
     dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
     dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
 
@@ -1097,14 +1245,14 @@ namespace Ddhdg
         const Tensor<1, dim> normal =
           scratch.fe_face_values_trace_restricted.normal_vector(q);
 
-        if (c == Component::V)
+        if constexpr (c == Component::V)
           {
             scratch.permittivity.epsilon_operator_on_face(q,
                                                           E0[q],
                                                           epsilon_times_E);
             epsilon_times_previous_E_times_normal = epsilon_times_E * normal;
           }
-        if (c == Component::n)
+        if constexpr (c == Component::n)
           {
             mu_n_times_previous_E_times_normal =
               scratch.mu_n_face[q] * E0[q] * normal;
@@ -1113,7 +1261,7 @@ namespace Ddhdg
                 ->template compute_einstein_diffusion_coefficient<Component::n>(
                   scratch, q);
           }
-        if (c == Component::p)
+        if constexpr (c == Component::p)
           {
             mu_p_times_previous_E_times_normal =
               scratch.mu_p_face[q] * E0[q] * normal;
@@ -1136,14 +1284,14 @@ namespace Ddhdg
             const double       xi =
               scratch.fe_face_values_trace_restricted[tr_c_extractor].value(ii,
                                                                             q);
-            if (c == V)
+            if constexpr (c == Component::V)
               {
                 task_data.tt_vector[ii] +=
                   (-epsilon_times_previous_E_times_normal -
                    tau_stabilized * c0[q]) *
                   xi * JxW;
               }
-            if (c == n)
+            if constexpr (c == Component::n)
               {
                 task_data.tt_vector[ii] +=
                   (-c0[q] * mu_n_times_previous_E_times_normal +
@@ -1151,7 +1299,7 @@ namespace Ddhdg
                    tau_stabilized * c0[q]) *
                   xi * JxW;
               }
-            if (c == p)
+            if constexpr (c == Component::p)
               {
                 task_data.tt_vector[ii] +=
                   (c0[q] * mu_p_times_previous_E_times_normal +
@@ -1173,7 +1321,7 @@ namespace Ddhdg
     Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
     const unsigned int                               face)
   {
-    if (c != V && c != n && c != p)
+    if constexpr (c != Component::V && c != Component::n && c != Component::p)
       AssertThrow(false, InvalidComponent());
 
     auto &tr_c = scratch.tr_c.at(c);
@@ -1233,7 +1381,7 @@ namespace Ddhdg
     Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
     const unsigned int                               face)
   {
-    if (c != V && c != n && c != p)
+    if constexpr (c != Component::V && c != Component::n && c != Component::p)
       AssertThrow(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
@@ -1290,7 +1438,7 @@ namespace Ddhdg
     const Ddhdg::DirichletBoundaryCondition<dim> &   dbc,
     unsigned int                                     face)
   {
-    if (c != V && c != n && c != p)
+    if constexpr (c != Component::V && c != Component::n && c != Component::p)
       Assert(false, InvalidComponent());
 
     auto &tr_c  = scratch.tr_c.at(c);
@@ -1312,7 +1460,7 @@ namespace Ddhdg
 
         const Point<dim> quadrature_point =
           scratch.fe_face_values_trace_restricted.quadrature_point(q);
-        const double dbc_value =
+        double dbc_value =
           (prm::thermodyn_eq) ?
             0 :
             dbc.evaluate(quadrature_point) / rescaling_factor - tr_c0[q];
@@ -1343,7 +1491,7 @@ namespace Ddhdg
     const Ddhdg::NeumannBoundaryCondition<dim> &     nbc,
     unsigned int                                     face)
   {
-    if (c != Component::V && c != Component::n && c != Component::p)
+    if constexpr (c != Component::V && c != Component::n && c != Component::p)
       Assert(false, InvalidComponent());
 
     const unsigned int n_face_q_points =
@@ -1353,7 +1501,7 @@ namespace Ddhdg
 
     auto &tr_c = scratch.tr_c.at(c);
 
-    const double rescaling_factor =
+    double rescaling_factor =
       this->adimensionalizer
         ->template get_neumann_boundary_condition_rescaling_factor<c>();
 
@@ -1383,125 +1531,153 @@ namespace Ddhdg
     Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
     const unsigned int                               face)
   {
-    const unsigned int n_face_q_points =
-      scratch.fe_face_values_cell.get_quadrature().size();
-    const unsigned int cell_dofs_per_face =
-      scratch.fe_cell_support_on_face[face].size();
+    constexpr bool something_enabled =
+      prm::is_V_enabled || prm::is_n_enabled || prm::is_p_enabled;
 
-    auto &E  = scratch.d.at(Component::V);
-    auto &V  = scratch.c.at(Component::V);
-    auto &Wn = scratch.d.at(Component::n);
-    auto &n  = scratch.c.at(Component::n);
-    auto &Wp = scratch.d.at(Component::p);
-    auto &p  = scratch.c.at(Component::p);
+    if constexpr (!something_enabled)
+      (void)face;
 
-    auto &z1 = scratch.c.at(Component::V);
-    auto &z2 = scratch.c.at(Component::n);
-    auto &z3 = scratch.c.at(Component::p);
-
-    const auto  n0 = scratch.previous_c_face.at(Component::n);
-    const auto  p0 = scratch.previous_c_face.at(Component::p);
-    const auto &E0 = scratch.previous_d_face.at(Component::V);
-
-    const double V_tau = this->parameters->tau.at(Component::V);
-    const double n_tau = this->parameters->tau.at(Component::n);
-    const double p_tau = this->parameters->tau.at(Component::p);
-
-    double V_tau_stabilized = 0;
-    double n_tau_stabilized = 0;
-    double p_tau_stabilized = 0;
-
-    dealii::Tensor<1, dim> epsilon_times_E;
-
-    dealii::Tensor<1, dim> mu_n_times_previous_E;
-    dealii::Tensor<1, dim> mu_p_times_previous_E;
-
-    dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
-    dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
-
-    for (unsigned int q = 0; q < n_face_q_points; ++q)
+    if constexpr (something_enabled)
       {
-        copy_fe_values_on_scratch(scratch, face, q);
+        const unsigned int n_face_q_points =
+          scratch.fe_face_values_cell.get_quadrature().size();
+        const unsigned int cell_dofs_per_face =
+          scratch.fe_cell_support_on_face[face].size();
 
-        // Integrals on the border of the cell of the cell functions
-        const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
-        const Tensor<1, dim> normal =
-          scratch.fe_face_values_trace_restricted.normal_vector(q);
+        auto &E  = scratch.d.at(Component::V);
+        auto &V  = scratch.c.at(Component::V);
+        auto &Wn = scratch.d.at(Component::n);
+        auto &n  = scratch.c.at(Component::n);
+        auto &Wp = scratch.d.at(Component::p);
+        auto &p  = scratch.c.at(Component::p);
 
-        if (prm::is_n_enabled)
-          mu_n_times_previous_E = scratch.mu_n_face[q] * E0[q];
+        auto &z1 = scratch.c.at(Component::V);
+        auto &z2 = scratch.c.at(Component::n);
+        auto &z3 = scratch.c.at(Component::p);
 
-        if (prm::is_p_enabled)
-          mu_p_times_previous_E = scratch.mu_p_face[q] * E0[q];
+        const auto  n0 = scratch.previous_c_face.at(Component::n);
+        const auto  p0 = scratch.previous_c_face.at(Component::p);
+        const auto &E0 = scratch.previous_d_face.at(Component::V);
 
-        if (prm::is_n_enabled)
-          n_einstein_diffusion_coefficient =
-            this->template compute_einstein_diffusion_coefficient<Component::n>(
-              scratch, q);
+        const double V_tau = this->parameters->tau.at(Component::V);
+        const double n_tau = this->parameters->tau.at(Component::n);
+        const double p_tau = this->parameters->tau.at(Component::p);
 
-        if (prm::is_p_enabled)
-          p_einstein_diffusion_coefficient =
-            this->template compute_einstein_diffusion_coefficient<Component::p>(
-              scratch, q);
+        double V_tau_stabilized = 0;
+        double n_tau_stabilized = 0;
+        double p_tau_stabilized = 0;
 
-        if (prm::is_V_enabled)
-          V_tau_stabilized =
-            this->template compute_stabilized_tau<Component::V>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::V>(V_tau),
-              normal,
-              q);
-        if (prm::is_n_enabled)
-          n_tau_stabilized =
-            this->template compute_stabilized_tau<Component::n>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::n>(n_tau),
-              normal,
-              q);
-        if (prm::is_p_enabled)
-          p_tau_stabilized =
-            this->template compute_stabilized_tau<Component::p>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::p>(p_tau),
-              normal,
-              q);
-
-        for (unsigned int i = 0; i < cell_dofs_per_face; ++i)
+        if constexpr (!prm::is_V_enabled)
           {
-            const unsigned int ii = scratch.fe_cell_support_on_face[face][i];
-            for (unsigned int j = 0; j < cell_dofs_per_face; ++j)
-              {
-                const unsigned int jj =
-                  scratch.fe_cell_support_on_face[face][j];
+            (void)V_tau;
+            (void)V_tau_stabilized;
+          }
+        if constexpr (!prm::is_n_enabled)
+          {
+            (void)n_tau;
+            (void)n_tau_stabilized;
+          }
+        if constexpr (!prm::is_p_enabled)
+          {
+            (void)p_tau;
+            (void)p_tau_stabilized;
+          }
 
-                if (prm::is_V_enabled)
+        dealii::Tensor<1, dim> epsilon_times_E;
+
+        dealii::Tensor<1, dim> mu_n_times_previous_E;
+        dealii::Tensor<1, dim> mu_p_times_previous_E;
+
+        dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
+        dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
+
+        for (unsigned int q = 0; q < n_face_q_points; ++q)
+          {
+            copy_fe_values_on_scratch(scratch, face, q);
+
+            // Integrals on the border of the cell of the cell functions
+            const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
+            const Tensor<1, dim> normal =
+              scratch.fe_face_values_trace_restricted.normal_vector(q);
+
+            if constexpr (prm::is_n_enabled)
+              mu_n_times_previous_E = scratch.mu_n_face[q] * E0[q];
+
+            if constexpr (prm::is_p_enabled)
+              mu_p_times_previous_E = scratch.mu_p_face[q] * E0[q];
+
+            if constexpr (prm::is_n_enabled)
+              n_einstein_diffusion_coefficient =
+                this->template compute_einstein_diffusion_coefficient<
+                  Component::n>(scratch, q);
+
+            if constexpr (prm::is_p_enabled)
+              p_einstein_diffusion_coefficient =
+                this->template compute_einstein_diffusion_coefficient<
+                  Component::p>(scratch, q);
+
+            if constexpr (prm::is_V_enabled)
+              V_tau_stabilized =
+                this->template compute_stabilized_tau<Component::V>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::V>(V_tau),
+                  normal,
+                  q);
+            if constexpr (prm::is_n_enabled)
+              n_tau_stabilized =
+                this->template compute_stabilized_tau<Component::n>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::n>(n_tau),
+                  normal,
+                  q);
+            if constexpr (prm::is_p_enabled)
+              p_tau_stabilized =
+                this->template compute_stabilized_tau<Component::p>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::p>(p_tau),
+                  normal,
+                  q);
+
+            for (unsigned int i = 0; i < cell_dofs_per_face; ++i)
+              {
+                const unsigned int ii =
+                  scratch.fe_cell_support_on_face[face][i];
+                for (unsigned int j = 0; j < cell_dofs_per_face; ++j)
                   {
-                    scratch.permittivity.epsilon_operator_on_face(
-                      q, E[j], epsilon_times_E);
-                    scratch.cc_matrix(ii, jj) +=
-                      (epsilon_times_E * normal * z1[i] +
-                       V_tau_stabilized * V[j] * z1[i]) *
-                      JxW;
+                    const unsigned int jj =
+                      scratch.fe_cell_support_on_face[face][j];
+
+                    if constexpr (prm::is_V_enabled)
+                      {
+                        scratch.permittivity.epsilon_operator_on_face(
+                          q, E[j], epsilon_times_E);
+                        scratch.cc_matrix(ii, jj) +=
+                          (epsilon_times_E * normal * z1[i] +
+                           V_tau_stabilized * V[j] * z1[i]) *
+                          JxW;
+                      }
+                    if constexpr (prm::is_n_enabled)
+                      scratch.cc_matrix(ii, jj) +=
+                        ((n[j] * mu_n_times_previous_E +
+                          scratch.mu_n_face[q] * E[j] * n0[q]) *
+                           normal * z2[i] -
+                         n_einstein_diffusion_coefficient * Wn[j] * normal *
+                           z2[i] -
+                         n_tau_stabilized * n[j] * z2[i]) *
+                        JxW;
+                    if constexpr (prm::is_p_enabled)
+                      scratch.cc_matrix(ii, jj) +=
+                        (-(p[j] * mu_p_times_previous_E +
+                           scratch.mu_p_face[q] * E[j] * p0[q]) *
+                           normal * z3[i] -
+                         p_einstein_diffusion_coefficient * Wp[j] * normal *
+                           z3[i] -
+                         p_tau_stabilized * p[j] * z3[i]) *
+                        JxW;
                   }
-                if (prm::is_n_enabled)
-                  scratch.cc_matrix(ii, jj) +=
-                    ((n[j] * mu_n_times_previous_E +
-                      scratch.mu_n_face[q] * E[j] * n0[q]) *
-                       normal * z2[i] -
-                     n_einstein_diffusion_coefficient * Wn[j] * normal * z2[i] -
-                     n_tau_stabilized * n[j] * z2[i]) *
-                    JxW;
-                if (prm::is_p_enabled)
-                  scratch.cc_matrix(ii, jj) +=
-                    (-(p[j] * mu_p_times_previous_E +
-                       scratch.mu_p_face[q] * E[j] * p0[q]) *
-                       normal * z3[i] -
-                     p_einstein_diffusion_coefficient * Wp[j] * normal * z3[i] -
-                     p_tau_stabilized * p[j] * z3[i]) *
-                    JxW;
               }
           }
       }
@@ -1516,127 +1692,162 @@ namespace Ddhdg
     Ddhdg::NPSolver<dim, Permittivity>::ScratchData &scratch,
     const unsigned int                               face)
   {
-    const unsigned int n_face_q_points =
-      scratch.fe_face_values_cell.get_quadrature().size();
+    constexpr bool something_enabled =
+      prm::is_V_enabled || prm::is_n_enabled || prm::is_p_enabled;
 
-    const FEValuesExtractors::Scalar electric_potential =
-      this->get_component_extractor(Component::V);
-    const FEValuesExtractors::Scalar electron_density =
-      this->get_component_extractor(Component::n);
-    const FEValuesExtractors::Scalar hole_density =
-      this->get_component_extractor(Component::p);
+    if constexpr (!something_enabled)
+      (void)face;
 
-    auto &V0  = scratch.previous_c_face.at(Component::V);
-    auto &E0  = scratch.previous_d_face.at(Component::V);
-    auto &n0  = scratch.previous_c_face.at(Component::n);
-    auto &Wn0 = scratch.previous_d_face.at(Component::n);
-    auto &p0  = scratch.previous_c_face.at(Component::p);
-    auto &Wp0 = scratch.previous_d_face.at(Component::p);
-
-    const double V_tau = this->parameters->tau.at(Component::V);
-    const double n_tau = this->parameters->tau.at(Component::n);
-    const double p_tau = this->parameters->tau.at(Component::p);
-
-    double V_tau_stabilized = 0.;
-    double n_tau_stabilized = 0.;
-    double p_tau_stabilized = 0.;
-
-    dealii::Tensor<1, dim> epsilon_times_E;
-    double                 epsilon_times_E0_times_normal = 0.;
-
-    dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
-    dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
-
-    double Jn_flux = 0.;
-    double Jp_flux = 0.;
-
-    for (unsigned int q = 0; q < n_face_q_points; ++q)
+    if constexpr (something_enabled)
       {
-        const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
-        const Tensor<1, dim> normal =
-          scratch.fe_face_values_trace_restricted.normal_vector(q);
+        const unsigned int n_face_q_points =
+          scratch.fe_face_values_cell.get_quadrature().size();
 
-        if (prm::is_V_enabled)
+        const FEValuesExtractors::Scalar electric_potential =
+          this->get_component_extractor(Component::V);
+        const FEValuesExtractors::Scalar electron_density =
+          this->get_component_extractor(Component::n);
+        const FEValuesExtractors::Scalar hole_density =
+          this->get_component_extractor(Component::p);
+
+        if constexpr (!prm::is_V_enabled)
+          (void)electric_potential;
+        if constexpr (!prm::is_n_enabled)
+          (void)electron_density;
+        if constexpr (!prm::is_p_enabled)
+          (void)hole_density;
+
+        auto &V0  = scratch.previous_c_face.at(Component::V);
+        auto &E0  = scratch.previous_d_face.at(Component::V);
+        auto &n0  = scratch.previous_c_face.at(Component::n);
+        auto &Wn0 = scratch.previous_d_face.at(Component::n);
+        auto &p0  = scratch.previous_c_face.at(Component::p);
+        auto &Wp0 = scratch.previous_d_face.at(Component::p);
+
+        const double V_tau = this->parameters->tau.at(Component::V);
+        const double n_tau = this->parameters->tau.at(Component::n);
+        const double p_tau = this->parameters->tau.at(Component::p);
+
+        double V_tau_stabilized = 0.;
+        double n_tau_stabilized = 0.;
+        double p_tau_stabilized = 0.;
+
+        if constexpr (!prm::is_V_enabled)
           {
-            scratch.permittivity.epsilon_operator_on_face(q,
-                                                          E0[q],
-                                                          epsilon_times_E);
-            epsilon_times_E0_times_normal = epsilon_times_E * normal;
+            (void)V_tau;
+            (void)V_tau_stabilized;
+          }
+        if constexpr (!prm::is_n_enabled)
+          {
+            (void)n_tau;
+            (void)n_tau_stabilized;
+          }
+        if constexpr (!prm::is_p_enabled)
+          {
+            (void)p_tau;
+            (void)p_tau_stabilized;
           }
 
-        if (prm::is_n_enabled)
-          n_einstein_diffusion_coefficient =
-            this->template compute_einstein_diffusion_coefficient<Component::n>(
-              scratch, q);
+        dealii::Tensor<1, dim> epsilon_times_E;
+        double                 epsilon_times_E0_times_normal = 0.;
 
-        if (prm::is_p_enabled)
-          p_einstein_diffusion_coefficient =
-            this->template compute_einstein_diffusion_coefficient<Component::p>(
-              scratch, q);
+        dealii::Tensor<2, dim> n_einstein_diffusion_coefficient;
+        dealii::Tensor<2, dim> p_einstein_diffusion_coefficient;
 
-        if (prm::is_n_enabled)
-          Jn_flux = (n0[q] * (scratch.mu_n_face[q] * E0[q]) -
-                     (n_einstein_diffusion_coefficient * Wn0[q])) *
-                    normal;
+        double Jn_flux = 0.;
+        double Jp_flux = 0.;
 
-        if (prm::is_p_enabled)
-          Jp_flux = (-p0[q] * (scratch.mu_p_face[q] * E0[q]) -
-                     (p_einstein_diffusion_coefficient * Wp0[q])) *
-                    normal;
-
-        if (prm::is_V_enabled)
-          V_tau_stabilized =
-            this->template compute_stabilized_tau<Component::V>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::V>(V_tau),
-              normal,
-              q);
-        if (prm::is_n_enabled)
-          n_tau_stabilized =
-            this->template compute_stabilized_tau<Component::n>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::n>(n_tau),
-              normal,
-              q);
-        if (prm::is_p_enabled)
-          p_tau_stabilized =
-            this->template compute_stabilized_tau<Component::p>(
-              scratch,
-              this->adimensionalizer
-                ->template adimensionalize_tau<Component::p>(p_tau),
-              normal,
-              q);
-
-        for (unsigned int i = 0;
-             i < scratch.fe_cell_support_on_face[face].size();
-             ++i)
+        for (unsigned int q = 0; q < n_face_q_points; ++q)
           {
-            const unsigned int ii  = scratch.fe_cell_support_on_face[face][i];
-            const unsigned int iii = scratch.enabled_component_indices[ii];
+            const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
+            const Tensor<1, dim> normal =
+              scratch.fe_face_values_trace_restricted.normal_vector(q);
 
-            if (prm::is_V_enabled)
+            if constexpr (prm::is_V_enabled)
               {
-                const double z1 =
-                  scratch.fe_face_values_cell[electric_potential].value(iii, q);
-                scratch.cc_rhs[ii] += (-epsilon_times_E0_times_normal * z1 -
-                                       V_tau_stabilized * V0[q] * z1) *
-                                      JxW;
+                scratch.permittivity.epsilon_operator_on_face(q,
+                                                              E0[q],
+                                                              epsilon_times_E);
+                epsilon_times_E0_times_normal = epsilon_times_E * normal;
               }
-            if (prm::is_n_enabled)
+
+            if constexpr (prm::is_n_enabled)
+              n_einstein_diffusion_coefficient =
+                this->template compute_einstein_diffusion_coefficient<
+                  Component::n>(scratch, q);
+
+            if constexpr (prm::is_p_enabled)
+              p_einstein_diffusion_coefficient =
+                this->template compute_einstein_diffusion_coefficient<
+                  Component::p>(scratch, q);
+
+            if constexpr (prm::is_n_enabled)
+              Jn_flux = (n0[q] * (scratch.mu_n_face[q] * E0[q]) -
+                         (n_einstein_diffusion_coefficient * Wn0[q])) *
+                        normal;
+
+            if constexpr (prm::is_p_enabled)
+              Jp_flux = (-p0[q] * (scratch.mu_p_face[q] * E0[q]) -
+                         (p_einstein_diffusion_coefficient * Wp0[q])) *
+                        normal;
+
+            if constexpr (prm::is_V_enabled)
+              V_tau_stabilized =
+                this->template compute_stabilized_tau<Component::V>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::V>(V_tau),
+                  normal,
+                  q);
+            if constexpr (prm::is_n_enabled)
+              n_tau_stabilized =
+                this->template compute_stabilized_tau<Component::n>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::n>(n_tau),
+                  normal,
+                  q);
+            if constexpr (prm::is_p_enabled)
+              p_tau_stabilized =
+                this->template compute_stabilized_tau<Component::p>(
+                  scratch,
+                  this->adimensionalizer
+                    ->template adimensionalize_tau<Component::p>(p_tau),
+                  normal,
+                  q);
+
+            for (unsigned int i = 0;
+                 i < scratch.fe_cell_support_on_face[face].size();
+                 ++i)
               {
-                const double z2 =
-                  scratch.fe_face_values_cell[electron_density].value(iii, q);
-                scratch.cc_rhs[ii] +=
-                  (-Jn_flux * z2 + n_tau_stabilized * n0[q] * z2) * JxW;
-              }
-            if (prm::is_p_enabled)
-              {
-                const double z3 =
-                  scratch.fe_face_values_cell[hole_density].value(iii, q);
-                scratch.cc_rhs[ii] +=
-                  (-Jp_flux * z3 + p_tau_stabilized * p0[q] * z3) * JxW;
+                const unsigned int ii =
+                  scratch.fe_cell_support_on_face[face][i];
+                const unsigned int iii = scratch.enabled_component_indices[ii];
+
+                if constexpr (prm::is_V_enabled)
+                  {
+                    const double z1 =
+                      scratch.fe_face_values_cell[electric_potential].value(iii,
+                                                                            q);
+                    scratch.cc_rhs[ii] += (-epsilon_times_E0_times_normal * z1 -
+                                           V_tau_stabilized * V0[q] * z1) *
+                                          JxW;
+                  }
+                if constexpr (prm::is_n_enabled)
+                  {
+                    const double z2 =
+                      scratch.fe_face_values_cell[electron_density].value(iii,
+                                                                          q);
+                    scratch.cc_rhs[ii] +=
+                      (-Jn_flux * z2 + n_tau_stabilized * n0[q] * z2) * JxW;
+                  }
+                if constexpr (prm::is_p_enabled)
+                  {
+                    const double z3 =
+                      scratch.fe_face_values_cell[hole_density].value(iii, q);
+                    scratch.cc_rhs[ii] +=
+                      (-Jp_flux * z3 + p_tau_stabilized * p0[q] * z3) * JxW;
+                  }
               }
           }
       }

@@ -12,16 +12,21 @@ namespace Ddhdg
   class Adimensionalizer
   {
   public:
-    explicit Adimensionalizer(double scale_length          = 1,
-                              double temperature_magnitude = Constants::Q /
-                                                             Constants::KB,
-                              double doping_magnitude            = 1,
-                              double electron_mobility_magnitude = 1);
+    explicit constexpr Adimensionalizer(
+      double scale_length                = 1,
+      double temperature_magnitude       = Constants::Q / Constants::KB,
+      double doping_magnitude            = 1,
+      double electron_mobility_magnitude = 1)
+      : scale_length(scale_length)
+      , temperature_magnitude(temperature_magnitude)
+      , doping_magnitude(doping_magnitude)
+      , electron_mobility_magnitude(electron_mobility_magnitude)
+    {}
 
-    Adimensionalizer(const Adimensionalizer &adm) = default;
+    constexpr Adimensionalizer(const Adimensionalizer &adm) = default;
 
     template <Component c>
-    [[nodiscard]] inline double
+    [[nodiscard]] constexpr double
     get_component_rescaling_factor() const
     {
       switch (c)
@@ -41,7 +46,7 @@ namespace Ddhdg
     [[nodiscard]] double
     get_component_rescaling_factor(Component c) const;
 
-    [[nodiscard]] inline double
+    [[nodiscard]] constexpr double
     get_poisson_equation_density_constant() const
     {
       // Using Constants::Q, you do not rescale the Poisson equation
@@ -49,7 +54,7 @@ namespace Ddhdg
       return 1.;
     }
 
-    [[nodiscard]] inline double
+    [[nodiscard]] constexpr double
     get_current_equation_constant() const
     {
       // Using this value, you do not rescale the drift-diffusion equations
@@ -60,7 +65,7 @@ namespace Ddhdg
     }
 
     template <Component c>
-    [[nodiscard]] inline double
+    [[nodiscard]] constexpr double
     get_neumann_boundary_condition_rescaling_factor() const
     {
       switch (c)

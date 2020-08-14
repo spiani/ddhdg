@@ -753,9 +753,10 @@ namespace Ddhdg
   NPSolver<dim, Permittivity>::get_number_of_quadrature_points() const
   {
     Assert(this->initialized, dealii::ExcNotInitialized());
-    if (this->fe_cell->degree > this->fe_trace->degree)
-      return this->fe_cell->degree + 1;
-    return this->fe_trace->degree + 1;
+    const unsigned int     cell_degree  = this->fe_cell->degree;
+    const unsigned int     trace_degree = this->fe_trace->degree;
+    constexpr unsigned int K            = 1;
+    return (cell_degree > trace_degree) ? cell_degree + K : trace_degree + K;
   }
 
 

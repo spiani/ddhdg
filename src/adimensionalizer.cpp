@@ -2,18 +2,6 @@
 
 namespace Ddhdg
 {
-  Adimensionalizer::Adimensionalizer(double scale_length,
-                                     double temperature_magniture,
-                                     double doping_magnitude,
-                                     double electron_mobility_magnitude)
-    : scale_length(scale_length)
-    , temperature_magnitude(temperature_magniture)
-    , doping_magnitude(doping_magnitude)
-    , electron_mobility_magnitude(electron_mobility_magnitude)
-  {}
-
-
-
   double
   Adimensionalizer::get_component_rescaling_factor(const Component c) const
   {
