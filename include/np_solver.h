@@ -438,6 +438,13 @@ namespace Ddhdg
 
     dealii::Threads::Mutex inversion_mutex;
 
+    template <typename prm, bool has_boundary_conditions>
+    void
+    assemble_system_one_cell_internal(
+      const typename DoFHandler<dim>::active_cell_iterator &cell,
+      ScratchData &                                         scratch,
+      PerTaskData &                                         task_data);
+
     typedef void (
       NPSolver<dim, Permittivity>::*assemble_system_one_cell_pointer)(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
@@ -558,14 +565,13 @@ namespace Ddhdg
 
     template <typename prm>
     inline void
-    assemble_flux_conditions_wrapper(
-      Component                               c,
-      ScratchData &                           scratch,
-      PerTaskData &                           task_data,
-      const std::map<Ddhdg::Component, bool> &has_dirichlet_conditions,
-      const std::map<Ddhdg::Component, bool> &has_neumann_conditions,
-      types::boundary_id                      face_boundary_id,
-      unsigned int                            face);
+    assemble_flux_conditions_wrapper(Component    c,
+                                     ScratchData &scratch,
+                                     PerTaskData &task_data,
+                                     bool         has_dirichlet_conditions,
+                                     bool         has_neumann_conditions,
+                                     types::boundary_id face_boundary_id,
+                                     unsigned int       face);
 
     template <typename prm>
     inline void

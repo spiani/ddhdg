@@ -1981,42 +1981,39 @@ namespace Ddhdg
   template <typename prm>
   void
   NPSolver<dim, Permittivity>::assemble_flux_conditions_wrapper(
-    const Component                         c,
-    ScratchData &                           scratch,
-    PerTaskData &                           task_data,
-    const std::map<Ddhdg::Component, bool> &has_dirichlet_conditions,
-    const std::map<Ddhdg::Component, bool> &has_neumann_conditions,
-    const types::boundary_id                face_boundary_id,
-    const unsigned int                      face)
+    const Component          c,
+    ScratchData &            scratch,
+    PerTaskData &            task_data,
+    const bool               has_dirichlet_conditions,
+    const bool               has_neumann_conditions,
+    const types::boundary_id face_boundary_id,
+    const unsigned int       face)
   {
     switch (c)
       {
         case Component::V:
-          assemble_flux_conditions<prm, Component::V>(
-            scratch,
-            task_data,
-            has_dirichlet_conditions.at(Component::V),
-            has_neumann_conditions.at(Component::V),
-            face_boundary_id,
-            face);
+          assemble_flux_conditions<prm, Component::V>(scratch,
+                                                      task_data,
+                                                      has_dirichlet_conditions,
+                                                      has_neumann_conditions,
+                                                      face_boundary_id,
+                                                      face);
           break;
         case Component::n:
-          assemble_flux_conditions<prm, Component::n>(
-            scratch,
-            task_data,
-            has_dirichlet_conditions.at(Component::n),
-            has_neumann_conditions.at(Component::n),
-            face_boundary_id,
-            face);
+          assemble_flux_conditions<prm, Component::n>(scratch,
+                                                      task_data,
+                                                      has_dirichlet_conditions,
+                                                      has_neumann_conditions,
+                                                      face_boundary_id,
+                                                      face);
           break;
         case Component::p:
-          assemble_flux_conditions<prm, Component::p>(
-            scratch,
-            task_data,
-            has_dirichlet_conditions.at(Component::p),
-            has_neumann_conditions.at(Component::p),
-            face_boundary_id,
-            face);
+          assemble_flux_conditions<prm, Component::p>(scratch,
+                                                      task_data,
+                                                      has_dirichlet_conditions,
+                                                      has_neumann_conditions,
+                                                      face_boundary_id,
+                                                      face);
           break;
         default:
           Assert(false, InvalidComponent());
@@ -2027,9 +2024,9 @@ namespace Ddhdg
 
 
   template <int dim, class Permittivity>
-  template <typename prm>
+  template <typename prm, bool has_boundary_conditions>
   void
-  NPSolver<dim, Permittivity>::assemble_system_one_cell(
+  NPSolver<dim, Permittivity>::assemble_system_one_cell_internal(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
     ScratchData &                                         scratch,
     PerTaskData &                                         task_data)
@@ -2077,6 +2074,10 @@ namespace Ddhdg
         scratch.fe_face_values_trace.reinit(trace_cell, face);
         scratch.fe_face_values_trace_restricted.reinit(cell, face);
 
+        const types::boundary_id face_boundary_id =
+          cell->face(face)->boundary_id();
+
+
         // If we have already solved the system for the trace, copy the values
         // of the global solution in the scratch that stores the values for
         // this cell
@@ -2090,28 +2091,6 @@ namespace Ddhdg
                   this->update_trace, scratch.tr_c_solution_values[c]);
               }
           }
-
-        // Now I create some maps to store, for each component, if there is a
-        // boundary condition for it
-        const types::boundary_id face_boundary_id =
-          cell->face(face)->boundary_id();
-        std::map<Ddhdg::Component, bool> has_dirichlet_conditions;
-        std::map<Ddhdg::Component, bool> has_neumann_conditions;
-
-        // Now we populate the previous maps
-
-        for (const auto c : this->enabled_components)
-          {
-            has_dirichlet_conditions.insert(
-              {c,
-               this->problem->boundary_handler
-                 ->has_dirichlet_boundary_conditions(face_boundary_id, c)});
-            has_neumann_conditions.insert(
-              {c,
-               this->problem->boundary_handler->has_neumann_boundary_conditions(
-                 face_boundary_id, c)});
-          }
-
 
         // Before assembling the other parts of the matrix, we need the values
         // of epsilon, mu and D_n on the quadrature points of the current
@@ -2138,16 +2117,58 @@ namespace Ddhdg
         if (!task_data.trace_reconstruct)
           {
             this->assemble_ct_matrix<prm>(scratch, face);
-            for (const Component c : this->enabled_components)
+            if constexpr (!has_boundary_conditions)
               {
-                this->assemble_flux_conditions_wrapper<prm>(
-                  c,
-                  scratch,
-                  task_data,
-                  has_dirichlet_conditions,
-                  has_neumann_conditions,
-                  face_boundary_id,
-                  face);
+                if constexpr (prm::is_V_enabled)
+                  {
+                    this->assemble_tc_matrix<prm, Component::V>(scratch, face);
+                    this->add_tc_matrix_terms_to_tt_rhs<prm, Component::V>(
+                      scratch, task_data, face);
+                    this->assemble_tt_matrix<prm, Component::V>(scratch,
+                                                                task_data,
+                                                                face);
+                    this->add_tt_matrix_terms_to_tt_rhs<prm, Component::V>(
+                      scratch, task_data, face);
+                  }
+                if constexpr (prm::is_n_enabled)
+                  {
+                    this->assemble_tc_matrix<prm, Component::n>(scratch, face);
+                    this->add_tc_matrix_terms_to_tt_rhs<prm, Component::n>(
+                      scratch, task_data, face);
+                    this->assemble_tt_matrix<prm, Component::n>(scratch,
+                                                                task_data,
+                                                                face);
+                    this->add_tt_matrix_terms_to_tt_rhs<prm, Component::n>(
+                      scratch, task_data, face);
+                  }
+                if constexpr (prm::is_p_enabled)
+                  {
+                    this->assemble_tc_matrix<prm, Component::p>(scratch, face);
+                    this->add_tc_matrix_terms_to_tt_rhs<prm, Component::p>(
+                      scratch, task_data, face);
+                    this->assemble_tt_matrix<prm, Component::p>(scratch,
+                                                                task_data,
+                                                                face);
+                    this->add_tt_matrix_terms_to_tt_rhs<prm, Component::p>(
+                      scratch, task_data, face);
+                  }
+              }
+            else
+              {
+                for (const Component c : this->enabled_components)
+                  {
+                    this->assemble_flux_conditions_wrapper<prm>(
+                      c,
+                      scratch,
+                      task_data,
+                      this->problem->boundary_handler
+                        ->has_dirichlet_boundary_conditions(face_boundary_id,
+                                                            c),
+                      this->problem->boundary_handler
+                        ->has_neumann_boundary_conditions(face_boundary_id, c),
+                      face_boundary_id,
+                      face);
+                  }
               }
           }
 
@@ -2181,6 +2202,51 @@ namespace Ddhdg
             scratch.restricted_tmp_rhs[i];
         loc_cell->set_dof_values(scratch.tmp_rhs, update_cell);
       }
+  }
+
+
+  template <int dim, class Permittivity>
+  template <typename prm>
+  void
+  NPSolver<dim, Permittivity>::assemble_system_one_cell(
+    const typename DoFHandler<dim>::active_cell_iterator &cell,
+    ScratchData &                                         scratch,
+    PerTaskData &                                         task_data)
+  {
+    // First of all, we want to check if any boundary condition is set for this
+    // cell
+    bool has_boundary_conditions = false;
+    for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
+         ++face)
+      {
+        const types::boundary_id face_boundary_id =
+          cell->face(face)->boundary_id();
+
+        for (const auto c : this->enabled_components)
+          {
+            if (this->problem->boundary_handler
+                  ->has_dirichlet_boundary_conditions(face_boundary_id, c))
+              has_boundary_conditions = true;
+            if (this->problem->boundary_handler
+                  ->has_neumann_boundary_conditions(face_boundary_id, c))
+              has_boundary_conditions = true;
+            if (has_boundary_conditions)
+              break;
+          }
+        if (has_boundary_conditions)
+          break;
+      }
+    // Now we call the appropriate function. In this way, from now on when
+    // we are far from the boundary, we do not have to care about boundary
+    // conditions
+    if (has_boundary_conditions)
+      this->assemble_system_one_cell_internal<prm, true>(cell,
+                                                         scratch,
+                                                         task_data);
+    else
+      this->assemble_system_one_cell_internal<prm, false>(cell,
+                                                          scratch,
+                                                          task_data);
   }
 
 } // namespace Ddhdg
