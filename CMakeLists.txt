@@ -36,6 +36,13 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 option(WITH_PYTHON_INTERFACE "Compile also the python interface" OFF)
 option(WITH_TESTS "Compile the tests" ON)
 
+find_package(Boost REQUIRED COMPONENTS log log_setup)
+
+# Set a flag that indicates that the code will be linked
+# against a dynamically loaded library (this is the most
+# common case for linux)
+add_compile_definitions(BOOST_LOG_DYN_LINK)
+
 include_directories("include")
 add_subdirectory("src")
 

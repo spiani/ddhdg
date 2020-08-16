@@ -89,9 +89,15 @@ py::class_<Problem<DIM>>(m, "Problem")
 py::class_<NPSolver<DIM>>(m, "NPSolver")
   .def(py::init<const Problem<DIM> &,
                 const Ddhdg::NPSolverParameters &,
-                const Ddhdg::Adimensionalizer &>())
+                const Ddhdg::Adimensionalizer &,
+                bool>(),
+       py::arg("problem"),
+       py::arg("parameters"),
+       py::arg("adimensionalizer"),
+       py::arg("verbose") = true)
   .def_property_readonly("dim", [](const NPSolver<DIM> &) { return DIM; })
   .def_property_readonly("dimension", [](const NPSolver<DIM> &) { return DIM; })
+  .def("set_verbose", &NPSolver<DIM>::set_verbose, py::arg("verbose") = true)
   .def("refine_grid",
        &NPSolver<DIM>::refine_grid,
        py::arg("n")                 = 1,

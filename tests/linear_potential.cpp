@@ -11,7 +11,10 @@ class LinearPotentialTest
 public:
   LinearPotentialTest()
     : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousPermittivity<D::value>>(
-        get_problem()){};
+        get_problem())
+  {
+    this->log_standard_level = Ddhdg::Logging::severity_level::debug;
+  };
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<D::value>>

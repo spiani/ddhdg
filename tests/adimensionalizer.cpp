@@ -114,11 +114,11 @@ TEST(AdimensionalizerTest, scale_length)
     std::make_shared<Ddhdg::NPSolverParameters>();
 
   Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>> solver_m(
-    problem_in_m, parameters, adimensionalizer_for_m);
+    problem_in_m, parameters, adimensionalizer_for_m, false);
   Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>> solver_mm(
-    problem_in_mm, parameters, adimensionalizer_for_mm);
+    problem_in_mm, parameters, adimensionalizer_for_mm, false);
   Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>> solver_km(
-    problem_in_km, parameters, adimensionalizer_for_km);
+    problem_in_km, parameters, adimensionalizer_for_km, false);
 
   solver_m.set_enabled_components(true, false, false);
   solver_mm.set_enabled_components(true, false, false);

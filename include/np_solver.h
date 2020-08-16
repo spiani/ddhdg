@@ -68,7 +68,8 @@ namespace Ddhdg
                       std::shared_ptr<const NPSolverParameters> parameters =
                         std::make_shared<NPSolverParameters>(),
                       std::shared_ptr<const Adimensionalizer> adimensionalizer =
-                        std::make_shared<Adimensionalizer>());
+                        std::make_shared<Adimensionalizer>(),
+                      bool verbose = true);
 
     template <class OtherPermittivity>
     void

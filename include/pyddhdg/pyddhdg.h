@@ -213,7 +213,11 @@ namespace pyddhdg
   public:
     NPSolver(const Problem<dim> &             problem,
              const Ddhdg::NPSolverParameters &parameters,
-             const Ddhdg::Adimensionalizer &  adimensionalizer);
+             const Ddhdg::Adimensionalizer &  adimensionalizer,
+             bool                             verbose = true);
+
+    void
+    set_verbose(bool verbose);
 
     void
     copy_triangulation_from(NPSolver other);

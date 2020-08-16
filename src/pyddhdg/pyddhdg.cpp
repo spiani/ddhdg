@@ -354,13 +354,29 @@ namespace pyddhdg
   template <int dim>
   NPSolver<dim>::NPSolver(const Problem<dim> &             problem,
                           const Ddhdg::NPSolverParameters &parameters,
-                          const Ddhdg::Adimensionalizer &  adimensionalizer)
+                          const Ddhdg::Adimensionalizer &  adimensionalizer,
+                          const bool                       verbose)
     : ddhdg_solver(std::make_shared<
                    Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
         problem.get_ddhdg_problem(),
         std::make_shared<const Ddhdg::NPSolverParameters>(parameters),
-        std::make_shared<const Ddhdg::Adimensionalizer>(adimensionalizer)))
+        std::make_shared<const Ddhdg::Adimensionalizer>(adimensionalizer),
+        verbose))
   {}
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::set_verbose(const bool verbose)
+  {
+    if (verbose)
+      this->ddhdg_solver->log_standard_level =
+        Ddhdg::Logging::severity_level::info;
+    else
+      this->ddhdg_solver->log_standard_level =
+        Ddhdg::Logging::severity_level::debug;
+  }
 
 
 

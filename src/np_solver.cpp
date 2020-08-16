@@ -343,7 +343,8 @@ namespace Ddhdg
   NPSolver<dim, Permittivity>::NPSolver(
     const std::shared_ptr<const Problem<dim, Permittivity>> problem,
     const std::shared_ptr<const NPSolverParameters>         parameters,
-    const std::shared_ptr<const Adimensionalizer>           adimensionalizer)
+    const std::shared_ptr<const Adimensionalizer>           adimensionalizer,
+    const bool                                              verbose)
     : Solver<dim, Permittivity>(problem, adimensionalizer)
     , triangulation(copy_triangulation(problem->triangulation))
     , parameters(std::make_unique<NPSolverParameters>(*parameters))
@@ -359,7 +360,10 @@ namespace Ddhdg
         generate_fe_system(parameters->degree, true)))
     , dof_handler_trace(*triangulation)
     , dof_handler_trace_restricted(*triangulation)
-  {}
+  {
+    if (!verbose)
+      this->log_standard_level = Logging::severity_level::debug;
+  }
 
 
 
@@ -490,11 +494,22 @@ namespace Ddhdg
   void
   NPSolver<dim, Permittivity>::setup_overall_system()
   {
+    this->log(
+      "Building (or rebuilding) the vectors for storing the solution on the "
+      "cells and on the skeleton (for all the components)");
     this->dof_handler_cell.distribute_dofs(*(this->fe_cell));
     this->dof_handler_trace.distribute_dofs(*(this->fe_trace));
 
     const unsigned int cell_dofs  = this->dof_handler_cell.n_dofs();
     const unsigned int trace_dofs = this->dof_handler_trace.n_dofs();
+
+    this->log("Number of degrees of freedom for the solution on the cells (all "
+              "components): %s",
+              cell_dofs);
+    this->log(
+      "Number of degrees of freedom for the solution on the skeleton (all "
+      "components): %s",
+      trace_dofs);
 
     this->current_solution_trace.reinit(trace_dofs);
     this->update_trace.reinit(trace_dofs);
@@ -518,6 +533,8 @@ namespace Ddhdg
   void
   NPSolver<dim, Permittivity>::setup_restricted_trace_system()
   {
+    this->log("Building (or rebuilding) the vectors for storing the solution "
+              "on the skeleton restricted only on the active components");
     this->fe_trace_restricted.reset(
       generate_fe_system(restrict_degrees_on_enabled_component(), true));
 
@@ -527,8 +544,10 @@ namespace Ddhdg
     const unsigned int trace_restricted_dofs =
       this->dof_handler_trace_restricted.n_dofs();
 
-    std::cout << "   Number of degrees of freedom: " << trace_restricted_dofs
-              << std::endl;
+    this->log(
+      "Number of degrees of freedom for the solution on the skeleton for "
+      "the active components: %s",
+      trace_restricted_dofs);
 
     this->system_rhs.reinit(trace_restricted_dofs);
     this->system_solution.reinit(trace_restricted_dofs);
@@ -1197,9 +1216,8 @@ namespace Ddhdg
   void
   NPSolver<dim, Permittivity>::solve_linear_problem()
   {
-    std::cout << "    RHS norm   : " << this->system_rhs.l2_norm() << std::endl
-              << "    Matrix norm: " << this->system_matrix.linfty_norm()
-              << std::endl;
+    this->log("    RHS l2 norm       : %s", this->system_rhs.l2_norm());
+    this->log("    Matrix linfty norm: %s", this->system_matrix.linfty_norm());
 
     SolverControl solver_control(this->system_matrix.m() * 10,
                                  1e-10 * this->system_rhs.l2_norm());
@@ -1211,8 +1229,8 @@ namespace Ddhdg
                             this->system_solution,
                             this->system_rhs,
                             PreconditionIdentity());
-        std::cout << "    Number of GMRES iterations: "
-                  << solver_control.last_step() << std::endl;
+        this->log("    Number of GMRES iterations: %s",
+                  solver_control.last_step());
       }
     else
       {
@@ -1343,7 +1361,7 @@ namespace Ddhdg
          step <= max_number_of_iterations || max_number_of_iterations < 0;
          step++)
       {
-        std::cout << "Computing step number " << step << std::endl;
+        this->log("Computing step number %s", step);
 
         this->update_trace    = 0;
         this->update_cell     = 0;
@@ -1375,8 +1393,8 @@ namespace Ddhdg
         current_solution_norm =
           std::max(current_solution_cell_norm, current_solution_trace_norm);
 
-        std::cout << "Difference in norm compared to the previous step: "
-                  << update_norm << std::endl;
+        this->log("Difference in linfty norm compared to the previous step: %s",
+                  update_norm);
 
         this->update_trace *= 1.;
         this->update_cell *= 1.;
@@ -1384,20 +1402,19 @@ namespace Ddhdg
         this->current_solution_trace += this->update_trace;
         this->current_solution_cell += this->update_cell;
 
-        std::cout << "Current solution norm: " << current_solution_norm
-                  << std::endl;
+        this->log("Current solution norm: %s", current_solution_norm);
 
         if (update_norm < absolute_tol)
           {
-            std::cout << "Update is smaller than absolute tolerance. "
-                      << "CONVERGENCE REACHED" << std::endl;
+            this->log(
+              "Update is smaller than absolute tolerance. CONVERGENCE REACHED");
             convergence_reached = true;
             break;
           }
         if (update_norm < relative_tol * current_solution_norm)
           {
-            std::cout << "Update is smaller than relative tolerance. "
-                      << "CONVERGENCE REACHED" << std::endl;
+            this->log(
+              "Update is smaller than relative tolerance. CONVERGENCE REACHED");
             convergence_reached = true;
             break;
           }

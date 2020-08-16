@@ -12,7 +12,10 @@ class NeumannBCLinearTest
 public:
   NeumannBCLinearTest()
     : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousPermittivity<D::value>>(
-        get_problem()){};
+        get_problem())
+  {
+    this->log_standard_level = Ddhdg::Logging::severity_level::debug;
+  };
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<D::value>>
@@ -202,7 +205,10 @@ class NeumannBCTrigonometricTest
 {
 public:
   NeumannBCTrigonometricTest()
-    : Ddhdg::NPSolver<2, Ddhdg::HomogeneousPermittivity<2>>(get_problem()){};
+    : Ddhdg::NPSolver<2, Ddhdg::HomogeneousPermittivity<2>>(get_problem())
+  {
+    this->log_standard_level = Ddhdg::Logging::severity_level::debug;
+  };
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<2>>

@@ -19,6 +19,7 @@
 
 #include "adimensionalizer.h"
 #include "convergence_table.h"
+#include "logging_utilities.h"
 #include "nonlinear_iteration_results.h"
 #include "problem.h"
 
@@ -221,10 +222,36 @@ namespace Ddhdg
       unsigned int                                 n_cycles,
       unsigned int                                 initial_refinements) = 0;
 
+    inline void
+    log(const std::string &log_message) const
+    {
+      Logging::log(log_message, this->log_standard_level);
+    }
+
+    inline void
+    log(const std::string &log_message, const unsigned int n) const
+    {
+      Logging::log(log_message, n, this->log_standard_level);
+    }
+
+    inline void
+    log(const std::string &log_message, const int n) const
+    {
+      Logging::log(log_message, n, this->log_standard_level);
+    }
+
+    inline void
+    log(const std::string &log_message, const double n) const
+    {
+      Logging::log(log_message, n, this->log_standard_level);
+    }
+
     virtual ~Solver() = default;
 
     const std::shared_ptr<const Problem<dim, Permittivity>> problem;
     const std::shared_ptr<const Adimensionalizer>           adimensionalizer;
+
+    Logging::severity_level log_standard_level = Logging::severity_level::info;
 
   protected:
     template <Component c>

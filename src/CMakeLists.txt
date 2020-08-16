@@ -17,6 +17,8 @@ add_library(DDHDG SHARED
         thermodynamic_equilibrium.cpp
         )
 
+target_link_libraries(DDHDG ${Boost_LOG_LIBRARY} ${Boost_LOG_SETUP_LIBRARY})
+
 if (WITH_PYTHON_INTERFACE)
     add_subdirectory(pyddhdg)
 endif ()

@@ -15,7 +15,8 @@ public:
         std::make_shared<Ddhdg::Adimensionalizer>(1,
                                                   Ddhdg::Constants::Q /
                                                     Ddhdg::Constants::KB,
-                                                  1 / Ddhdg::Constants::Q)){};
+                                                  1 / Ddhdg::Constants::Q),
+        false){};
 
 protected:
   constexpr static const unsigned int dim = 2;
