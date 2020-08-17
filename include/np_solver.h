@@ -421,11 +421,7 @@ namespace Ddhdg
     void
     setup_restricted_trace_system();
 
-    void
-    assemble_system_multithreaded(
-      bool reconstruct_trace                 = false,
-      bool compute_thermodynamic_equilibrium = false);
-
+    template <bool multithreading>
     void
     assemble_system(bool reconstruct_trace                 = false,
                     bool compute_thermodynamic_equilibrium = false);

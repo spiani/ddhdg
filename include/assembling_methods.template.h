@@ -6,49 +6,7 @@
 namespace Ddhdg
 {
   template <int dim, class Permittivity>
-  void
-  NPSolver<dim, Permittivity>::assemble_system_multithreaded(
-    const bool trace_reconstruct,
-    const bool compute_thermodynamic_equilibrium)
-  {
-    Assert(this->initialized, dealii::ExcNotInitialized());
-
-    const QGauss<dim> quadrature_formula(
-      this->get_number_of_quadrature_points());
-    const QGauss<dim - 1> face_quadrature_formula(
-      this->get_number_of_quadrature_points());
-
-    const UpdateFlags flags_cell(update_values | update_gradients |
-                                 update_JxW_values | update_quadrature_points);
-    const UpdateFlags face_flags_cell(update_values);
-    const UpdateFlags flags_trace(update_values);
-    const UpdateFlags flags_trace_restricted(
-      update_values | update_normal_vectors | update_quadrature_points |
-      update_JxW_values);
-    PerTaskData task_data(this->fe_trace_restricted->dofs_per_cell,
-                          trace_reconstruct);
-    ScratchData scratch(*(this->fe_trace_restricted),
-                        *(this->fe_trace),
-                        *(this->fe_cell),
-                        quadrature_formula,
-                        face_quadrature_formula,
-                        flags_cell,
-                        face_flags_cell,
-                        flags_trace,
-                        flags_trace_restricted,
-                        *(this->problem->permittivity),
-                        this->enabled_components);
-    WorkStream::run(dof_handler_trace_restricted.begin_active(),
-                    dof_handler_trace_restricted.end(),
-                    *this,
-                    this->get_assemble_system_one_cell_function(
-                      compute_thermodynamic_equilibrium),
-                    &NPSolver<dim, Permittivity>::copy_local_to_global,
-                    scratch,
-                    task_data);
-  }
-
-  template <int dim, class Permittivity>
+  template <bool multithreading>
   void
   NPSolver<dim, Permittivity>::assemble_system(
     const bool trace_reconstruct,
@@ -83,12 +41,28 @@ namespace Ddhdg
                         *(this->problem->permittivity),
                         this->enabled_components);
 
-    for (const auto &cell :
-         this->dof_handler_trace_restricted.active_cell_iterators())
+    if constexpr (multithreading)
       {
-        (this->*get_assemble_system_one_cell_function(
-                  compute_thermodynamic_equilibrium))(cell, scratch, task_data);
-        copy_local_to_global(task_data);
+        WorkStream::run(dof_handler_trace_restricted.begin_active(),
+                        dof_handler_trace_restricted.end(),
+                        *this,
+                        this->get_assemble_system_one_cell_function(
+                          compute_thermodynamic_equilibrium),
+                        &NPSolver<dim, Permittivity>::copy_local_to_global,
+                        scratch,
+                        task_data);
+      }
+    else
+      {
+        for (const auto &cell :
+             this->dof_handler_trace_restricted.active_cell_iterators())
+          {
+            (this->*get_assemble_system_one_cell_function(
+                      compute_thermodynamic_equilibrium))(cell,
+                                                          scratch,
+                                                          task_data);
+            copy_local_to_global(task_data);
+          }
       }
   }
 

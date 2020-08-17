@@ -1370,19 +1370,17 @@ namespace Ddhdg
         this->system_solution = 0;
 
         if (parameters->multithreading)
-          assemble_system_multithreaded(false,
-                                        compute_thermodynamic_equilibrium);
+          assemble_system<true>(false, compute_thermodynamic_equilibrium);
         else
-          assemble_system(false, compute_thermodynamic_equilibrium);
+          assemble_system<false>(false, compute_thermodynamic_equilibrium);
 
         solve_linear_problem();
         this->copy_restricted_to_trace();
 
         if (parameters->multithreading)
-          assemble_system_multithreaded(true,
-                                        compute_thermodynamic_equilibrium);
+          assemble_system<true>(true, compute_thermodynamic_equilibrium);
         else
-          assemble_system(true, compute_thermodynamic_equilibrium);
+          assemble_system<false>(true, compute_thermodynamic_equilibrium);
 
         update_cell_norm           = this->update_cell.linfty_norm();
         current_solution_cell_norm = this->current_solution_cell.linfty_norm();
