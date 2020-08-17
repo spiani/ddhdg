@@ -356,7 +356,8 @@ namespace Ddhdg
     get_component_mask(Displacement displacement) const;
 
     dealii::ComponentMask
-    get_trace_component_mask(Component component) const;
+    get_trace_component_mask(Component component,
+                             bool      restricted = false) const;
 
     dealii::FEValuesExtractors::Scalar
     get_component_extractor(Component component) const;

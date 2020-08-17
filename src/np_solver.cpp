@@ -630,24 +630,18 @@ namespace Ddhdg
   template <int dim, class Permittivity>
   dealii::ComponentMask
   NPSolver<dim, Permittivity>::get_trace_component_mask(
-    const Component component) const
+    const Component component,
+    const bool      restricted) const
   {
-    dealii::ComponentMask mask(3, false);
-    switch (component)
-      {
-        case Component::V:
-          mask.set(0, true);
-          break;
-        case Component::n:
-          mask.set(1, true);
-          break;
-        case Component::p:
-          mask.set(2, true);
-          break;
-        default:
-          Assert(false, InvalidComponent());
-          break;
-      }
+    std::set<Component> components;
+    if (restricted)
+      components = this->enabled_components;
+    else
+      components = all_primary_components();
+
+    const unsigned int    c_index = get_component_index(component, components);
+    dealii::ComponentMask mask(components.size(), false);
+    mask.set(c_index, true);
     return mask;
   }
 
