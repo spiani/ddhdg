@@ -3,6 +3,7 @@
 #include <deal.II/numerics/vector_tools.h>
 
 #include "dof_types.h"
+#include "local_condenser.h"
 #include "solver.h"
 
 namespace pyddhdg
@@ -416,6 +417,10 @@ namespace Ddhdg
     project_component_private(
       std::shared_ptr<const dealii::Function<dim>> c_function);
 
+    unsigned int
+    get_dofs_constrained_by_dirichlet_conditions(
+      std::vector<bool> &lines) const;
+
     void
     setup_overall_system();
 
@@ -687,6 +692,10 @@ namespace Ddhdg
 
     bool initialized = false;
 
+    unsigned int                                 n_dirichlet_constraints;
+    std::vector<dealii::types::global_dof_index> constrained_dof_indices;
+    std::vector<double>                          constrained_dof_values;
+
     friend class TemplatizedParametersInterface<dim, Permittivity>;
 
     template <int d, class p, unsigned int parameter_mask>
@@ -701,12 +710,20 @@ namespace Ddhdg
     FullMatrix<double>                   tt_matrix;
     Vector<double>                       tt_vector;
     std::vector<types::global_dof_index> dof_indices;
-    bool                                 trace_reconstruct;
+
+    unsigned int                                 n_dirichlet_constrained_dofs;
+    std::vector<dealii::types::global_dof_index> dirichlet_trace_dof_indices;
+    std::vector<double>                          dirichlet_trace_dof_values;
+
+    bool trace_reconstruct;
 
     PerTaskData(const unsigned int n_dofs, const bool trace_reconstruct)
       : tt_matrix(n_dofs, n_dofs)
       , tt_vector(n_dofs)
       , dof_indices(n_dofs)
+      , n_dirichlet_constrained_dofs(0)
+      , dirichlet_trace_dof_indices(n_dofs)
+      , dirichlet_trace_dof_values(n_dofs)
       , trace_reconstruct(trace_reconstruct)
     {}
   };
@@ -755,6 +772,8 @@ namespace Ddhdg
     std::map<Component, std::vector<double>>         tr_c;
     std::map<Component, std::vector<double>>         tr_c_solution_values;
 
+    LocalCondenser<dim> local_condenser;
+
     static std::map<Component, std::vector<double>>
     initialize_double_map_on_components(unsigned int n);
 
@@ -778,17 +797,19 @@ namespace Ddhdg
     check_dofs_on_faces_for_trace(
       const FiniteElement<dim> &fe_trace_restricted);
 
-    ScratchData(const FiniteElement<dim> & fe_trace_restricted,
-                const FiniteElement<dim> & fe_trace,
-                const FiniteElement<dim> & fe_cell,
-                const QGauss<dim> &        quadrature_formula,
-                const QGauss<dim - 1> &    face_quadrature_formula,
-                UpdateFlags                cell_flags,
-                UpdateFlags                cell_face_flags,
-                UpdateFlags                trace_flags,
-                UpdateFlags                trace_restricted_flags,
-                const Permittivity &       permittivity,
-                const std::set<Component> &enabled_components);
+    ScratchData(
+      const FiniteElement<dim> & fe_trace_restricted,
+      const FiniteElement<dim> & fe_trace,
+      const FiniteElement<dim> & fe_cell,
+      const QGauss<dim> &        quadrature_formula,
+      const QGauss<dim - 1> &    face_quadrature_formula,
+      UpdateFlags                cell_flags,
+      UpdateFlags                cell_face_flags,
+      UpdateFlags                trace_flags,
+      UpdateFlags                trace_restricted_flags,
+      const Permittivity &       permittivity,
+      const std::set<Component> &enabled_components,
+      const std::map<Component, const dealii::FiniteElement<dim> &> &fe_map);
 
     ScratchData(const ScratchData &sd);
   };

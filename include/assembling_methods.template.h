@@ -27,6 +27,17 @@ namespace Ddhdg
       update_values | update_normal_vectors | update_quadrature_points |
       update_JxW_values);
 
+    // Create a map that associate to each active component on the trace its fe
+    std::map<Component, const dealii::FiniteElement<dim> &> component_to_fe;
+    for (const auto c : this->enabled_components)
+      {
+        const dealii::ComponentMask c_mask =
+          this->get_trace_component_mask(c, true);
+        const dealii::FiniteElement<dim> &fe =
+          this->fe_trace_restricted->get_sub_fe(c_mask);
+        component_to_fe.insert({c, fe});
+      }
+
     PerTaskData task_data(this->fe_trace_restricted->dofs_per_cell,
                           trace_reconstruct);
     ScratchData scratch(*(this->fe_trace_restricted),
@@ -39,7 +50,8 @@ namespace Ddhdg
                         flags_trace,
                         flags_trace_restricted,
                         *(this->problem->permittivity),
-                        this->enabled_components);
+                        this->enabled_components,
+                        component_to_fe);
 
     if constexpr (multithreading)
       {
@@ -1415,23 +1427,63 @@ namespace Ddhdg
     if constexpr (c != Component::V && c != Component::n && c != Component::p)
       Assert(false, InvalidComponent());
 
-    auto &tr_c  = scratch.tr_c.at(c);
-    auto &tr_c0 = scratch.previous_tr_c_face.at(c);
+    // This used to be needed to store the Dirichlet boundary conditions; now we
+    // do not have that problem anymore because we have the local_condenser
+    (void)task_data;
 
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
-    const unsigned int trace_dofs_per_face =
-      scratch.fe_trace_support_on_face[face].size();
+
+    auto &tr_c0 = scratch.previous_tr_c_face.at(c);
 
     const double rescaling_factor =
       this->adimensionalizer->template get_component_rescaling_factor<c>();
 
+    // We want now to compute the L2 projection of the Dirichlet boundary
+    // condition on the current face
+    const unsigned int c_index = scratch.local_condenser.get_component_index(c);
+    const auto c_extractor     = this->get_trace_component_extractor(c, true);
+
+    const auto &dofs_on_this_face = scratch.fe_trace_support_on_face[face];
+
+    auto &proj_matrix  = scratch.local_condenser.proj_matrix[c_index];
+    auto &proj_rhs     = scratch.local_condenser.proj_rhs[c_index];
+    auto &current_dofs = scratch.local_condenser.current_dofs[c_index];
+    auto &bf_values    = scratch.local_condenser.bf_values[c_index];
+
+    // Now I clean the memory for the projection matrix and for the rhs
+    proj_matrix = 0;
+    proj_rhs    = 0;
+
+    // Copy the index of the dofs that are constrained on the current face
+    // and count their number
+    unsigned int constrained_dofs = 0;
+    for (unsigned int i = 0; i < dofs_on_this_face.size(); ++i)
+      {
+        const unsigned int dof_index = dofs_on_this_face[i];
+        if (this->fe_trace_restricted->system_to_block_index(i).first ==
+            c_index)
+          {
+            current_dofs[constrained_dofs] = dof_index;
+            ++constrained_dofs;
+          }
+      }
+
+    // Let us assemble the projection matrix and its rhs
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
-        copy_fe_values_for_trace(scratch, face, q);
+        // First of all we prepare a vector with the values of the base
+        // functions
+        for (unsigned int i = 0; i < constrained_dofs; i++)
+          {
+            const unsigned int dof_index = current_dofs[i];
+            const double       bf_value =
+              scratch.fe_face_values_trace_restricted[c_extractor].value(
+                dof_index, q);
+            bf_values[i] = bf_value;
+          }
 
-        const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
-
+        const double     JxW = scratch.fe_face_values_trace_restricted.JxW(q);
         const Point<dim> quadrature_point =
           scratch.fe_face_values_trace_restricted.quadrature_point(q);
         double dbc_value =
@@ -1439,19 +1491,29 @@ namespace Ddhdg
             0 :
             dbc.evaluate(quadrature_point) / rescaling_factor - tr_c0[q];
 
-        for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
+        for (unsigned int i = 0; i < constrained_dofs; i++)
           {
-            const unsigned int ii = scratch.fe_trace_support_on_face[face][i];
-            for (unsigned int j = 0; j < trace_dofs_per_face; ++j)
-              {
-                const unsigned int jj =
-                  scratch.fe_trace_support_on_face[face][j];
-                task_data.tt_matrix(ii, jj) += tr_c[i] * tr_c[j] * JxW;
-              }
-
-            task_data.tt_vector[ii] += tr_c[i] * dbc_value * JxW;
+            for (unsigned int j = 0; j < constrained_dofs; j++)
+              proj_matrix(i, j) += bf_values[i] * bf_values[j] * JxW;
+            proj_rhs[i] += bf_values[i] * dbc_value * JxW;
           }
       }
+
+    // Solve the linear system. The solution will be stored in proj_rhs
+    proj_matrix.set_property(dealii::LAPACKSupport::Property::symmetric);
+    proj_matrix.compute_cholesky_factorization();
+    proj_matrix.solve(proj_rhs);
+
+    // Store the solution in the local_condenser
+    const unsigned int n_cell_constrained_dofs =
+      scratch.local_condenser.n_cell_constrained_dofs;
+    for (unsigned int i = 0; i < constrained_dofs; ++i)
+      {
+        const unsigned int j = n_cell_constrained_dofs + i;
+        scratch.local_condenser.cell_constrained_dofs[j]   = current_dofs[i];
+        scratch.local_condenser.constrained_dofs_values[j] = proj_rhs[i];
+      }
+    scratch.local_condenser.n_cell_constrained_dofs += constrained_dofs;
   }
 
 
@@ -2021,7 +2083,17 @@ namespace Ddhdg
         scratch.tc_matrix   = 0;
         task_data.tt_matrix = 0;
         task_data.tt_vector = 0;
+
+        task_data.n_dirichlet_constrained_dofs = 0;
+
+        // Fix also the values of the dof_indices vector
+        cell->get_dof_indices(task_data.dof_indices);
       }
+
+    // Set also that there are no constrained dofs (by the Dirichlet BC) on this
+    // cell (we will increase that number later, if needed)
+    scratch.local_condenser.n_cell_constrained_dofs = 0;
+
     scratch.fe_values_cell.reinit(loc_cell);
 
     // We use the following function to copy every value that we need from the
@@ -2039,7 +2111,7 @@ namespace Ddhdg
     // the right hand term
     this->add_cell_products_to_cc_rhs<prm>(scratch);
 
-    // Now we must perform the L2 product on the boundary, i.e. for each face
+    // Now we must perform the L2 products on the boundary, i.e. for each face
     // of the cell
     for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
          ++face)
@@ -2047,10 +2119,6 @@ namespace Ddhdg
         scratch.fe_face_values_cell.reinit(loc_cell, face);
         scratch.fe_face_values_trace.reinit(trace_cell, face);
         scratch.fe_face_values_trace_restricted.reinit(cell, face);
-
-        const types::boundary_id face_boundary_id =
-          cell->face(face)->boundary_id();
-
 
         // If we have already solved the system for the trace, copy the values
         // of the global solution in the scratch that stores the values for
@@ -2129,17 +2197,24 @@ namespace Ddhdg
               }
             else
               {
+                const types::boundary_id face_boundary_id =
+                  cell->face(face)->boundary_id();
                 for (const Component c : this->enabled_components)
                   {
+                    const bool has_dirichlet_bc =
+                      this->problem->boundary_handler
+                        ->has_dirichlet_boundary_conditions(face_boundary_id,
+                                                            c);
+                    const bool has_neumann_bc =
+                      this->problem->boundary_handler
+                        ->has_neumann_boundary_conditions(face_boundary_id, c);
+
                     this->assemble_flux_conditions_wrapper<prm>(
                       c,
                       scratch,
                       task_data,
-                      this->problem->boundary_handler
-                        ->has_dirichlet_boundary_conditions(face_boundary_id,
-                                                            c),
-                      this->problem->boundary_handler
-                        ->has_neumann_boundary_conditions(face_boundary_id, c),
+                      has_dirichlet_bc,
+                      has_neumann_bc,
                       face_boundary_id,
                       face);
                   }
@@ -2155,6 +2230,11 @@ namespace Ddhdg
           this->add_trace_terms_to_cc_rhs<prm>(scratch, face);
       }
 
+    if constexpr (has_boundary_conditions)
+      if (!task_data.trace_reconstruct)
+        scratch.local_condenser.condense_ct_matrix(scratch.ct_matrix,
+                                                   scratch.cc_rhs);
+
     inversion_mutex.lock();
     scratch.cc_matrix.gauss_jordan();
     inversion_mutex.unlock();
@@ -2164,7 +2244,24 @@ namespace Ddhdg
         scratch.tc_matrix.mmult(scratch.tmp_matrix, scratch.cc_matrix);
         scratch.tmp_matrix.vmult_add(task_data.tt_vector, scratch.cc_rhs);
         scratch.tmp_matrix.mmult(task_data.tt_matrix, scratch.ct_matrix, true);
-        cell->get_dof_indices(task_data.dof_indices);
+
+        // We need to copy the Dirichlet boundary conditions in the task object
+        if constexpr (has_boundary_conditions)
+          {
+            const unsigned int n_constrained_dofs =
+              scratch.local_condenser.n_cell_constrained_dofs;
+            for (unsigned int i = 0; i < n_constrained_dofs; ++i)
+              {
+                const unsigned int dof_index =
+                  scratch.local_condenser.cell_constrained_dofs[i];
+                const dealii::types::global_dof_index global_dof_index =
+                  task_data.dof_indices[dof_index];
+                task_data.dirichlet_trace_dof_indices[i] = global_dof_index;
+                task_data.dirichlet_trace_dof_values[i] =
+                  scratch.local_condenser.constrained_dofs_values[i];
+                task_data.n_dirichlet_constrained_dofs = n_constrained_dofs;
+              }
+          }
       }
     else
       {

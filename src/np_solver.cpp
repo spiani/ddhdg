@@ -120,7 +120,8 @@ namespace Ddhdg
     const UpdateFlags          trace_flags,
     const UpdateFlags          trace_restricted_flags,
     const Permittivity &       permittivity,
-    const std::set<Component> &enabled_components)
+    const std::set<Component> &enabled_components,
+    const std::map<Component, const dealii::FiniteElement<dim> &> &fe_map)
     : fe_values_cell(fe_cell, quadrature_formula, cell_flags)
     , fe_face_values_cell(fe_cell, face_quadrature_formula, cell_face_flags)
     , fe_face_values_trace(fe_trace, face_quadrature_formula, trace_flags)
@@ -173,6 +174,7 @@ namespace Ddhdg
         initialize_double_map_on_components(fe_trace_restricted.dofs_per_cell))
     , tr_c_solution_values(
         initialize_double_map_on_components(face_quadrature_formula.size()))
+    , local_condenser(fe_map)
   {}
 
 
@@ -301,6 +303,7 @@ namespace Ddhdg
     , c_grad(sd.c_grad)
     , tr_c(sd.tr_c)
     , tr_c_solution_values(sd.tr_c_solution_values)
+    , local_condenser(sd.local_condenser)
   {}
 
 
@@ -360,6 +363,7 @@ namespace Ddhdg
         generate_fe_system(parameters->degree, true)))
     , dof_handler_trace(*triangulation)
     , dof_handler_trace_restricted(*triangulation)
+    , n_dirichlet_constraints(0)
   {
     if (!verbose)
       this->log_standard_level = Logging::severity_level::debug;
@@ -491,6 +495,75 @@ namespace Ddhdg
 
 
   template <int dim, class Permittivity>
+  unsigned int
+  NPSolver<dim, Permittivity>::get_dofs_constrained_by_dirichlet_conditions(
+    std::vector<bool> &lines) const
+  {
+    Assert(lines.size() == this->dof_handler_trace_restricted.n_dofs(),
+           ExcMessage("Wrong size of lines vector"));
+
+    const unsigned int dofs_per_cell = this->fe_trace_restricted->dofs_per_cell;
+    const unsigned int faces_per_cell =
+      dealii::GeometryInfo<dim>::faces_per_cell;
+
+    std::map<Component, std::vector<std::vector<unsigned int>>> dofs_on_face;
+
+    for (Component c : this->enabled_components)
+      {
+        const unsigned int c_index =
+          get_component_index(c, this->enabled_components);
+        std::vector<std::vector<unsigned int>> c_dofs_vector(faces_per_cell);
+        for (unsigned int face = 0; face < faces_per_cell; ++face)
+          {
+            for (unsigned int i = 0; i < dofs_per_cell; ++i)
+              {
+                const unsigned int current_index =
+                  this->fe_trace_restricted->system_to_block_index(i).first;
+                if (current_index == c_index &&
+                    this->fe_trace_restricted->has_support_on_face(i, face))
+                  c_dofs_vector[face].push_back(i);
+              }
+          }
+        dofs_on_face.insert({c, c_dofs_vector});
+      }
+
+    bool                                 copied_global_dofs;
+    std::vector<types::global_dof_index> dof_indices(dofs_per_cell);
+    unsigned int                         n_constrained_dofs = 0;
+
+    for (const auto &cell :
+         this->dof_handler_trace_restricted.active_cell_iterators())
+      {
+        copied_global_dofs = false;
+        for (Component c : this->enabled_components)
+          for (unsigned int face = 0; face < faces_per_cell; ++face)
+            {
+              const types::boundary_id face_boundary_id =
+                cell->face(face)->boundary_id();
+              const bool has_dirichlet_boundary_conditions =
+                this->problem->boundary_handler
+                  ->has_dirichlet_boundary_conditions(face_boundary_id, c);
+
+              if (has_dirichlet_boundary_conditions)
+                {
+                  if (!copied_global_dofs)
+                    {
+                      cell->get_dof_indices(dof_indices);
+                      copied_global_dofs = true;
+                    }
+                  const auto &c_face_dofs_on_face = dofs_on_face.at(c)[face];
+                  for (unsigned int i : c_face_dofs_on_face)
+                    lines[dof_indices[i]] = true;
+                  n_constrained_dofs += c_face_dofs_on_face.size();
+                }
+            }
+      }
+    return n_constrained_dofs;
+  }
+
+
+
+  template <int dim, class Permittivity>
   void
   NPSolver<dim, Permittivity>::setup_overall_system()
   {
@@ -549,12 +622,26 @@ namespace Ddhdg
       "the active components: %s",
       trace_restricted_dofs);
 
+    std::vector<bool>  dirichlet_constraints(trace_restricted_dofs, false);
+    const unsigned int n_dirichlet_constraints =
+      this->get_dofs_constrained_by_dirichlet_conditions(dirichlet_constraints);
+
+    this->n_dirichlet_constraints = n_dirichlet_constraints;
+    this->constrained_dof_indices.resize(n_dirichlet_constraints);
+    this->constrained_dof_values.resize(n_dirichlet_constraints);
+
+    this->log(
+      "%s degree of freedom (on the skeleton) are constrained by Dirichlet "
+      "boundary conditions",
+      n_dirichlet_constraints);
+
     this->system_rhs.reinit(trace_restricted_dofs);
     this->system_solution.reinit(trace_restricted_dofs);
 
     this->constraints.clear();
     DoFTools::make_hanging_node_constraints(this->dof_handler_trace_restricted,
                                             this->constraints);
+    this->constraints.add_lines(dirichlet_constraints);
     this->constraints.close();
 
     {
@@ -1197,11 +1284,25 @@ namespace Ddhdg
   NPSolver<dim, Permittivity>::copy_local_to_global(const PerTaskData &data)
   {
     if (!data.trace_reconstruct)
-      this->constraints.distribute_local_to_global(data.tt_matrix,
-                                                   data.tt_vector,
-                                                   data.dof_indices,
-                                                   this->system_matrix,
-                                                   this->system_rhs);
+      {
+        this->constraints.distribute_local_to_global(data.tt_matrix,
+                                                     data.tt_vector,
+                                                     data.dof_indices,
+                                                     this->system_matrix,
+                                                     this->system_rhs);
+
+        // We copy also the values for the node with the dirichlet boundary
+        // conditions
+        const unsigned int constrained_dofs = data.n_dirichlet_constrained_dofs;
+        for (unsigned int i = 0; i < constrained_dofs; ++i)
+          {
+            this->constrained_dof_indices[this->n_dirichlet_constraints + i] =
+              data.dirichlet_trace_dof_indices[i];
+            this->constrained_dof_values[this->n_dirichlet_constraints + i] =
+              data.dirichlet_trace_dof_values[i];
+          }
+        this->n_dirichlet_constraints += constrained_dofs;
+      }
   }
 
 
@@ -1351,24 +1452,44 @@ namespace Ddhdg
     double update_norm = 0.;
     double current_solution_norm;
 
+    unsigned int dirichlet_constrains_check = this->n_dirichlet_constraints;
+    // This variable is used only inside Assert expressions; this prevents the
+    // "unused variable" warnings
+    (void)dirichlet_constrains_check;
+
     for (step = 1;
          step <= max_number_of_iterations || max_number_of_iterations < 0;
          step++)
       {
         this->log("Computing step number %s", step);
 
-        this->update_trace    = 0;
-        this->update_cell     = 0;
-        this->system_matrix   = 0;
-        this->system_rhs      = 0;
-        this->system_solution = 0;
+        this->update_trace            = 0;
+        this->update_cell             = 0;
+        this->system_matrix           = 0;
+        this->system_rhs              = 0;
+        this->system_solution         = 0;
+        this->n_dirichlet_constraints = 0;
 
         if (parameters->multithreading)
           assemble_system<true>(false, compute_thermodynamic_equilibrium);
         else
           assemble_system<false>(false, compute_thermodynamic_equilibrium);
 
+        Assert(
+          this->n_dirichlet_constraints == dirichlet_constrains_check,
+          ExcMessage(
+            "Wrong number of dofs constrained by the Dirichlet boundary conditions"));
+
         solve_linear_problem();
+
+        // Copy Dirichlet boundary conditions
+        for (unsigned int i = 0; i < this->n_dirichlet_constraints; ++i)
+          {
+            const dealii::types::global_dof_index dof_index =
+              this->constrained_dof_indices[i];
+            this->system_solution[dof_index] = this->constrained_dof_values[i];
+          }
+
         this->copy_restricted_to_trace();
 
         if (parameters->multithreading)

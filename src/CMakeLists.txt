@@ -8,6 +8,7 @@ add_library(DDHDG SHARED
         electron_mobility.cpp
         error_estimation.cpp
         function_tools.cpp
+        local_condenser.cpp
         nonlinear_iteration_results.cpp
         np_solver.cpp
         problem.cpp
