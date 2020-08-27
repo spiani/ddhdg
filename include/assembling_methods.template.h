@@ -2235,9 +2235,15 @@ namespace Ddhdg
         scratch.local_condenser.condense_ct_matrix(scratch.ct_matrix,
                                                    scratch.cc_rhs);
 
+#ifdef WITH_MUTEX
     inversion_mutex.lock();
+#endif
+
     scratch.cc_matrix.gauss_jordan();
+
+#ifdef WITH_MUTEX
     inversion_mutex.unlock();
+#endif
 
     if (!task_data.trace_reconstruct)
       {

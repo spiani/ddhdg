@@ -438,7 +438,9 @@ namespace Ddhdg
     struct PerTaskData;
     struct ScratchData;
 
+#ifdef WITH_MUTEX
     dealii::Threads::Mutex inversion_mutex;
+#endif
 
     template <typename prm, bool has_boundary_conditions>
     void

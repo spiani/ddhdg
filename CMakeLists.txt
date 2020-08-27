@@ -35,6 +35,7 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 
 option(WITH_PYTHON_INTERFACE "Compile also the python interface" OFF)
 option(WITH_TESTS "Compile the tests" ON)
+option(SERIALIZE_OPENBLAS "Serialize matrix inversion (use with non-threadsafe openblas)" ON)
 
 find_package(Boost REQUIRED COMPONENTS log log_setup)
 
@@ -42,6 +43,10 @@ find_package(Boost REQUIRED COMPONENTS log log_setup)
 # against a dynamically loaded library (this is the most
 # common case for linux)
 add_compile_definitions(BOOST_LOG_DYN_LINK)
+
+if (SERIALIZE_OPENBLAS)
+    add_compile_definitions(WITH_MUTEX)
+endif ()
 
 include_directories("include")
 add_subdirectory("src")
