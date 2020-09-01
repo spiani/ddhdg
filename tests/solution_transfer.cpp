@@ -5,12 +5,12 @@
 
 template <typename D>
 class SolutionTransferTest
-  : public Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousPermittivity<D::value>>,
+  : public Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>,
     public ::testing::Test
 {
 public:
   SolutionTransferTest()
-    : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousPermittivity<D::value>>(
+    : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>(
         get_problem(),
         std::make_shared<Ddhdg::NPSolverParameters>(),
         std::make_shared<Ddhdg::Adimensionalizer>(1,
@@ -103,15 +103,13 @@ protected:
     return boundary_handler;
   }
 
-  static std::shared_ptr<
-    Ddhdg::Problem<D::value, Ddhdg::HomogeneousPermittivity<D::value>>>
+  static std::shared_ptr<Ddhdg::HomogeneousProblem<D::value>>
   get_problem()
   {
     const unsigned int dim = D::value;
 
-    std::shared_ptr<Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
-      problem = std::make_shared<
-        Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
+    std::shared_ptr<Ddhdg::HomogeneousProblem<dim>> problem =
+      std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),

@@ -10,14 +10,18 @@
 
 namespace Ddhdg
 {
-  template <int dim, class Permittivity>
+  template <int dim, class Permittivity, class NMobility, class PMobility>
   struct Problem
   {
+    using PermittivityClass = Permittivity;
+    using NMobilityClass    = NMobility;
+    using PMobilityClass    = PMobility;
+
     Problem(
       std::shared_ptr<const dealii::Triangulation<dim>>    triangulation,
       std::shared_ptr<const Permittivity>                  permittivity,
-      std::shared_ptr<const ElectronMobility<dim>>         n_electron_mobility,
-      std::shared_ptr<const ElectronMobility<dim>>         p_electron_mobility,
+      std::shared_ptr<const NMobility>                     n_mobility,
+      std::shared_ptr<const PMobility>                     p_mobility,
       std::shared_ptr<const RecombinationTerm<dim>>        recombination_term,
       std::shared_ptr<const dealii::Function<dim>>         temperature,
       std::shared_ptr<const dealii::Function<dim>>         doping,
@@ -30,8 +34,8 @@ namespace Ddhdg
 
     const std::shared_ptr<const dealii::Triangulation<dim>> triangulation;
     const std::shared_ptr<const Permittivity>               permittivity;
-    const std::shared_ptr<const ElectronMobility<dim>>      n_electron_mobility;
-    const std::shared_ptr<const ElectronMobility<dim>>      p_electron_mobility;
+    const std::shared_ptr<const NMobility>                  n_mobility;
+    const std::shared_ptr<const PMobility>                  p_mobility;
     const std::shared_ptr<const RecombinationTerm<dim>>     recombination_term;
     const std::shared_ptr<const dealii::Function<dim>>      temperature;
     const std::shared_ptr<const dealii::Function<dim>>      doping;
@@ -40,5 +44,11 @@ namespace Ddhdg
     const std::map<Component, double> band_density;
     const std::map<Component, double> band_edge_energy;
   };
+
+  template <int dim>
+  using HomogeneousProblem = Problem<dim,
+                                     HomogeneousPermittivity<dim>,
+                                     HomogeneousElectronMobility<dim>,
+                                     HomogeneousElectronMobility<dim>>;
 
 } // namespace Ddhdg

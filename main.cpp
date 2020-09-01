@@ -428,8 +428,9 @@ main(int argc, char **argv)
       std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.);
 
   // The same for the electron mobility
-  const std::shared_ptr<const Ddhdg::ElectronMobility<dim>> electron_mobility =
-    std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.);
+  const std::shared_ptr<const Ddhdg::HomogeneousElectronMobility<dim>>
+    electron_mobility =
+      std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.);
 
   // Set the recombination terms
   const std::shared_ptr<const Ddhdg::RecombinationTerm<dim>>
@@ -440,10 +441,8 @@ main(int argc, char **argv)
         prm.recombination_term_p_coefficient);
 
   // Create an object that represent the problem we are going to solve
-  std::shared_ptr<
-    const Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
-    problem = std::make_shared<
-      const Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
+  std::shared_ptr<const Ddhdg::HomogeneousProblem<dim>> problem =
+    std::make_shared<const Ddhdg::HomogeneousProblem<dim>>(
       triangulation,
       permittivity,
       electron_mobility,
@@ -477,8 +476,9 @@ main(int argc, char **argv)
       prm.length_scale, prm.doping_magnitude, prm.electron_mobility_magnitude);
 
   // Create a solver for the problem
-  Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>> solver(
-    problem, parameters, adimensionalizer);
+  Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>> solver(problem,
+                                                              parameters,
+                                                              adimensionalizer);
 
   std::cout << std::endl
             << std::endl

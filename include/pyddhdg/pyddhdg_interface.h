@@ -2,11 +2,7 @@
 py::class_<HomogeneousPermittivity<DIM>>(m, "HomogeneousPermittivity")
   .def(py::init<const double &>());
 
-py::class_<ElectronMobility<DIM>>(m, "ElectronMobility");
-
-py::class_<HomogeneousElectronMobility<DIM>, ElectronMobility<DIM>>(
-  m,
-  "HomogeneousElectronMobility")
+py::class_<HomogeneousElectronMobility<DIM>>(m, "HomogeneousElectronMobility")
   .def(py::init<const double &>());
 
 py::class_<DealIIFunction<DIM>>(m, "DealIIFunction").def(py::init<double>());
@@ -62,8 +58,8 @@ py::class_<Problem<DIM>>(m, "Problem")
   .def(py::init<double,
                 double,
                 HomogeneousPermittivity<DIM> &,
-                ElectronMobility<DIM> &,
-                ElectronMobility<DIM> &,
+                HomogeneousElectronMobility<DIM> &,
+                HomogeneousElectronMobility<DIM> &,
                 RecombinationTerm<DIM> &,
                 DealIIFunction<DIM> &,
                 DealIIFunction<DIM> &,

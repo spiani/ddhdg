@@ -16,7 +16,7 @@ namespace Ddhdg
 {
   using namespace dealii;
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   class TemplatizedParametersInterface;
 
   template <int dim, class Permittivity, unsigned int parameter_mask>
@@ -58,23 +58,27 @@ namespace Ddhdg
     bool                              multithreading;
   };
 
-  template <int dim, class Permittivity>
-  class NPSolver : public Solver<dim, Permittivity>
+  template <int dim, typename ProblemType>
+  class NPSolver : public Solver<dim, ProblemType>
   {
   public:
-    using Solver<dim, Permittivity>::output_results;
-    using Solver<dim, Permittivity>::compute_thermodynamic_equilibrium;
+    using Solver<dim, ProblemType>::output_results;
+    using Solver<dim, ProblemType>::compute_thermodynamic_equilibrium;
 
-    explicit NPSolver(std::shared_ptr<const Problem<dim, Permittivity>> problem,
+    using Permittivity = typename ProblemType::PermittivityClass;
+    using NMobility    = typename ProblemType::NMobilityClass;
+    using PMobility    = typename ProblemType::PMobilityClass;
+
+    explicit NPSolver(std::shared_ptr<const ProblemType>        problem,
                       std::shared_ptr<const NPSolverParameters> parameters =
                         std::make_shared<NPSolverParameters>(),
                       std::shared_ptr<const Adimensionalizer> adimensionalizer =
                         std::make_shared<Adimensionalizer>(),
                       bool verbose = true);
 
-    template <class OtherPermittivity>
+    template <class OtherProblemType>
     void
-    copy_triangulation_from(const NPSolver<dim, OtherPermittivity> &other)
+    copy_triangulation_from(const NPSolver<dim, OtherProblemType> &other)
     {
       this->triangulation = std::make_unique<dealii::Triangulation<dim>>();
       this->triangulation->copy_triangulation(*(other.triangulation));
@@ -87,9 +91,9 @@ namespace Ddhdg
       this->initialized = false;
     }
 
-    template <class OtherPermittivity>
+    template <class OtherProblemType>
     void
-    copy_solution_from(const NPSolver<dim, OtherPermittivity> &other)
+    copy_solution_from(const NPSolver<dim, OtherProblemType> &other)
     {
       if (!this->initialized)
         this->setup_overall_system();
@@ -200,16 +204,16 @@ namespace Ddhdg
       dealii::Vector<float> &                      error) const;
 
     void
-    estimate_error_per_cell(const NPSolver<dim, Permittivity> &other,
-                            Component                          c,
-                            dealii::VectorTools::NormType      norm,
-                            dealii::Vector<float> &            error) const;
+    estimate_error_per_cell(const NPSolver<dim, ProblemType> &other,
+                            Component                         c,
+                            dealii::VectorTools::NormType     norm,
+                            dealii::Vector<float> &           error) const;
 
     void
-    estimate_error_per_cell(const NPSolver<dim, Permittivity> &other,
-                            Displacement                       d,
-                            dealii::VectorTools::NormType      norm,
-                            dealii::Vector<float> &            error) const;
+    estimate_error_per_cell(const NPSolver<dim, ProblemType> &other,
+                            Displacement                      d,
+                            dealii::VectorTools::NormType     norm,
+                            dealii::Vector<float> &           error) const;
 
     void
     estimate_error_per_cell(
@@ -283,14 +287,14 @@ namespace Ddhdg
       Component                                    c) const override;
 
     double
-    estimate_error(const NPSolver<dim, Permittivity> &other,
-                   Component                          c,
-                   dealii::VectorTools::NormType      norm) const;
+    estimate_error(const NPSolver<dim, ProblemType> &other,
+                   Component                         c,
+                   dealii::VectorTools::NormType     norm) const;
 
     double
-    estimate_error(const NPSolver<dim, Permittivity> &other,
-                   Displacement                       d,
-                   dealii::VectorTools::NormType      norm) const;
+    estimate_error(const NPSolver<dim, ProblemType> &other,
+                   Displacement                      d,
+                   dealii::VectorTools::NormType     norm) const;
 
     std::shared_ptr<dealii::Function<dim>>
     get_solution() const override;
@@ -450,7 +454,7 @@ namespace Ddhdg
       PerTaskData &                                         task_data);
 
     typedef void (
-      NPSolver<dim, Permittivity>::*assemble_system_one_cell_pointer)(
+      NPSolver<dim, ProblemType>::*assemble_system_one_cell_pointer)(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
       ScratchData &                                         scratch,
       PerTaskData &                                         task_data);
@@ -469,9 +473,11 @@ namespace Ddhdg
     template <Component cmp,
               bool      on_face      = true,
               class ScratchDataClass = ScratchData>
-    inline dealii::Tensor<2, dim>
-    compute_einstein_diffusion_coefficient(const ScratchDataClass &scratch,
-                                           unsigned int            q) const;
+    inline void
+    apply_einstein_diffusion_coefficient(const ScratchDataClass &      scratch,
+                                         unsigned int                  q,
+                                         const dealii::Tensor<1, dim> &v,
+                                         dealii::Tensor<1, dim> &      w) const;
 
     template <Component cmp, class ScratchDataClass = ScratchData>
     inline double
@@ -527,9 +533,9 @@ namespace Ddhdg
     template <typename prm, Component c>
     inline void
     add_tc_matrix_terms_to_tt_rhs(
-      ScratchData &                                    scratch,
-      Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
-      unsigned int                                     face);
+      ScratchData &                                   scratch,
+      Ddhdg::NPSolver<dim, ProblemType>::PerTaskData &task_data,
+      unsigned int                                    face);
 
     template <typename prm, Component c>
     inline void
@@ -540,9 +546,9 @@ namespace Ddhdg
     template <typename prm, Component c>
     inline void
     add_tt_matrix_terms_to_tt_rhs(
-      ScratchData &                                    scratch,
-      Ddhdg::NPSolver<dim, Permittivity>::PerTaskData &task_data,
-      unsigned int                                     face);
+      ScratchData &                                   scratch,
+      Ddhdg::NPSolver<dim, ProblemType>::PerTaskData &task_data,
+      unsigned int                                    face);
 
     template <typename prm, Component c>
     inline void
@@ -623,9 +629,19 @@ namespace Ddhdg
     inline void
     copy_trace_compute_tau(CTScratchData &scratch) const;
 
+    template <typename CTScratchData,
+              TraceProjectionStrategy strategy,
+              bool                    regular_face>
+    inline void
+    copy_trace_assemble_rhs(CTScratchData &scratch,
+                            unsigned int   face_number) const;
+
     template <typename CTScratchData>
     inline void
-    copy_trace_compute_D_n_and_D_p(CTScratchData &scratch) const;
+    copy_trace_assemble_rhs(CTScratchData &         scratch,
+                            unsigned int            face_number,
+                            TraceProjectionStrategy strategy,
+                            bool                    regular_face) const;
 
     template <typename IteratorType1,
               typename IteratorType2,
@@ -698,7 +714,7 @@ namespace Ddhdg
     std::vector<dealii::types::global_dof_index> constrained_dof_indices;
     std::vector<double>                          constrained_dof_values;
 
-    friend class TemplatizedParametersInterface<dim, Permittivity>;
+    friend class TemplatizedParametersInterface<dim, ProblemType>;
 
     template <int d, class p, unsigned int parameter_mask>
     friend class TemplatizedParameters;
@@ -706,8 +722,8 @@ namespace Ddhdg
     friend class pyddhdg::NPSolver<dim>;
   };
 
-  template <int dim, class Permittivity>
-  struct NPSolver<dim, Permittivity>::PerTaskData
+  template <int dim, typename ProblemType>
+  struct NPSolver<dim, ProblemType>::PerTaskData
   {
     FullMatrix<double>                   tt_matrix;
     Vector<double>                       tt_vector;
@@ -730,8 +746,8 @@ namespace Ddhdg
     {}
   };
 
-  template <int dim, class Permittivity>
-  struct NPSolver<dim, Permittivity>::ScratchData
+  template <int dim, typename ProblemType>
+  struct NPSolver<dim, ProblemType>::ScratchData
   {
     FEValues<dim>                   fe_values_cell;
     FEFaceValues<dim>               fe_face_values_cell;
@@ -749,12 +765,10 @@ namespace Ddhdg
     Vector<double>                                   tmp_rhs;
     Vector<double>                                   restricted_tmp_rhs;
     Permittivity                                     permittivity;
+    NMobility                                        n_mobility;
+    PMobility                                        p_mobility;
     std::vector<Point<dim>>                          cell_quadrature_points;
     std::vector<Point<dim>>                          face_quadrature_points;
-    std::vector<Tensor<2, dim>>                      mu_n_cell;
-    std::vector<Tensor<2, dim>>                      mu_p_cell;
-    std::vector<Tensor<2, dim>>                      mu_n_face;
-    std::vector<Tensor<2, dim>>                      mu_p_face;
     std::vector<double>                              T_cell;
     std::vector<double>                              T_face;
     std::vector<double>                              U_T_cell;
@@ -810,39 +824,59 @@ namespace Ddhdg
       UpdateFlags                trace_flags,
       UpdateFlags                trace_restricted_flags,
       const Permittivity &       permittivity,
+      const NMobility &          n_mobility,
+      const PMobility &          p_mobility,
       const std::set<Component> &enabled_components,
       const std::map<Component, const dealii::FiniteElement<dim> &> &fe_map);
 
     ScratchData(const ScratchData &sd);
   };
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   template <Component cmp, bool on_face, class ScratchDataClass>
-  dealii::Tensor<2, dim>
-  NPSolver<dim, Permittivity>::compute_einstein_diffusion_coefficient(
-    const ScratchDataClass &scratch,
-    const unsigned int      q) const
+  void
+  NPSolver<dim, ProblemType>::apply_einstein_diffusion_coefficient(
+    const ScratchDataClass &      scratch,
+    const unsigned int            q,
+    const dealii::Tensor<1, dim> &v,
+    dealii::Tensor<1, dim> &      w) const
   {
-    switch (cmp)
+    if constexpr (on_face)
       {
-        case n:
-          if (on_face)
-            return scratch.U_T_face[q] * scratch.mu_n_face[q];
-          return scratch.U_T_cell[q] * scratch.mu_n_cell[q];
-        case p:
-          if (on_face)
-            return scratch.U_T_face[q] * scratch.mu_p_face[q];
-          return scratch.U_T_cell[q] * scratch.mu_p_cell[q];
-        default:
-          Assert(false, InvalidComponent());
-          return Tensor<2, dim>();
+        switch (cmp)
+          {
+            case n:
+              scratch.n_mobility.mu_operator_on_face(q, v, w);
+              break;
+            case p:
+              scratch.p_mobility.mu_operator_on_face(q, v, w);
+              break;
+            default:
+              Assert(false, InvalidComponent());
+          }
+        w *= scratch.U_T_face[q];
+      }
+    else
+      {
+        switch (cmp)
+          {
+            case n:
+              scratch.n_mobility.mu_operator_on_cell(q, v, w);
+              break;
+            case p:
+              scratch.p_mobility.mu_operator_on_cell(q, v, w);
+              break;
+            default:
+              Assert(false, InvalidComponent());
+          }
+        w *= scratch.U_T_cell[q];
       }
   }
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   template <Component cmp, class ScratchDataClass>
   double
-  NPSolver<dim, Permittivity>::compute_stabilized_tau(
+  NPSolver<dim, ProblemType>::compute_stabilized_tau(
     const ScratchDataClass &scratch,
     const double            c_tau,
     const Tensor<1, dim> &  normal,
@@ -854,28 +888,34 @@ namespace Ddhdg
           return scratch.permittivity.compute_stabilized_v_tau(q,
                                                                c_tau,
                                                                normal);
-        case Component::n:
-          return this->template compute_einstein_diffusion_coefficient<
-                   Component::n,
-                   true,
-                   ScratchDataClass>(scratch, q) *
-                 normal * normal * c_tau;
-        case Component::p:
-          return this->template compute_einstein_diffusion_coefficient<
-                   Component::p,
-                   true,
-                   ScratchDataClass>(scratch, q) *
-                 normal * normal * c_tau;
+          case Component::n: {
+            dealii::Tensor<1, dim> temp;
+            this
+              ->template apply_einstein_diffusion_coefficient<Component::n,
+                                                              true,
+                                                              ScratchDataClass>(
+                scratch, q, normal, temp);
+            return temp * normal * c_tau;
+          }
+          case Component::p: {
+            dealii::Tensor<1, dim> temp;
+            this
+              ->template apply_einstein_diffusion_coefficient<Component::p,
+                                                              true,
+                                                              ScratchDataClass>(
+                scratch, q, normal, temp);
+            return temp * normal * c_tau;
+          }
         default:
           Assert(false, InvalidComponent());
           return 1.;
       }
   }
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   template <class ScratchDataClass>
   double
-  NPSolver<dim, Permittivity>::compute_stabilized_tau(
+  NPSolver<dim, ProblemType>::compute_stabilized_tau(
     const ScratchDataClass &scratch,
     const double            c_tau,
     const Tensor<1, dim> &  normal,

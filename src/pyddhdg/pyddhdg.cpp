@@ -30,7 +30,7 @@ namespace pyddhdg
 
 
   template <int dim>
-  std::shared_ptr<Ddhdg::ElectronMobility<dim>>
+  std::shared_ptr<Ddhdg::HomogeneousElectronMobility<dim>>
   HomogeneousElectronMobility<dim>::generate_ddhdg_electron_mobility()
   {
     return std::make_shared<Ddhdg::HomogeneousElectronMobility<dim>>(this->mu);
@@ -265,21 +265,20 @@ namespace pyddhdg
 
 
   template <int dim>
-  Problem<dim>::Problem(const double                   left,
-                        const double                   right,
-                        HomogeneousPermittivity<dim> & permittivity,
-                        ElectronMobility<dim> &        n_electron_mobility,
-                        ElectronMobility<dim> &        p_electron_mobility,
-                        RecombinationTerm<dim> &       recombination_term,
-                        DealIIFunction<dim> &          temperature,
-                        DealIIFunction<dim> &          doping,
-                        BoundaryConditionHandler<dim> &bc_handler,
-                        const double                   conduction_band_density,
-                        const double                   valence_band_density,
+  Problem<dim>::Problem(const double                      left,
+                        const double                      right,
+                        HomogeneousPermittivity<dim> &    permittivity,
+                        HomogeneousElectronMobility<dim> &n_electron_mobility,
+                        HomogeneousElectronMobility<dim> &p_electron_mobility,
+                        RecombinationTerm<dim> &          recombination_term,
+                        DealIIFunction<dim> &             temperature,
+                        DealIIFunction<dim> &             doping,
+                        BoundaryConditionHandler<dim> &   bc_handler,
+                        const double conduction_band_density,
+                        const double valence_band_density,
                         const double conduction_band_edge_energy,
                         const double valence_band_edge_energy)
-    : ddhdg_problem(std::make_shared<
-                    Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
+    : ddhdg_problem(std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
         generate_triangulation(left, right),
         permittivity.generate_ddhdg_permittivity(),
         n_electron_mobility.generate_ddhdg_electron_mobility(),
@@ -304,8 +303,7 @@ namespace pyddhdg
 
 
   template <int dim>
-  std::shared_ptr<
-    const Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
+  std::shared_ptr<const Ddhdg::HomogeneousProblem<dim>>
   Problem<dim>::get_ddhdg_problem() const
   {
     return this->ddhdg_problem;
@@ -356,12 +354,12 @@ namespace pyddhdg
                           const Ddhdg::NPSolverParameters &parameters,
                           const Ddhdg::Adimensionalizer &  adimensionalizer,
                           const bool                       verbose)
-    : ddhdg_solver(std::make_shared<
-                   Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
-        problem.get_ddhdg_problem(),
-        std::make_shared<const Ddhdg::NPSolverParameters>(parameters),
-        std::make_shared<const Ddhdg::Adimensionalizer>(adimensionalizer),
-        verbose))
+    : ddhdg_solver(
+        std::make_shared<Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>>(
+          problem.get_ddhdg_problem(),
+          std::make_shared<const Ddhdg::NPSolverParameters>(parameters),
+          std::make_shared<const Ddhdg::Adimensionalizer>(adimensionalizer),
+          verbose))
   {}
 
 

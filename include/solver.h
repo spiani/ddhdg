@@ -29,12 +29,12 @@ namespace Ddhdg
 
   DeclExceptionMsg(NoTraceIn1D, "The trace can not be saved in 1D");
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   class Solver
   {
   public:
-    Solver(std::shared_ptr<const Problem<dim, Permittivity>> problem,
-           std::shared_ptr<const Adimensionalizer>           adimensionalizer =
+    Solver(std::shared_ptr<const ProblemType>      problem,
+           std::shared_ptr<const Adimensionalizer> adimensionalizer =
              std::make_shared<Adimensionalizer>());
 
     virtual void
@@ -248,8 +248,8 @@ namespace Ddhdg
 
     virtual ~Solver() = default;
 
-    const std::shared_ptr<const Problem<dim, Permittivity>> problem;
-    const std::shared_ptr<const Adimensionalizer>           adimensionalizer;
+    const std::shared_ptr<const ProblemType>      problem;
+    const std::shared_ptr<const Adimensionalizer> adimensionalizer;
 
     Logging::severity_level log_standard_level = Logging::severity_level::info;
 

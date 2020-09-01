@@ -2,12 +2,12 @@
 
 namespace Ddhdg
 {
-  template <int dim, class Permittivity>
-  Problem<dim, Permittivity>::Problem(
+  template <int dim, class Permittivity, class NMobility, class PMobility>
+  Problem<dim, Permittivity, NMobility, PMobility>::Problem(
     const std::shared_ptr<const dealii::Triangulation<dim>> triangulation,
     const std::shared_ptr<const Permittivity>               permittivity,
-    const std::shared_ptr<const ElectronMobility<dim>>      n_electron_mobility,
-    const std::shared_ptr<const ElectronMobility<dim>>      p_electron_mobility,
+    const std::shared_ptr<const NMobility>                  n_mobility,
+    const std::shared_ptr<const PMobility>                  p_mobility,
     const std::shared_ptr<const RecombinationTerm<dim>>     recombination_term,
     const std::shared_ptr<const dealii::Function<dim>>      temperature,
     const std::shared_ptr<const dealii::Function<dim>>      doping,
@@ -18,8 +18,8 @@ namespace Ddhdg
     const double valence_band_edge_energy)
     : triangulation(triangulation)
     , permittivity(permittivity)
-    , n_electron_mobility(n_electron_mobility)
-    , p_electron_mobility(p_electron_mobility)
+    , n_mobility(n_mobility)
+    , p_mobility(p_mobility)
     , recombination_term(recombination_term)
     , temperature(temperature)
     , doping(doping)
@@ -30,7 +30,16 @@ namespace Ddhdg
                        {Component::p, valence_band_edge_energy}}
   {}
 
-  template struct Problem<1, HomogeneousPermittivity<1>>;
-  template struct Problem<2, HomogeneousPermittivity<2>>;
-  template struct Problem<3, HomogeneousPermittivity<3>>;
+  template struct Ddhdg::Problem<1,
+                                 Ddhdg::HomogeneousPermittivity<1>,
+                                 Ddhdg::HomogeneousElectronMobility<1>,
+                                 Ddhdg::HomogeneousElectronMobility<1>>;
+  template struct Ddhdg::Problem<2,
+                                 Ddhdg::HomogeneousPermittivity<2>,
+                                 Ddhdg::HomogeneousElectronMobility<2>,
+                                 Ddhdg::HomogeneousElectronMobility<2>>;
+  template struct Ddhdg::Problem<3,
+                                 Ddhdg::HomogeneousPermittivity<3>,
+                                 Ddhdg::HomogeneousElectronMobility<3>,
+                                 Ddhdg::HomogeneousElectronMobility<3>>;
 } // namespace Ddhdg

@@ -6,12 +6,12 @@
 
 template <typename D>
 class NeumannBCLinearTest
-  : public Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousPermittivity<D::value>>,
+  : public Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>,
     public ::testing::Test
 {
 public:
   NeumannBCLinearTest()
-    : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousPermittivity<D::value>>(
+    : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>(
         get_problem())
   {
     this->log_standard_level = Ddhdg::Logging::severity_level::debug;
@@ -134,14 +134,12 @@ protected:
     return boundary_handler;
   }
 
-  static std::shared_ptr<
-    Ddhdg::Problem<D::value, Ddhdg::HomogeneousPermittivity<D::value>>>
+  static std::shared_ptr<Ddhdg::HomogeneousProblem<D::value>>
   get_problem()
   {
-    const unsigned int dim = D::value;
-    std::shared_ptr<Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
-      problem = std::make_shared<
-        Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
+    const unsigned int                              dim = D::value;
+    std::shared_ptr<Ddhdg::HomogeneousProblem<dim>> problem =
+      std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
@@ -200,12 +198,12 @@ TYPED_TEST(NeumannBCLinearTest, NeumannBCLinearTest) // NOLINT
 
 
 class NeumannBCTrigonometricTest
-  : public Ddhdg::NPSolver<2, Ddhdg::HomogeneousPermittivity<2>>,
+  : public Ddhdg::NPSolver<2, Ddhdg::HomogeneousProblem<2>>,
     public ::testing::Test
 {
 public:
   NeumannBCTrigonometricTest()
-    : Ddhdg::NPSolver<2, Ddhdg::HomogeneousPermittivity<2>>(get_problem())
+    : Ddhdg::NPSolver<2, Ddhdg::HomogeneousProblem<2>>(get_problem())
   {
     this->log_standard_level = Ddhdg::Logging::severity_level::debug;
   };
@@ -354,14 +352,13 @@ protected:
     return boundary_handler;
   }
 
-  static std::shared_ptr<Ddhdg::Problem<2, Ddhdg::HomogeneousPermittivity<2>>>
+  static std::shared_ptr<Ddhdg::HomogeneousProblem<2>>
   get_problem()
   {
     const unsigned int dim = 2;
 
-    std::shared_ptr<Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
-      problem = std::make_shared<
-        Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>(
+    std::shared_ptr<Ddhdg::HomogeneousProblem<dim>> problem =
+      std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),

@@ -22,22 +22,12 @@ namespace pyddhdg
   };
 
   template <int dim>
-  class ElectronMobility
-  {
-  public:
-    virtual ~ElectronMobility() = default;
-
-    virtual std::shared_ptr<Ddhdg::ElectronMobility<dim>>
-    generate_ddhdg_electron_mobility() = 0;
-  };
-
-  template <int dim>
-  class HomogeneousElectronMobility : public ElectronMobility<dim>
+  class HomogeneousElectronMobility
   {
   public:
     explicit HomogeneousElectronMobility(double mu);
 
-    virtual std::shared_ptr<Ddhdg::ElectronMobility<dim>>
+    std::shared_ptr<Ddhdg::HomogeneousElectronMobility<dim>>
     generate_ddhdg_electron_mobility();
 
     const double mu;
@@ -168,33 +158,30 @@ namespace pyddhdg
   class Problem
   {
   public:
-    Problem(double                         left,
-            double                         right,
-            HomogeneousPermittivity<dim> & permittivity,
-            ElectronMobility<dim> &        n_electron_mobility,
-            ElectronMobility<dim> &        p_electron_mobility,
-            RecombinationTerm<dim> &       recombination_term,
-            DealIIFunction<dim> &          temperature,
-            DealIIFunction<dim> &          doping,
-            BoundaryConditionHandler<dim> &bc_handler,
-            double                         conduction_band_density,
-            double                         valence_band_density,
-            double                         conduction_band_edge_energy,
-            double                         valence_band_edge_energy);
+    Problem(double                            left,
+            double                            right,
+            HomogeneousPermittivity<dim> &    permittivity,
+            HomogeneousElectronMobility<dim> &n_electron_mobility,
+            HomogeneousElectronMobility<dim> &p_electron_mobility,
+            RecombinationTerm<dim> &          recombination_term,
+            DealIIFunction<dim> &             temperature,
+            DealIIFunction<dim> &             doping,
+            BoundaryConditionHandler<dim> &   bc_handler,
+            double                            conduction_band_density,
+            double                            valence_band_density,
+            double                            conduction_band_edge_energy,
+            double                            valence_band_edge_energy);
 
     Problem(const Problem<dim> &problem);
 
-    std::shared_ptr<
-      const Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
+    std::shared_ptr<const Ddhdg::HomogeneousProblem<dim>>
     get_ddhdg_problem() const;
 
   private:
     static std::shared_ptr<dealii::Triangulation<dim>>
     generate_triangulation(double left = 0., double right = 1.);
 
-    const std::shared_ptr<
-      const Ddhdg::Problem<dim, Ddhdg::HomogeneousPermittivity<dim>>>
-      ddhdg_problem;
+    const std::shared_ptr<const Ddhdg::HomogeneousProblem<dim>> ddhdg_problem;
   };
 
   class ErrorPerCell
@@ -431,8 +418,7 @@ namespace pyddhdg
                             unsigned int       initial_refinements = 0);
 
   private:
-    const std::shared_ptr<
-      Ddhdg::NPSolver<dim, Ddhdg::HomogeneousPermittivity<dim>>>
+    const std::shared_ptr<Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>>
       ddhdg_solver;
   };
 

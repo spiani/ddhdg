@@ -6,22 +6,7 @@
 namespace Ddhdg
 {
   template <int dim>
-  class ElectronMobility
-  {
-  public:
-    virtual dealii::Tensor<2, dim>
-    compute_electron_mobility(const dealii::Point<dim> &q) const = 0;
-
-    virtual void
-    compute_electron_mobility(const std::vector<dealii::Point<dim>> &P,
-                              std::vector<dealii::Tensor<2, dim>> &  mu) const;
-
-    virtual ~ElectronMobility()
-    {}
-  };
-
-  template <int dim>
-  class HomogeneousElectronMobility : public ElectronMobility<dim>
+  class HomogeneousElectronMobility
   {
   public:
     HomogeneousElectronMobility(double mu)
@@ -29,16 +14,38 @@ namespace Ddhdg
     {}
 
     const double mu;
+    double       rescaled_mu = 0;
 
-    virtual dealii::Tensor<2, dim>
-    compute_electron_mobility(const dealii::Point<dim> &q) const;
+    inline void
+    initialize_on_cell(const std::vector<dealii::Point<dim>> &,
+                       const double rescaling_factor)
+    {
+      this->rescaled_mu = this->mu / rescaling_factor;
+    }
 
+    inline void
+    initialize_on_face(const std::vector<dealii::Point<dim>> &,
+                       const double rescaling_factor)
+    {
+      this->rescaled_mu = this->mu / rescaling_factor;
+    }
 
-    virtual void
-    compute_electron_mobility(const std::vector<dealii::Point<dim>> &P,
-                              std::vector<dealii::Tensor<2, dim>> &  mu) const;
+    inline void
+    mu_operator_on_cell(const unsigned int,
+                        const dealii::Tensor<1, dim> &v,
+                        dealii::Tensor<1, dim> &      w) const
+    {
+      for (unsigned int i = 0; i < dim; i++)
+        w[i] = v[i] * this->rescaled_mu;
+    }
 
-    virtual ~HomogeneousElectronMobility()
-    {}
+    inline void
+    mu_operator_on_face(const unsigned int,
+                        const dealii::Tensor<1, dim> &v,
+                        dealii::Tensor<1, dim> &      w) const
+    {
+      for (unsigned int i = 0; i < dim; i++)
+        w[i] = v[i] * this->rescaled_mu;
+    }
   };
 } // namespace Ddhdg

@@ -6,9 +6,9 @@
 
 namespace Ddhdg
 {
-  template <int dim, class Permittivity>
+  template <int dim, typename Problem>
   void
-  NPSolver<dim, Permittivity>::compute_local_charge_neutrality_on_a_point(
+  NPSolver<dim, Problem>::compute_local_charge_neutrality_on_a_point(
     const std::vector<double> &evaluated_doping,
     const std::vector<double> &evaluated_temperature,
     std::vector<double> &      evaluated_potentials)
@@ -44,9 +44,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename Problem>
   void
-  NPSolver<dim, Permittivity>::compute_local_charge_neutrality_on_cells()
+  NPSolver<dim, Problem>::compute_local_charge_neutrality_on_cells()
   {
     const QGauss<dim> quadrature_formula(
       this->get_number_of_quadrature_points());
@@ -214,9 +214,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename Problem>
   void
-  NPSolver<dim, Permittivity>::compute_local_charge_neutrality_on_trace(
+  NPSolver<dim, Problem>::compute_local_charge_neutrality_on_trace(
     const bool only_at_boundary)
   {
     const QGauss<dim> quadrature_formula(
@@ -352,9 +352,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename Problem>
   void
-  NPSolver<dim, Permittivity>::compute_local_charge_neutrality()
+  NPSolver<dim, Problem>::compute_local_charge_neutrality()
   {
     this->compute_local_charge_neutrality_on_cells();
     this->compute_local_charge_neutrality_on_trace(false);
@@ -362,9 +362,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename Problem>
   NonlinearIterationResults
-  NPSolver<dim, Permittivity>::compute_thermodynamic_equilibrium(
+  NPSolver<dim, Problem>::compute_thermodynamic_equilibrium(
     const double absolute_tol,
     const double relative_tol,
     const int    max_number_of_iterations,
@@ -403,9 +403,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename Problem>
   NonlinearIterationResults
-  NPSolver<dim, Permittivity>::compute_thermodynamic_equilibrium(
+  NPSolver<dim, Problem>::compute_thermodynamic_equilibrium(
     bool generate_first_guess)
   {
     return this->compute_thermodynamic_equilibrium(
@@ -416,7 +416,7 @@ namespace Ddhdg
   }
 
 
-  template class NPSolver<1, HomogeneousPermittivity<1>>;
-  template class NPSolver<2, HomogeneousPermittivity<2>>;
-  template class NPSolver<3, HomogeneousPermittivity<3>>;
+  template class NPSolver<1, HomogeneousProblem<1>>;
+  template class NPSolver<2, HomogeneousProblem<2>>;
+  template class NPSolver<3, HomogeneousProblem<3>>;
 } // namespace Ddhdg

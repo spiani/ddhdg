@@ -615,7 +615,7 @@ namespace Ddhdg
 
 
 
-  template class NPSolver<1, HomogeneousPermittivity<1>>;
-  template class NPSolver<2, HomogeneousPermittivity<2>>;
-  template class NPSolver<3, HomogeneousPermittivity<3>>;
+  template class NPSolver<1, HomogeneousProblem<1>>;
+  template class NPSolver<2, HomogeneousProblem<2>>;
+  template class NPSolver<3, HomogeneousProblem<3>>;
 } // namespace Ddhdg

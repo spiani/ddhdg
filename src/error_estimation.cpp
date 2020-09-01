@@ -4,9 +4,9 @@
 
 namespace Ddhdg
 {
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   void
-  NPSolver<dim, Permittivity>::estimate_error_per_cell(
+  NPSolver<dim, ProblemType>::estimate_error_per_cell(
     const std::shared_ptr<const dealii::Function<dim, double>>
                                         expected_solution,
     const Ddhdg::Component              c,
@@ -45,9 +45,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   void
-  NPSolver<dim, Permittivity>::estimate_error_per_cell(
+  NPSolver<dim, ProblemType>::estimate_error_per_cell(
     const std::shared_ptr<const dealii::Function<dim, double>>
                                         expected_solution,
     const Ddhdg::Displacement           d,
@@ -97,13 +97,13 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   void
-  NPSolver<dim, Permittivity>::estimate_error_per_cell(
-    const NPSolver<dim, Permittivity> &other,
-    Component                          c,
-    dealii::VectorTools::NormType      norm,
-    dealii::Vector<float> &            error) const
+  NPSolver<dim, ProblemType>::estimate_error_per_cell(
+    const NPSolver<dim, ProblemType> &other,
+    Component                         c,
+    dealii::VectorTools::NormType     norm,
+    dealii::Vector<float> &           error) const
   {
     AssertDimension(error.size(), this->triangulation->n_active_cells());
 
@@ -136,13 +136,13 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   void
-  NPSolver<dim, Permittivity>::estimate_error_per_cell(
-    const NPSolver<dim, Permittivity> &other,
-    Displacement                       d,
-    dealii::VectorTools::NormType      norm,
-    dealii::Vector<float> &            error) const
+  NPSolver<dim, ProblemType>::estimate_error_per_cell(
+    const NPSolver<dim, ProblemType> &other,
+    Displacement                      d,
+    dealii::VectorTools::NormType     norm,
+    dealii::Vector<float> &           error) const
   {
     AssertDimension(error.size(), this->triangulation->n_active_cells());
 
@@ -178,9 +178,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_error(
+  NPSolver<dim, ProblemType>::estimate_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
                                         expected_solution,
     const Ddhdg::Component              c,
@@ -203,9 +203,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_error(
+  NPSolver<dim, ProblemType>::estimate_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
                                         expected_solution,
     const Ddhdg::Displacement           d,
@@ -229,9 +229,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_error_on_trace(
+  NPSolver<dim, ProblemType>::estimate_error_on_trace(
     const std::shared_ptr<const dealii::Function<dim, double>>
                                         expected_solution,
     const Ddhdg::Component              c,
@@ -395,9 +395,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_l2_error(
+  NPSolver<dim, ProblemType>::estimate_l2_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
                            expected_solution,
     const Ddhdg::Component c) const
@@ -409,9 +409,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_l2_error(
+  NPSolver<dim, ProblemType>::estimate_l2_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
                               expected_solution,
     const Ddhdg::Displacement d) const
@@ -423,9 +423,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_l2_error_on_trace(
+  NPSolver<dim, ProblemType>::estimate_l2_error_on_trace(
     const std::shared_ptr<const dealii::Function<dim, double>>
                            expected_solution,
     const Ddhdg::Component c) const
@@ -437,9 +437,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_h1_error(
+  NPSolver<dim, ProblemType>::estimate_h1_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
                            expected_solution,
     const Ddhdg::Component c) const
@@ -451,9 +451,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_h1_error(
+  NPSolver<dim, ProblemType>::estimate_h1_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
                               expected_solution,
     const Ddhdg::Displacement d) const
@@ -465,9 +465,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_linfty_error(
+  NPSolver<dim, ProblemType>::estimate_linfty_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
                            expected_solution,
     const Ddhdg::Component c) const
@@ -479,9 +479,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_linfty_error(
+  NPSolver<dim, ProblemType>::estimate_linfty_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
                               expected_solution,
     const Ddhdg::Displacement d) const
@@ -493,9 +493,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_linfty_error_on_trace(
+  NPSolver<dim, ProblemType>::estimate_linfty_error_on_trace(
     const std::shared_ptr<const dealii::Function<dim, double>>
                            expected_solution,
     const Ddhdg::Component c) const
@@ -507,12 +507,12 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_error(
-    const NPSolver<dim, Permittivity> &other,
-    Component                          c,
-    dealii::VectorTools::NormType      norm) const
+  NPSolver<dim, ProblemType>::estimate_error(
+    const NPSolver<dim, ProblemType> &other,
+    Component                         c,
+    dealii::VectorTools::NormType     norm) const
   {
     Vector<float> difference_per_cell(triangulation->n_active_cells());
 
@@ -527,12 +527,12 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   double
-  NPSolver<dim, Permittivity>::estimate_error(
-    const NPSolver<dim, Permittivity> &other,
-    Displacement                       d,
-    dealii::VectorTools::NormType      norm) const
+  NPSolver<dim, ProblemType>::estimate_error(
+    const NPSolver<dim, ProblemType> &other,
+    Displacement                      d,
+    dealii::VectorTools::NormType     norm) const
   {
     Vector<float> difference_per_cell(triangulation->n_active_cells());
 
@@ -547,9 +547,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   void
-  NPSolver<dim, Permittivity>::estimate_error_per_cell(
+  NPSolver<dim, ProblemType>::estimate_error_per_cell(
     dealii::Vector<float> &      error,
     const dealii::ComponentMask &cmp_mask) const
   {
@@ -567,9 +567,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   void
-  NPSolver<dim, Permittivity>::estimate_error_per_cell(
+  NPSolver<dim, ProblemType>::estimate_error_per_cell(
     const Component        c,
     dealii::Vector<float> &error) const
   {
@@ -579,9 +579,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename ProblemType>
   void
-  NPSolver<dim, Permittivity>::estimate_error_per_cell(
+  NPSolver<dim, ProblemType>::estimate_error_per_cell(
     const Displacement     d,
     dealii::Vector<float> &error) const
   {
@@ -590,8 +590,8 @@ namespace Ddhdg
   }
 
 
-  template class NPSolver<1, HomogeneousPermittivity<1>>;
-  template class NPSolver<2, HomogeneousPermittivity<2>>;
-  template class NPSolver<3, HomogeneousPermittivity<3>>;
+  template class NPSolver<1, HomogeneousProblem<1>>;
+  template class NPSolver<2, HomogeneousProblem<2>>;
+  template class NPSolver<3, HomogeneousProblem<3>>;
 
 } // namespace Ddhdg
