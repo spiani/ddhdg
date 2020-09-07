@@ -5,6 +5,7 @@ add_library(DDHDG SHARED
         assembling_methods_3d.cpp
         boundary_conditions.cpp
         copy_on_trace.cpp
+        derivative_quantities.cpp
         error_estimation.cpp
         function_tools.cpp
         local_condenser.cpp

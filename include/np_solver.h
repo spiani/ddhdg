@@ -421,6 +421,25 @@ namespace Ddhdg
     project_component_private(
       std::shared_ptr<const dealii::Function<dim>> c_function);
 
+    template <typename DQScratchData, typename DQCopyData, typename quantity>
+    void
+    derivative_quantities_project_on_one_cell(
+      const typename DoFHandler<dim>::active_cell_iterator &cell,
+      DQScratchData &                                       scratch,
+      DQCopyData &                                          copy_data) const;
+
+
+    template <typename DQCopyData>
+    void
+    derivative_quantities_copier(const DQCopyData &      copy_data,
+                                 dealii::Vector<double> &data) const;
+
+    template <typename quantity>
+    void
+    derivative_quantities_compute_derived_quantity(
+      const dealii::DoFHandler<dim> &dof,
+      dealii::Vector<double> &       data) const;
+
     unsigned int
     get_dofs_constrained_by_dirichlet_conditions(
       std::vector<bool> &lines) const;

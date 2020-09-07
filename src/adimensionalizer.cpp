@@ -15,7 +15,27 @@ namespace Ddhdg
           return this->get_component_rescaling_factor<Component::p>();
         default:
           Assert(false, InvalidComponent());
-          return 1;
+          return 9e99;
+      }
+  }
+
+
+
+  double
+  Adimensionalizer::get_displacement_rescaling_factor(
+    const Displacement d) const
+  {
+    switch (d)
+      {
+        case Displacement::E:
+          return this->get_displacement_rescaling_factor<Displacement::E>();
+        case Displacement::Wn:
+          return this->get_displacement_rescaling_factor<Displacement::Wn>();
+        case Displacement::Wp:
+          return this->get_displacement_rescaling_factor<Displacement::Wp>();
+        default:
+          Assert(false, InvalidDisplacement());
+          return 9e99;
       }
   }
 
@@ -50,7 +70,7 @@ namespace Ddhdg
                                               std::vector<double> &dest) const
   {
     AssertDimension(source.size(), dest.size());
-    if (c != Component::V && c != Component::n && c != Component::p)
+    if constexpr (c != Component::V && c != Component::n && c != Component::p)
       Assert(false, InvalidComponent());
 
     const unsigned int n_of_elements = source.size();
@@ -71,7 +91,7 @@ namespace Ddhdg
     std::vector<double> &      dest) const
   {
     AssertDimension(source.size(), dest.size());
-    if (c != Component::V && c != Component::n && c != Component::p)
+    if constexpr (c != Component::V && c != Component::n && c != Component::p)
       Assert(false, InvalidComponent());
 
     const unsigned int n_of_elements = source.size();
@@ -90,7 +110,7 @@ namespace Ddhdg
   Adimensionalizer::inplace_adimensionalize_component(
     std::vector<double> &data) const
   {
-    if (c != Component::V && c != Component::n && c != Component::p)
+    if constexpr (c != Component::V && c != Component::n && c != Component::p)
       Assert(false, InvalidComponent());
 
     const unsigned int n_of_elements = data.size();
@@ -109,7 +129,7 @@ namespace Ddhdg
   Adimensionalizer::inplace_redimensionalize_component(
     std::vector<double> &data) const
   {
-    if (c != Component::V && c != Component::n && c != Component::p)
+    if constexpr (c != Component::V && c != Component::n && c != Component::p)
       Assert(false, InvalidComponent());
 
     const unsigned int n_of_elements = data.size();
@@ -190,6 +210,7 @@ namespace Ddhdg
   }
 
 
+
   void
   Adimensionalizer::inplace_redimensionalize_component(
     std::vector<double> &data,
@@ -208,6 +229,90 @@ namespace Ddhdg
           break;
         default:
           Assert(false, InvalidComponent());
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  Adimensionalizer::adimensionalize_displacement(
+    const std::vector<dealii::Tensor<1, dim>> &source,
+    const Displacement                         d,
+    std::vector<dealii::Tensor<1, dim>> &      dest) const
+  {
+    AssertDimension(source.size(), dest.size());
+    if (d != Displacement::E && d != Displacement::Wn && d != Displacement::Wp)
+      Assert(false, InvalidDisplacement());
+
+    const unsigned int n_of_elements = source.size();
+    const double       rescaling = this->get_displacement_rescaling_factor(d);
+
+    for (unsigned int i = 0; i < n_of_elements; i++)
+      {
+        dest[i] = source[i] / rescaling;
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  Adimensionalizer::redimensionalize_displacement(
+    const std::vector<dealii::Tensor<1, dim>> &source,
+    const Displacement                         d,
+    std::vector<dealii::Tensor<1, dim>> &      dest) const
+  {
+    AssertDimension(source.size(), dest.size());
+    if (d != Displacement::E && d != Displacement::Wn && d != Displacement::Wp)
+      Assert(false, InvalidDisplacement());
+
+    const unsigned int n_of_elements = source.size();
+    const double       rescaling = this->get_displacement_rescaling_factor(d);
+
+    for (unsigned int i = 0; i < n_of_elements; i++)
+      {
+        dest[i] = source[i] * rescaling;
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  Adimensionalizer::inplace_adimensionalize_displacement(
+    std::vector<dealii::Tensor<1, dim>> &data,
+    const Displacement                   d) const
+  {
+    if (d != Displacement::E && d != Displacement::Wn && d != Displacement::Wp)
+      Assert(false, InvalidDisplacement());
+
+    const unsigned int n_of_elements = data.size();
+    const double       rescaling = this->get_displacement_rescaling_factor(d);
+
+    for (unsigned int i = 0; i < n_of_elements; i++)
+      {
+        data[i] /= rescaling;
+      }
+  }
+
+
+
+  template <int dim>
+  void
+  Adimensionalizer::inplace_redimensionalize_displacement(
+    std::vector<dealii::Tensor<1, dim>> &data,
+    const Displacement                   d) const
+  {
+    if (d != Displacement::E && d != Displacement::Wn && d != Displacement::Wp)
+      Assert(false, InvalidDisplacement());
+
+    const unsigned int n_of_elements = data.size();
+    const double       rescaling = this->get_displacement_rescaling_factor(d);
+
+    for (unsigned int i = 0; i < n_of_elements; i++)
+      {
+        data[i] *= rescaling;
       }
   }
 
@@ -417,6 +522,32 @@ namespace Ddhdg
   template void
   Adimensionalizer::inplace_redimensionalize_component<Component::p>(
     std::vector<double> &data) const;
+
+  template void
+  Adimensionalizer::inplace_adimensionalize_displacement<1>(
+    std::vector<dealii::Tensor<1, 1>> &data,
+    Displacement                       d) const;
+  template void
+  Adimensionalizer::inplace_adimensionalize_displacement<2>(
+    std::vector<dealii::Tensor<1, 2>> &data,
+    Displacement                       d) const;
+  template void
+  Adimensionalizer::inplace_adimensionalize_displacement<3>(
+    std::vector<dealii::Tensor<1, 3>> &data,
+    Displacement                       d) const;
+
+  template void
+  Adimensionalizer::inplace_redimensionalize_displacement<1>(
+    std::vector<dealii::Tensor<1, 1>> &data,
+    Displacement                       d) const;
+  template void
+  Adimensionalizer::inplace_redimensionalize_displacement<2>(
+    std::vector<dealii::Tensor<1, 2>> &data,
+    Displacement                       d) const;
+  template void
+  Adimensionalizer::inplace_redimensionalize_displacement<3>(
+    std::vector<dealii::Tensor<1, 3>> &data,
+    Displacement                       d) const;
 
   template std::shared_ptr<dealii::Function<1>>
   Adimensionalizer::adimensionalize_component_function<1>(

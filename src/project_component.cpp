@@ -286,10 +286,10 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename Problem>
   template <typename PCScratchData, typename PCCopyData, Component c>
   void
-  NPSolver<dim, Permittivity>::project_component_one_cell(
+  NPSolver<dim, Problem>::project_component_one_cell(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
     PCScratchData &                                       scratch,
     PCCopyData &                                          copy_data) const
@@ -472,10 +472,10 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename Problem>
   template <typename PCCopyData>
   void
-  NPSolver<dim, Permittivity>::project_component_copier(PCCopyData &copy_data)
+  NPSolver<dim, Problem>::project_component_copier(PCCopyData &copy_data)
   {
     for (unsigned int i = 0; i < copy_data.dof_indices.size(); ++i)
       this->current_solution_cell[copy_data.dof_indices[i]] =
@@ -484,10 +484,10 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename Problem>
   template <Component c>
   void
-  NPSolver<dim, Permittivity>::project_component_private(
+  NPSolver<dim, Problem>::project_component_private(
     const std::shared_ptr<const dealii::Function<dim>> c_function)
   {
     Assert(c == Component::V || c == Component::n || c == Component::p ||
@@ -585,9 +585,9 @@ namespace Ddhdg
 
 
 
-  template <int dim, class Permittivity>
+  template <int dim, typename Problem>
   void
-  NPSolver<dim, Permittivity>::project_component(
+  NPSolver<dim, Problem>::project_component(
     const Component                                    c,
     const std::shared_ptr<const dealii::Function<dim>> c_function)
   {

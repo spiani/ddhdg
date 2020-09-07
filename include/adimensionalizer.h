@@ -46,6 +46,17 @@ namespace Ddhdg
     [[nodiscard]] double
     get_component_rescaling_factor(Component c) const;
 
+    template <Displacement d>
+    [[nodiscard]] constexpr double
+    get_displacement_rescaling_factor() const
+    {
+      const Component c = displacement2component(d);
+      return this->get_component_rescaling_factor<c>();
+    }
+
+    [[nodiscard]] double
+    get_displacement_rescaling_factor(Displacement d) const;
+
     [[nodiscard]] constexpr double
     get_poisson_equation_density_constant() const
     {
@@ -132,6 +143,32 @@ namespace Ddhdg
     void
     inplace_redimensionalize_component(std::vector<double> &data,
                                        Component            c) const;
+
+    template <int dim>
+    void
+    adimensionalize_displacement(
+      const std::vector<dealii::Tensor<1, dim>> &source,
+      Displacement                               d,
+      std::vector<dealii::Tensor<1, dim>> &      dest) const;
+
+    template <int dim>
+    void
+    redimensionalize_displacement(
+      const std::vector<dealii::Tensor<1, dim>> &source,
+      Displacement                               d,
+      std::vector<dealii::Tensor<1, dim>> &      dest) const;
+
+    template <int dim>
+    void
+    inplace_adimensionalize_displacement(
+      std::vector<dealii::Tensor<1, dim>> &data,
+      Displacement                         d) const;
+
+    template <int dim>
+    void
+    inplace_redimensionalize_displacement(
+      std::vector<dealii::Tensor<1, dim>> &data,
+      Displacement                         d) const;
 
     void
     adimensionalize_dof_vector(
