@@ -1486,6 +1486,10 @@ namespace Ddhdg
           {
             const dealii::types::global_dof_index dof_index =
               this->constrained_dof_indices[i];
+            Logging::log<Logging::severity_level::trace>(
+              "Setting dof index %s of system_solution to value %s to satisfy "
+              "the Dirichlet boundary conditions", dof_index, this->constrained_dof_values[i]
+              );
             this->system_solution[dof_index] = this->constrained_dof_values[i];
           }
 

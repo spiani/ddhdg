@@ -253,5 +253,44 @@ namespace Ddhdg
         }
     }
 
+    template <severity_level level, typename Element1, typename Element2>
+    inline static void
+    log(const std::string &log_message, const Element1 n1, const Element2 n2)
+    {
+      Assert(n_of_occurrences("%s", log_message) == 2,
+             dealii::ExcMessage(
+               "Wrong number of \"%s\" inside the log message"));
+      if constexpr (level == severity_level::trace)
+        {
+#ifdef DEBUG
+          const std::string str_n1          = element_to_string(n1);
+          const std::string str_n2          = element_to_string(n2);
+          const std::string new_log_message = std::regex_replace(
+            std::regex_replace(log_message,
+                               std::regex("%s"),
+                               str_n1,
+                               std::regex_constants::format_first_only),
+            std::regex("%s"),
+            str_n2);
+          log<severity_level::trace>(new_log_message);
+#else
+          return;
+#endif
+        }
+      else
+        {
+          const std::string str_n1 = element_to_string(n1);
+          const std::string str_n2 = element_to_string(n2);
+          const std::string new_log_message = std::regex_replace(
+            std::regex_replace(log_message,
+                               std::regex("%s"),
+                               str_n1,
+                               std::regex_constants::format_first_only),
+            std::regex("%s"),
+            str_n2);
+          log<level>(new_log_message);
+        }
+    }
+
   } // namespace Logging
 } // namespace Ddhdg
