@@ -131,13 +131,35 @@ namespace Ddhdg
 
 
 
+    template <typename Element>
+    inline static std::string
+    element_to_string(const Element element)
+    {
+      if constexpr (std::is_same<Element, double>::value)
+        {
+          std::ostringstream stream_n;
+          stream_n << element;
+          return stream_n.str();
+        }
+      else
+        {
+          return std::to_string(element);
+        }
+    }
+
+
+
     template <severity_level level>
-    inline void
+    inline static void
     log(const std::string &log_message)
     {
       if constexpr (level == severity_level::trace)
         {
+#ifdef DEBUG
           BOOST_LOG_SEV(LOGGER::get(), severity_level::trace) << log_message;
+#else
+          return;
+#endif
         }
       else
         BOOST_LOG_SEV(LOGGER::get(), level) << log_message;
@@ -172,22 +194,37 @@ namespace Ddhdg
         }
     }
 
-    template <severity_level level>
-    inline void
-    log(const std::string &log_message, const unsigned int n)
+    template <severity_level level, typename Element>
+    inline static void
+    log(const std::string &log_message, const Element n)
     {
       Assert(n_of_occurrences("%s", log_message) == 1,
              dealii::ExcMessage(
                "Wrong number of \"%s\" inside the log message"));
-      const std::string str_n = std::to_string(n);
-      const std::string new_log_message =
-        std::regex_replace(log_message, std::regex("%s"), str_n);
-      log<level>(new_log_message);
+      if constexpr (level == severity_level::trace)
+        {
+#ifdef DEBUG
+          const std::string str_n = element_to_string(n);
+          const std::string new_log_message =
+            std::regex_replace(log_message, std::regex("%s"), str_n);
+          log<severity_level::trace>(new_log_message);
+#else
+          return;
+#endif
+        }
+      else
+        {
+          const std::string str_n = element_to_string(n);
+          const std::string new_log_message =
+            std::regex_replace(log_message, std::regex("%s"), str_n);
+          log<level>(new_log_message);
+        }
     }
 
+    template <typename Element>
     inline void
     log(const std::string &  log_message,
-        const unsigned int   n,
+        const Element        n,
         const severity_level level)
     {
       switch (level)
@@ -216,92 +253,5 @@ namespace Ddhdg
         }
     }
 
-    template <severity_level level>
-    inline void
-    log(const std::string &log_message, int n)
-    {
-      Assert(n_of_occurrences("%s", log_message) == 1,
-             dealii::ExcMessage(
-               "Wrong number of \"%s\" inside the log message"));
-      const std::string str_n = std::to_string(n);
-      const std::string new_log_message =
-        std::regex_replace(log_message, std::regex("%s"), str_n);
-      log<level>(new_log_message);
-    }
-
-    inline void
-    log(const std::string &log_message, const int n, const severity_level level)
-    {
-      switch (level)
-        {
-          case (severity_level::trace):
-            log<severity_level::trace>(log_message, n);
-            break;
-          case (severity_level::debug):
-            log<severity_level::debug>(log_message, n);
-            break;
-          case (severity_level::info):
-            log<severity_level::info>(log_message, n);
-            break;
-          case (severity_level::warning):
-            log<severity_level::warning>(log_message, n);
-            break;
-          case (severity_level::error):
-            log<severity_level::error>(log_message, n);
-            break;
-          case (severity_level::fatal):
-            log<severity_level::fatal>(log_message, n);
-            break;
-          default:
-            Assert(false, InvalidSeverityLevel());
-            break;
-        }
-    }
-
-    template <severity_level level>
-    inline void
-    log(const std::string &log_message, double n)
-    {
-      Assert(n_of_occurrences("%s", log_message) == 1,
-             dealii::ExcMessage(
-               "Wrong number of \"%s\" inside the log message"));
-      std::ostringstream stream_n;
-      stream_n << n;
-      const std::string str_n = stream_n.str();
-      const std::string new_log_message =
-        std::regex_replace(log_message, std::regex("%s"), str_n);
-      log<level>(new_log_message);
-    }
-
-    inline void
-    log(const std::string &  log_message,
-        const double         n,
-        const severity_level level)
-    {
-      switch (level)
-        {
-          case (severity_level::trace):
-            log<severity_level::trace>(log_message, n);
-            break;
-          case (severity_level::debug):
-            log<severity_level::debug>(log_message, n);
-            break;
-          case (severity_level::info):
-            log<severity_level::info>(log_message, n);
-            break;
-          case (severity_level::warning):
-            log<severity_level::warning>(log_message, n);
-            break;
-          case (severity_level::error):
-            log<severity_level::error>(log_message, n);
-            break;
-          case (severity_level::fatal):
-            log<severity_level::fatal>(log_message, n);
-            break;
-          default:
-            Assert(false, InvalidSeverityLevel());
-            break;
-        }
-    }
   } // namespace Logging
 } // namespace Ddhdg
