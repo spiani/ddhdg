@@ -108,6 +108,8 @@ namespace Ddhdg
       sink->locked_backend()->add_stream(out_stream);
 
       sink->set_formatter(&log_formatter);
+
+      // Remove this line to print all the debug messages
       sink->set_filter(severity >= severity_level::info);
 
       boost::log::add_common_attributes();

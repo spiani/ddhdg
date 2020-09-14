@@ -347,7 +347,7 @@ namespace Ddhdg
           }
         cell->set_dof_values(local_trace_values, this->current_solution_trace);
       }
-    this->constraints.distribute(this->current_solution_trace);
+    this->global_constraints.distribute(this->current_solution_trace);
   }
 
 
