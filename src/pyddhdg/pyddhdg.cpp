@@ -1175,6 +1175,59 @@ namespace pyddhdg
 
 
 
+  template <int dim>
+  double
+  NPSolver<dim>::compute_quasi_fermi_potential(
+    const double           density,
+    const double           potential,
+    const double           temperature,
+    const Ddhdg::Component component) const
+  {
+    switch (component)
+      {
+        case Ddhdg::Component::n:
+          return this->ddhdg_solver
+            ->template compute_quasi_fermi_potential<Ddhdg::Component::n>(
+              density, potential, temperature);
+        case Ddhdg::Component::p:
+          return this->ddhdg_solver
+            ->template compute_quasi_fermi_potential<Ddhdg::Component::p>(
+              density, potential, temperature);
+        default:
+          Assert(false, Ddhdg::InvalidComponent());
+          return 9e99;
+      }
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::compute_density(const double           qf_potential,
+                                 const double           potential,
+                                 const double           temperature,
+                                 const Ddhdg::Component component) const
+  {
+    switch (component)
+      {
+        case Ddhdg::Component::n:
+          return this->ddhdg_solver
+            ->template compute_density<Ddhdg::Component::n>(qf_potential,
+                                                            potential,
+                                                            temperature);
+        case Ddhdg::Component::p:
+          return this->ddhdg_solver
+            ->template compute_density<Ddhdg::Component::p>(qf_potential,
+                                                            potential,
+                                                            temperature);
+        default:
+          Assert(false, Ddhdg::InvalidComponent());
+          return 9e99;
+      }
+  }
+
+
+
   template class HomogeneousPermittivity<1>;
   template class HomogeneousPermittivity<2>;
   template class HomogeneousPermittivity<3>;

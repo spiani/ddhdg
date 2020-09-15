@@ -392,5 +392,17 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("initial_n_function"),
        py::arg("initial_p_function"),
        py::arg("n_cycles"),
-       py::arg("initial_refinements") = 0);
+       py::arg("initial_refinements") = 0)
+  .def("compute_quasi_fermi_potential",
+       &NPSolver<DIM>::compute_quasi_fermi_potential,
+       py::arg("density"),
+       py::arg("potential"),
+       py::arg("temperature"),
+       py::arg("component"))
+  .def("compute_density",
+       &NPSolver<DIM>::compute_density,
+       py::arg("quasi_fermi_potential"),
+       py::arg("electric_potential"),
+       py::arg("temperature"),
+       py::arg("component"));
 #endif

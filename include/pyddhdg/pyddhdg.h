@@ -417,6 +417,18 @@ namespace pyddhdg
                             unsigned int       n_cycles,
                             unsigned int       initial_refinements = 0);
 
+    double
+    compute_quasi_fermi_potential(double           density,
+                                  double           potential,
+                                  double           temperature,
+                                  Ddhdg::Component component) const;
+
+    double
+    compute_density(double           qf_potential,
+                    double           potential,
+                    double           temperature,
+                    Ddhdg::Component component) const;
+
   private:
     const std::shared_ptr<Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>>
       ddhdg_solver;
