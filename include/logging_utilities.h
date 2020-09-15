@@ -153,7 +153,7 @@ namespace Ddhdg
 
     template <severity_level level>
     inline static void
-    log(const std::string &log_message)
+    write_log(const std::string &log_message)
     {
       if constexpr (level == severity_level::trace)
         {
@@ -168,27 +168,27 @@ namespace Ddhdg
     }
 
     inline void
-    log(const std::string &log_message, const severity_level level)
+    write_log(const std::string &log_message, const severity_level level)
     {
       switch (level)
         {
           case (severity_level::trace):
-            log<severity_level::trace>(log_message);
+            write_log<severity_level::trace>(log_message);
             break;
           case (severity_level::debug):
-            log<severity_level::debug>(log_message);
+            write_log<severity_level::debug>(log_message);
             break;
           case (severity_level::info):
-            log<severity_level::info>(log_message);
+            write_log<severity_level::info>(log_message);
             break;
           case (severity_level::warning):
-            log<severity_level::warning>(log_message);
+            write_log<severity_level::warning>(log_message);
             break;
           case (severity_level::error):
-            log<severity_level::error>(log_message);
+            write_log<severity_level::error>(log_message);
             break;
           case (severity_level::fatal):
-            log<severity_level::fatal>(log_message);
+            write_log<severity_level::fatal>(log_message);
             break;
           default:
             Assert(false, InvalidSeverityLevel());
@@ -198,7 +198,7 @@ namespace Ddhdg
 
     template <severity_level level, typename Element>
     inline static void
-    log(const std::string &log_message, const Element n)
+    write_log(const std::string &log_message, const Element n)
     {
       Assert(n_of_occurrences("%s", log_message) == 1,
              dealii::ExcMessage(
@@ -209,7 +209,7 @@ namespace Ddhdg
           const std::string str_n = element_to_string(n);
           const std::string new_log_message =
             std::regex_replace(log_message, std::regex("%s"), str_n);
-          log<severity_level::trace>(new_log_message);
+          write_log<severity_level::trace>(new_log_message);
 #else
           return;
 #endif
@@ -219,35 +219,35 @@ namespace Ddhdg
           const std::string str_n = element_to_string(n);
           const std::string new_log_message =
             std::regex_replace(log_message, std::regex("%s"), str_n);
-          log<level>(new_log_message);
+          write_log<level>(new_log_message);
         }
     }
 
     template <typename Element>
     inline void
-    log(const std::string &  log_message,
-        const Element        n,
-        const severity_level level)
+    write_log(const std::string &  log_message,
+              const Element        n,
+              const severity_level level)
     {
       switch (level)
         {
           case (severity_level::trace):
-            log<severity_level::trace>(log_message, n);
+            write_log<severity_level::trace>(log_message, n);
             break;
           case (severity_level::debug):
-            log<severity_level::debug>(log_message, n);
+            write_log<severity_level::debug>(log_message, n);
             break;
           case (severity_level::info):
-            log<severity_level::info>(log_message, n);
+            write_log<severity_level::info>(log_message, n);
             break;
           case (severity_level::warning):
-            log<severity_level::warning>(log_message, n);
+            write_log<severity_level::warning>(log_message, n);
             break;
           case (severity_level::error):
-            log<severity_level::error>(log_message, n);
+            write_log<severity_level::error>(log_message, n);
             break;
           case (severity_level::fatal):
-            log<severity_level::fatal>(log_message, n);
+            write_log<severity_level::fatal>(log_message, n);
             break;
           default:
             Assert(false, InvalidSeverityLevel());
@@ -257,7 +257,9 @@ namespace Ddhdg
 
     template <severity_level level, typename Element1, typename Element2>
     inline static void
-    log(const std::string &log_message, const Element1 n1, const Element2 n2)
+    write_log(const std::string &log_message,
+              const Element1     n1,
+              const Element2     n2)
     {
       Assert(n_of_occurrences("%s", log_message) == 2,
              dealii::ExcMessage(
@@ -274,15 +276,15 @@ namespace Ddhdg
                                std::regex_constants::format_first_only),
             std::regex("%s"),
             str_n2);
-          log<severity_level::trace>(new_log_message);
+          write_log<severity_level::trace>(new_log_message);
 #else
           return;
 #endif
         }
       else
         {
-          const std::string str_n1 = element_to_string(n1);
-          const std::string str_n2 = element_to_string(n2);
+          const std::string str_n1          = element_to_string(n1);
+          const std::string str_n2          = element_to_string(n2);
           const std::string new_log_message = std::regex_replace(
             std::regex_replace(log_message,
                                std::regex("%s"),
@@ -290,7 +292,7 @@ namespace Ddhdg
                                std::regex_constants::format_first_only),
             std::regex("%s"),
             str_n2);
-          log<level>(new_log_message);
+          write_log<level>(new_log_message);
         }
     }
 

@@ -567,7 +567,7 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::setup_overall_system()
   {
-    this->log(
+    this->write_log(
       "Building (or rebuilding) the vectors for storing the solution on the "
       "cells and on the skeleton (for all the components)");
     this->dof_handler_cell.distribute_dofs(*(this->fe_cell));
@@ -576,10 +576,11 @@ namespace Ddhdg
     const unsigned int cell_dofs  = this->dof_handler_cell.n_dofs();
     const unsigned int trace_dofs = this->dof_handler_trace.n_dofs();
 
-    this->log("Number of degrees of freedom for the solution on the cells (all "
-              "components): %s",
-              cell_dofs);
-    this->log(
+    this->write_log(
+      "Number of degrees of freedom for the solution on the cells (all "
+      "components): %s",
+      cell_dofs);
+    this->write_log(
       "Number of degrees of freedom for the solution on the skeleton (all "
       "components): %s",
       trace_dofs);
@@ -606,8 +607,9 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::setup_restricted_trace_system()
   {
-    this->log("Building (or rebuilding) the vectors for storing the solution "
-              "on the skeleton restricted only on the active components");
+    this->write_log(
+      "Building (or rebuilding) the vectors for storing the "
+      "solution on the skeleton restricted only on the active components");
     this->fe_trace_restricted.reset(
       generate_fe_system(restrict_degrees_on_enabled_component(), true));
 
@@ -617,7 +619,7 @@ namespace Ddhdg
     const unsigned int trace_restricted_dofs =
       this->dof_handler_trace_restricted.n_dofs();
 
-    this->log(
+    this->write_log(
       "Number of degrees of freedom for the solution on the skeleton for "
       "the active components: %s",
       trace_restricted_dofs);
@@ -630,7 +632,7 @@ namespace Ddhdg
     this->constrained_dof_indices.resize(n_dirichlet_constraints);
     this->constrained_dof_values.resize(n_dirichlet_constraints);
 
-    this->log(
+    this->write_log(
       "%s degree of freedom (on the skeleton) are constrained by Dirichlet "
       "boundary conditions",
       n_dirichlet_constraints);
@@ -1310,8 +1312,9 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::solve_linear_problem()
   {
-    this->log("    RHS l2 norm       : %s", this->system_rhs.l2_norm());
-    this->log("    Matrix linfty norm: %s", this->system_matrix.linfty_norm());
+    this->write_log("    RHS l2 norm       : %s", this->system_rhs.l2_norm());
+    this->write_log("    Matrix linfty norm: %s",
+                    this->system_matrix.linfty_norm());
 
     SolverControl solver_control(this->system_matrix.m() * 10,
                                  1e-10 * this->system_rhs.l2_norm());
@@ -1323,8 +1326,8 @@ namespace Ddhdg
                             this->system_solution,
                             this->system_rhs,
                             PreconditionIdentity());
-        this->log("    Number of GMRES iterations: %s",
-                  solver_control.last_step());
+        this->write_log("    Number of GMRES iterations: %s",
+                        solver_control.last_step());
       }
     else
       {
@@ -1460,7 +1463,7 @@ namespace Ddhdg
          step <= max_number_of_iterations || max_number_of_iterations < 0;
          step++)
       {
-        this->log("Computing step number %s", step);
+        this->write_log("Computing step number %s", step);
 
         this->update_trace            = 0;
         this->update_cell             = 0;
@@ -1486,10 +1489,11 @@ namespace Ddhdg
           {
             const dealii::types::global_dof_index dof_index =
               this->constrained_dof_indices[i];
-            Logging::log<Logging::severity_level::trace>(
+            Logging::write_log<Logging::severity_level::trace>(
               "Setting dof index %s of system_solution to value %s to satisfy "
-              "the Dirichlet boundary conditions", dof_index, this->constrained_dof_values[i]
-              );
+              "the Dirichlet boundary conditions",
+              dof_index,
+              this->constrained_dof_values[i]);
             this->system_solution[dof_index] = this->constrained_dof_values[i];
           }
 
@@ -1509,8 +1513,9 @@ namespace Ddhdg
         current_solution_norm =
           std::max(current_solution_cell_norm, current_solution_trace_norm);
 
-        this->log("Difference in linfty norm compared to the previous step: %s",
-                  update_norm);
+        this->write_log(
+          "Difference in linfty norm compared to the previous step: %s",
+          update_norm);
 
         this->update_trace *= 1.;
         this->update_cell *= 1.;
@@ -1518,18 +1523,18 @@ namespace Ddhdg
         this->current_solution_trace += this->update_trace;
         this->current_solution_cell += this->update_cell;
 
-        this->log("Current solution norm: %s", current_solution_norm);
+        this->write_log("Current solution norm: %s", current_solution_norm);
 
         if (update_norm < absolute_tol)
           {
-            this->log(
+            this->write_log(
               "Update is smaller than absolute tolerance. CONVERGENCE REACHED");
             convergence_reached = true;
             break;
           }
         if (update_norm < relative_tol * current_solution_norm)
           {
-            this->log(
+            this->write_log(
               "Update is smaller than relative tolerance. CONVERGENCE REACHED");
             convergence_reached = true;
             break;

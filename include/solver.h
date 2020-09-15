@@ -223,37 +223,18 @@ namespace Ddhdg
       unsigned int                                 initial_refinements) = 0;
 
     inline void
-    log(const std::string &log_message) const
+    write_log(const std::string &log_message) const
     {
-      Logging::log(log_message, this->log_standard_level);
+      Logging::write_log(log_message, this->log_standard_level);
     }
 
+    template <typename Element>
     inline void
-    log(const std::string &log_message, const unsigned int n) const
+    write_log(const std::string &log_message, const Element n) const
     {
-      Logging::log(log_message, n, this->log_standard_level);
+      Logging::write_log(log_message, n, this->log_standard_level);
     }
 
-    inline void
-    log(const std::string &log_message, const int n) const
-    {
-      Logging::log(log_message, n, this->log_standard_level);
-    }
-
-    inline void
-    log(const std::string &log_message, const double n) const
-    {
-      Logging::log(log_message, n, this->log_standard_level);
-    }
-
-    virtual ~Solver() = default;
-
-    const std::shared_ptr<const ProblemType>      problem;
-    const std::shared_ptr<const Adimensionalizer> adimensionalizer;
-
-    Logging::severity_level log_standard_level = Logging::severity_level::info;
-
-  protected:
     template <Component c>
     inline double
     compute_quasi_fermi_potential(const double density,
@@ -359,6 +340,13 @@ namespace Ddhdg
         }
       return 9e99;
     }
+
+    virtual ~Solver() = default;
+
+    const std::shared_ptr<const ProblemType>      problem;
+    const std::shared_ptr<const Adimensionalizer> adimensionalizer;
+
+    Logging::severity_level log_standard_level = Logging::severity_level::info;
   };
 
 } // namespace Ddhdg
