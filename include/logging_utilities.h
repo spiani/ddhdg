@@ -211,6 +211,7 @@ namespace Ddhdg
             std::regex_replace(log_message, std::regex("%s"), str_n);
           write_log<severity_level::trace>(new_log_message);
 #else
+          (void)n;
           return;
 #endif
         }
@@ -278,6 +279,8 @@ namespace Ddhdg
             str_n2);
           write_log<severity_level::trace>(new_log_message);
 #else
+          (void)n1;
+          (void)n2;
           return;
 #endif
         }
