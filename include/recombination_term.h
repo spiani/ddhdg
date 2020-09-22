@@ -29,6 +29,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      bool                                   clear_vector,
       std::vector<double> &                  r) const;
 
     virtual void
@@ -37,6 +38,7 @@ namespace Ddhdg
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
       Component                              c,
+      bool                                   clear_vector,
       std::vector<double> &                  r) const;
 
     virtual ~RecombinationTerm() = default;
@@ -93,6 +95,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      bool                                   clear_vector,
       std::vector<double> &                  r) const override;
 
     void
@@ -101,6 +104,7 @@ namespace Ddhdg
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
       Component                              c,
+      bool                                   clear_vector,
       std::vector<double> &                  r) const override;
 
     virtual ~LinearRecombinationTerm() = default;

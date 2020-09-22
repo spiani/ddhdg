@@ -198,6 +198,7 @@ namespace Ddhdg
           scratch.previous_c_cell.at(Component::n),
           scratch.previous_c_cell.at(Component::p),
           scratch.cell_quadrature_points,
+          true,
           scratch.r_cell);
         this->problem->recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
@@ -205,6 +206,7 @@ namespace Ddhdg
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
             Component::n,
+            true,
             dr_n);
         this->problem->recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
@@ -212,6 +214,7 @@ namespace Ddhdg
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
             Component::p,
+            true,
             dr_p);
 
         this->adimensionalizer->adimensionalize_recombination_term(

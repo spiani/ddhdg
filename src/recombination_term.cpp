@@ -11,6 +11,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    bool                                   clear_vector,
     std::vector<double> &                  r) const
   {
     const std::size_t n_of_points = P.size();
@@ -22,8 +23,12 @@ namespace Ddhdg
     Assert(n_of_points == r.size(),
            dealii::ExcDimensionMismatch(n_of_points, r.size()));
 
+    if (clear_vector)
+      for (std::size_t q = 0; q < n_of_points; q++)
+        r[q] = 0.;
+
     for (std::size_t q = 0; q < n_of_points; q++)
-      r[q] = compute_recombination_term(n[q], p[q], P[q]);
+      r[q] += compute_recombination_term(n[q], p[q], P[q]);
   }
 
 
@@ -35,6 +40,7 @@ namespace Ddhdg
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
     const Component                        c,
+    bool                                   clear_vector,
     std::vector<double> &                  r) const
   {
     const std::size_t n_of_points = P.size();
@@ -46,8 +52,12 @@ namespace Ddhdg
     Assert(n_of_points == r.size(),
            dealii::ExcDimensionMismatch(n_of_points, r.size()));
 
+    if (clear_vector)
+      for (std::size_t q = 0; q < n_of_points; q++)
+        r[q] = 0.;
+
     for (std::size_t q = 0; q < n_of_points; q++)
-      r[q] = compute_derivative_of_recombination_term(n[q], p[q], P[q], c);
+      r[q] += compute_derivative_of_recombination_term(n[q], p[q], P[q], c);
   }
 
 
@@ -151,6 +161,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    bool                                   clear_vector,
     std::vector<double> &                  r) const
   {
     const std::size_t n_of_points = P.size();
@@ -162,6 +173,10 @@ namespace Ddhdg
     Assert(n_of_points == r.size(),
            dealii::ExcDimensionMismatch(n_of_points, r.size()));
 
+    if (clear_vector)
+      for (std::size_t q = 0; q < n_of_points; q++)
+        r[q] = 0.;
+
     std::vector<double> a(n_of_points);
     this->constant_term->value_list(P, a);
 
@@ -172,7 +187,7 @@ namespace Ddhdg
     this->p_linear_coefficient->value_list(P, c);
 
     for (std::size_t q = 0; q < n_of_points; q++)
-      r[q] = a[q] + b[q] * n[q] + c[q] * p[q];
+      r[q] += a[q] + b[q] * n[q] + c[q] * p[q];
   }
 
 
@@ -185,16 +200,28 @@ namespace Ddhdg
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
       const Component                        c,
+      bool                                   clear_vector,
       std::vector<double> &                  r) const
   {
     (void)n;
     (void)p;
-    Assert(P.size() == n.size(),
-           dealii::ExcDimensionMismatch(P.size(), n.size()));
-    Assert(P.size() == p.size(),
-           dealii::ExcDimensionMismatch(P.size(), p.size()));
-    Assert(P.size() == r.size(),
-           dealii::ExcDimensionMismatch(P.size(), r.size()));
+
+    const std::size_t n_of_points = P.size();
+
+    Assert(n_of_points == n.size(),
+           dealii::ExcDimensionMismatch(n_of_points, n.size()));
+    Assert(n_of_points == p.size(),
+           dealii::ExcDimensionMismatch(n_of_points, p.size()));
+    Assert(n_of_points == r.size(),
+           dealii::ExcDimensionMismatch(n_of_points, r.size()));
+
+    std::vector<double> old_values;
+
+    if (!clear_vector)
+      {
+        old_values.resize(n_of_points);
+        old_values = r;
+      }
 
     switch (c)
       {
@@ -208,6 +235,10 @@ namespace Ddhdg
           Assert(false, InvalidComponent());
           break;
       }
+
+    if (!clear_vector)
+      for (std::size_t q = 0; q < n_of_points; q++)
+        r[q] += old_values[q];
   }
 
 
