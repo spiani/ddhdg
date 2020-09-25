@@ -10,6 +10,7 @@ set(_test_files
         log_potential.cpp
         neumann_boundary_conditions.cpp
         solution_transfer.cpp
+        recombination_terms.cpp
         thermodynamic_equilibrium.cpp
         )
 

@@ -702,6 +702,7 @@ namespace Ddhdg
     const std::unique_ptr<NPSolverParameters> parameters;
 
     const std::shared_ptr<const dealii::Function<dim>> rescaled_doping;
+    const std::unique_ptr<RecombinationTerm<dim>>      recombination_term;
 
     std::unique_ptr<const FESystem<dim>> fe_cell;
     DoFHandler<dim>                      dof_handler_cell;

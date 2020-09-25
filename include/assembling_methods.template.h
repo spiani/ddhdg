@@ -194,13 +194,13 @@ namespace Ddhdg
         auto &dr_n = scratch.dr_cell.at(Component::n);
         auto &dr_p = scratch.dr_cell.at(Component::p);
 
-        this->problem->recombination_term->compute_multiple_recombination_terms(
+        this->recombination_term->compute_multiple_recombination_terms(
           scratch.previous_c_cell.at(Component::n),
           scratch.previous_c_cell.at(Component::p),
           scratch.cell_quadrature_points,
           true,
           scratch.r_cell);
-        this->problem->recombination_term
+        this->recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
@@ -208,7 +208,7 @@ namespace Ddhdg
             Component::n,
             true,
             dr_n);
-        this->problem->recombination_term
+        this->recombination_term
           ->compute_multiple_derivatives_of_recombination_terms(
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
