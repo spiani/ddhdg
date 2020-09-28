@@ -189,6 +189,18 @@ namespace Ddhdg
   class ShockleyReadHallFixedTemperature : public RecombinationTerm<dim>
   {
   public:
+    static inline double
+    compute_intrinsic_carrier_concentration(double conduction_band_density,
+                                            double valence_band_density,
+                                            double conduction_band_edge_energy,
+                                            double valence_band_edge_energy,
+                                            double temperature)
+    {
+      return conduction_band_density * valence_band_density *
+             exp((valence_band_edge_energy - conduction_band_edge_energy) /
+                 (Constants::KB * temperature));
+    }
+
     ShockleyReadHallFixedTemperature(double intrinsic_carrier_concentration,
                                      double electron_life_time,
                                      double hole_life_time);
@@ -249,6 +261,18 @@ namespace Ddhdg
   class AugerFixedTemperature : public RecombinationTerm<dim>
   {
   public:
+    static inline double
+    compute_intrinsic_carrier_concentration(double conduction_band_density,
+                                            double valence_band_density,
+                                            double conduction_band_edge_energy,
+                                            double valence_band_edge_energy,
+                                            double temperature)
+    {
+      return conduction_band_density * valence_band_density *
+             exp((valence_band_edge_energy - conduction_band_edge_energy) /
+                 (Constants::KB * temperature));
+    }
+
     AugerFixedTemperature(double intrinsic_carrier_concentration,
                           double n_coefficient,
                           double p_coefficient);

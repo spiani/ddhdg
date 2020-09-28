@@ -1,8 +1,9 @@
+find_package(pybind11 REQUIRED)
+
 add_library(pyddhdg STATIC pyddhdg.cpp)
+target_include_directories(pyddhdg PRIVATE ${pybind11_INCLUDE_DIRS})
 target_link_libraries(pyddhdg DDHDG)
 DEAL_II_SETUP_TARGET(pyddhdg)
-
-find_package(pybind11 REQUIRED)
 
 add_library(pyddhdg_common MODULE pyddhdg_common.cpp)
 

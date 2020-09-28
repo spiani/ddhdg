@@ -202,6 +202,259 @@ namespace pyddhdg
 
 
   template <int dim>
+  ShockleyReadHallFixedTemperature<dim>::ShockleyReadHallFixedTemperature(
+    const double intrinsic_carrier_concentration,
+    const double electron_life_time,
+    const double hole_life_time)
+    : intrinsic_carrier_concentration(intrinsic_carrier_concentration)
+    , electron_life_time(electron_life_time)
+    , hole_life_time(hole_life_time)
+  {}
+
+
+
+  template <int dim>
+  ShockleyReadHallFixedTemperature<dim>::ShockleyReadHallFixedTemperature(
+    const double conduction_band_density,
+    const double valence_band_density,
+    const double conduction_band_edge_energy,
+    const double valence_band_edge_energy,
+    const double temperature,
+    const double electron_life_time,
+    const double hole_life_time)
+    : intrinsic_carrier_concentration(
+        Ddhdg::ShockleyReadHallFixedTemperature<dim>::
+          compute_intrinsic_carrier_concentration(conduction_band_density,
+                                                  valence_band_density,
+                                                  conduction_band_edge_energy,
+                                                  valence_band_edge_energy,
+                                                  temperature))
+    , electron_life_time(electron_life_time)
+    , hole_life_time(hole_life_time)
+  {}
+
+
+
+  template <int dim>
+  std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+  ShockleyReadHallFixedTemperature<dim>::generate_ddhdg_recombination_term()
+  {
+    return std::make_shared<Ddhdg::ShockleyReadHallFixedTemperature<dim>>(
+      this->intrinsic_carrier_concentration,
+      this->electron_life_time,
+      this->hole_life_time);
+  }
+
+
+
+  template <int dim>
+  AugerFixedTemperature<dim>::AugerFixedTemperature(
+    const double intrinsic_carrier_concentration,
+    const double n_coefficient,
+    const double p_coefficient)
+    : intrinsic_carrier_concentration(intrinsic_carrier_concentration)
+    , n_coefficient(n_coefficient)
+    , p_coefficient(p_coefficient)
+  {}
+
+
+
+  template <int dim>
+  AugerFixedTemperature<dim>::AugerFixedTemperature(
+    const double conduction_band_density,
+    const double valence_band_density,
+    const double conduction_band_edge_energy,
+    const double valence_band_edge_energy,
+    const double temperature,
+    const double n_coefficient,
+    const double p_coefficient)
+    : intrinsic_carrier_concentration(
+        Ddhdg::AugerFixedTemperature<dim>::
+          compute_intrinsic_carrier_concentration(conduction_band_density,
+                                                  valence_band_density,
+                                                  conduction_band_edge_energy,
+                                                  valence_band_edge_energy,
+                                                  temperature))
+    , n_coefficient(n_coefficient)
+    , p_coefficient(p_coefficient)
+  {}
+
+
+
+  template <int dim>
+  std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+  AugerFixedTemperature<dim>::generate_ddhdg_recombination_term()
+  {
+    return std::make_shared<Ddhdg::AugerFixedTemperature<dim>>(
+      this->intrinsic_carrier_concentration,
+      this->n_coefficient,
+      this->p_coefficient);
+  }
+
+
+
+  template <int dim>
+  ShockleyReadHall<dim>::ShockleyReadHall(
+    const double              conduction_band_density,
+    const double              valence_band_density,
+    const double              conduction_band_edge_energy,
+    const double              valence_band_edge_energy,
+    const DealIIFunction<dim> temperature,
+    const double              electron_life_time,
+    const double              hole_life_time)
+    : conduction_band_density(conduction_band_density)
+    , valence_band_density(valence_band_density)
+    , conduction_band_edge_energy(conduction_band_edge_energy)
+    , valence_band_edge_energy(valence_band_edge_energy)
+    , temperature(temperature)
+    , electron_life_time(electron_life_time)
+    , hole_life_time(hole_life_time)
+  {}
+
+
+
+  template <int dim>
+  std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+  ShockleyReadHall<dim>::generate_ddhdg_recombination_term()
+  {
+    return std::make_shared<Ddhdg::ShockleyReadHall<dim>>(
+      this->conduction_band_density,
+      this->valence_band_density,
+      this->conduction_band_edge_energy,
+      this->valence_band_edge_energy,
+      this->temperature.get_dealii_function(),
+      this->electron_life_time,
+      this->hole_life_time);
+  }
+
+
+
+  template <int dim>
+  Auger<dim>::Auger(const double              conduction_band_density,
+                    const double              valence_band_density,
+                    const double              conduction_band_edge_energy,
+                    const double              valence_band_edge_energy,
+                    const DealIIFunction<dim> temperature,
+                    const double              n_coefficient,
+                    const double              p_coefficient)
+    : conduction_band_density(conduction_band_density)
+    , valence_band_density(valence_band_density)
+    , conduction_band_edge_energy(conduction_band_edge_energy)
+    , valence_band_edge_energy(valence_band_edge_energy)
+    , temperature(temperature)
+    , n_coefficient(n_coefficient)
+    , p_coefficient(p_coefficient)
+  {}
+
+
+
+  template <int dim>
+  std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+  Auger<dim>::generate_ddhdg_recombination_term()
+  {
+    return std::make_shared<Ddhdg::Auger<dim>>(
+      this->conduction_band_density,
+      this->valence_band_density,
+      this->conduction_band_edge_energy,
+      this->valence_band_edge_energy,
+      this->temperature.get_dealii_function(),
+      this->n_coefficient,
+      this->p_coefficient);
+  }
+
+
+
+  template <int dim>
+  pybind11::list
+  SuperimposedRecombinationTerm<dim>::put_in_a_list(
+    pybind11::object recombination_term1,
+    pybind11::object recombination_term2)
+  {
+    auto l = pybind11::list();
+    l.append(recombination_term1);
+    l.append(recombination_term2);
+    return l;
+  }
+
+
+
+  template <int dim>
+  pybind11::list
+  SuperimposedRecombinationTerm<dim>::put_in_a_list(
+    pybind11::object recombination_term1,
+    pybind11::object recombination_term2,
+    pybind11::object recombination_term3)
+  {
+    auto l = pybind11::list();
+    l.append(recombination_term1);
+    l.append(recombination_term2);
+    l.append(recombination_term3);
+    return l;
+  }
+
+
+
+  template <int dim>
+  SuperimposedRecombinationTerm<dim>::SuperimposedRecombinationTerm(
+    const pybind11::list recombination_terms)
+    : recombination_terms(recombination_terms)
+  {}
+
+
+
+  template <int dim>
+  SuperimposedRecombinationTerm<dim>::SuperimposedRecombinationTerm(
+    pybind11::object recombination_term1,
+    pybind11::object recombination_term2)
+    : recombination_terms(
+        put_in_a_list(recombination_term1, recombination_term2))
+  {}
+
+
+
+  template <int dim>
+  SuperimposedRecombinationTerm<dim>::SuperimposedRecombinationTerm(
+    pybind11::object recombination_term1,
+    pybind11::object recombination_term2,
+    pybind11::object recombination_term3)
+    : recombination_terms(put_in_a_list(recombination_term1,
+                                        recombination_term2,
+                                        recombination_term3))
+  {}
+
+
+
+  template <int dim>
+  pybind11::list
+  SuperimposedRecombinationTerm<dim>::get_recombination_terms() const
+  {
+    auto l = pybind11::list();
+    for (pybind11::handle obj : this->recombination_terms)
+      l.append(obj);
+    return l;
+  }
+
+
+
+  template <int dim>
+  std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+  SuperimposedRecombinationTerm<dim>::generate_ddhdg_recombination_term()
+  {
+    std::vector<std::shared_ptr<Ddhdg::RecombinationTerm<dim>>>
+      ddhdg_recombination_terms;
+    for (pybind11::handle obj : this->recombination_terms)
+      {
+        const auto recombination_term = obj.cast<RecombinationTerm<dim> *>()
+                                          ->generate_ddhdg_recombination_term();
+        ddhdg_recombination_terms.push_back(recombination_term);
+      }
+    return std::make_shared<Ddhdg::SuperimposedRecombinationTerm<dim>>(
+      ddhdg_recombination_terms);
+  }
+
+
+
+  template <int dim>
   BoundaryConditionHandler<dim>::BoundaryConditionHandler()
     : bc_handler(std::make_shared<Ddhdg::BoundaryConditionHandler<dim>>())
   {}
@@ -1251,6 +1504,26 @@ namespace pyddhdg
   template class LinearRecombinationTerm<1>;
   template class LinearRecombinationTerm<2>;
   template class LinearRecombinationTerm<3>;
+
+  template class ShockleyReadHallFixedTemperature<1>;
+  template class ShockleyReadHallFixedTemperature<2>;
+  template class ShockleyReadHallFixedTemperature<3>;
+
+  template class AugerFixedTemperature<1>;
+  template class AugerFixedTemperature<2>;
+  template class AugerFixedTemperature<3>;
+
+  template class ShockleyReadHall<1>;
+  template class ShockleyReadHall<2>;
+  template class ShockleyReadHall<3>;
+
+  template class Auger<1>;
+  template class Auger<2>;
+  template class Auger<3>;
+
+  template class SuperimposedRecombinationTerm<1>;
+  template class SuperimposedRecombinationTerm<2>;
+  template class SuperimposedRecombinationTerm<3>;
 
   template class BoundaryConditionHandler<1>;
   template class BoundaryConditionHandler<2>;

@@ -392,9 +392,12 @@ namespace Ddhdg
     double electron_life_time,
     double hole_life_time)
     : intrinsic_carrier_concentration(
-        conduction_band_density * valence_band_density *
-        exp((valence_band_edge_energy - conduction_band_edge_energy) /
-            (Constants::KB * temperature)))
+        ShockleyReadHallFixedTemperature<dim>::
+          compute_intrinsic_carrier_concentration(conduction_band_density,
+                                                  valence_band_density,
+                                                  conduction_band_edge_energy,
+                                                  valence_band_edge_energy,
+                                                  temperature))
     , electron_life_time(electron_life_time)
     , hole_life_time(hole_life_time)
   {}

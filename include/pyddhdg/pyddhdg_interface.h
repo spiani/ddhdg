@@ -21,7 +21,9 @@ py::class_<PiecewiseFunction<DIM>, DealIIFunction<DIM>>(m, "PiecewiseFunction")
   .def(py::init<const std::string &, double, const std::string &>())
   .def(py::init<const std::string &, double, double>());
 
-py::class_<RecombinationTerm<DIM>>(m, "RecombinationTerm");
+py::class_<RecombinationTerm<DIM>, Trampoline<DIM, RecombinationTerm<DIM>>>(
+  m,
+  "RecombinationTerm");
 
 py::class_<LinearRecombinationTerm<DIM>, RecombinationTerm<DIM>>(
   m,
@@ -34,6 +36,151 @@ py::class_<LinearRecombinationTerm<DIM>, RecombinationTerm<DIM>>(
        &LinearRecombinationTerm<DIM>::get_n_linear_coefficient)
   .def("get_p_linear_coefficient",
        &LinearRecombinationTerm<DIM>::get_p_linear_coefficient);
+
+py::class_<ShockleyReadHallFixedTemperature<DIM>, RecombinationTerm<DIM>>(
+  m,
+  "ShockleyReadHallFixedTemperature")
+  .def(py::init<double, double, double>(),
+       py::arg("intrinsic_carrier_concentration"),
+       py::arg("electron_life_time"),
+       py::arg("hole_life_time"))
+  .def(py::init<double, double, double, double, double, double, double>(),
+       py::arg("conduction_band_density"),
+       py::arg("valence_band_density"),
+       py::arg("conduction_band_edge_energy"),
+       py::arg("valence_band_edge_energy"),
+       py::arg("temperature"),
+       py::arg("electron_life_time"),
+       py::arg("hole_life_time"))
+  .def_property_readonly("intrinsic_carrier_concentration",
+                         [](const ShockleyReadHallFixedTemperature<DIM> &r) {
+                           return r.intrinsic_carrier_concentration;
+                         })
+  .def_property_readonly("electron_life_time",
+                         [](const ShockleyReadHallFixedTemperature<DIM> &r) {
+                           return r.electron_life_time;
+                         })
+  .def_property_readonly("hole_life_time",
+                         [](const ShockleyReadHallFixedTemperature<DIM> &r) {
+                           return r.hole_life_time;
+                         });
+
+py::class_<AugerFixedTemperature<DIM>, RecombinationTerm<DIM>>(
+  m,
+  "AugerFixedTemperature")
+  .def(py::init<double, double, double>(),
+       py::arg("intrinsic_carrier_concentration"),
+       py::arg("n_coefficient"),
+       py::arg("p_coefficient"))
+  .def(py::init<double, double, double, double, double, double, double>(),
+       py::arg("conduction_band_density"),
+       py::arg("valence_band_density"),
+       py::arg("conduction_band_edge_energy"),
+       py::arg("valence_band_edge_energy"),
+       py::arg("temperature"),
+       py::arg("n_coefficient"),
+       py::arg("p_coefficient"))
+  .def_property_readonly("intrinsic_carrier_concentration",
+                         [](const AugerFixedTemperature<DIM> &r) {
+                           return r.intrinsic_carrier_concentration;
+                         })
+  .def_property_readonly("n_coefficient",
+                         [](const AugerFixedTemperature<DIM> &r) {
+                           return r.n_coefficient;
+                         })
+  .def_property_readonly("p_coefficient",
+                         [](const AugerFixedTemperature<DIM> &r) {
+                           return r.p_coefficient;
+                         });
+
+py::class_<ShockleyReadHall<DIM>, RecombinationTerm<DIM>>(m, "ShockleyReadHall")
+  .def(py::init<double,
+                double,
+                double,
+                double,
+                DealIIFunction<DIM>,
+                double,
+                double>(),
+       py::arg("conduction_band_density"),
+       py::arg("valence_band_density"),
+       py::arg("conduction_band_edge_energy"),
+       py::arg("valence_band_edge_energy"),
+       py::arg("temperature"),
+       py::arg("electron_life_time"),
+       py::arg("hole_life_time"))
+  .def_property_readonly("conduction_band_density",
+                         [](const ShockleyReadHall<DIM> &r) {
+                           return r.conduction_band_density;
+                         })
+  .def_property_readonly("valence_band_density",
+                         [](const ShockleyReadHall<DIM> &r) {
+                           return r.valence_band_density;
+                         })
+  .def_property_readonly("conduction_band_edge_energy",
+                         [](const ShockleyReadHall<DIM> &r) {
+                           return r.conduction_band_edge_energy;
+                         })
+  .def_property_readonly("valence_band_edge_energy",
+                         [](const ShockleyReadHall<DIM> &r) {
+                           return r.valence_band_edge_energy;
+                         })
+  .def_property_readonly("electron_life_time",
+                         [](const ShockleyReadHall<DIM> &r) {
+                           return r.electron_life_time;
+                         })
+  .def_property_readonly("hole_life_time", [](const ShockleyReadHall<DIM> &r) {
+    return r.hole_life_time;
+  });
+
+py::class_<Auger<DIM>, RecombinationTerm<DIM>>(m, "Auger")
+  .def(py::init<double,
+                double,
+                double,
+                double,
+                DealIIFunction<DIM>,
+                double,
+                double>(),
+       py::arg("conduction_band_density"),
+       py::arg("valence_band_density"),
+       py::arg("conduction_band_edge_energy"),
+       py::arg("valence_band_edge_energy"),
+       py::arg("temperature"),
+       py::arg("n_coefficient"),
+       py::arg("p_coefficient"))
+  .def_property_readonly("conduction_band_density",
+                         [](const Auger<DIM> &r) {
+                           return r.conduction_band_density;
+                         })
+  .def_property_readonly("valence_band_density",
+                         [](const Auger<DIM> &r) {
+                           return r.valence_band_density;
+                         })
+  .def_property_readonly("conduction_band_edge_energy",
+                         [](const Auger<DIM> &r) {
+                           return r.conduction_band_edge_energy;
+                         })
+  .def_property_readonly("valence_band_edge_energy",
+                         [](const Auger<DIM> &r) {
+                           return r.valence_band_edge_energy;
+                         })
+  .def_property_readonly("n_coefficient",
+                         [](const Auger<DIM> &r) { return r.n_coefficient; })
+  .def_property_readonly("p_coefficient",
+                         [](const Auger<DIM> &r) { return r.p_coefficient; });
+
+py::class_<SuperimposedRecombinationTerm<DIM>, RecombinationTerm<DIM>>(
+  m,
+  "SuperimposedRecombinationTerm")
+  .def(py::init<pybind11::list>(), py::arg("recombination_terms"))
+  .def(py::init<pybind11::object, pybind11::object>(),
+       py::arg("recombination_term1"),
+       py::arg("recombination_term2"))
+  .def(py::init<pybind11::object, pybind11::object, pybind11::object>(),
+       py::arg("recombination_term1"),
+       py::arg("recombination_term2"),
+       py::arg("recombination_term3"))
+  .def("get_recombination_terms",
+       &SuperimposedRecombinationTerm<DIM>::get_recombination_terms);
 
 py::class_<BoundaryConditionHandler<DIM>>(m, "BoundaryConditionHandler")
   .def(py::init<>())

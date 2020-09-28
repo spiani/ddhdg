@@ -4,6 +4,8 @@
 
 #include <deal.II/grid/grid_generator.h>
 
+#include <pybind11/pybind11.h>
+
 #include "boundary_conditions.h"
 #include "ddhdg.h"
 
@@ -97,6 +99,25 @@ namespace pyddhdg
     generate_ddhdg_recombination_term() = 0;
   };
 
+  template <int dim, typename BaseRecombinationClass>
+  class Trampoline : public BaseRecombinationClass
+  {
+  public:
+    using BaseRecombinationClass::BaseRecombinationClass;
+
+    /* Trampoline */
+    std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+    generate_ddhdg_recombination_term() override
+    {
+      PYBIND11_OVERLOAD_PURE(
+        std::shared_ptr<Ddhdg::RecombinationTerm<dim>>, /* Return type */
+        BaseRecombinationClass,                         /* Parent class */
+        generate_ddhdg_recombination_term, /* Name of function in C++ (must
+                                             match Python name) */
+      );
+    }
+  };
+
   template <int dim>
   class LinearRecombinationTerm : public RecombinationTerm<dim>
   {
@@ -121,6 +142,136 @@ namespace pyddhdg
     const DealIIFunction<dim> zero_term;
     const DealIIFunction<dim> n_linear_coefficient;
     const DealIIFunction<dim> p_linear_coefficient;
+  };
+
+  template <int dim>
+  class ShockleyReadHallFixedTemperature : public RecombinationTerm<dim>
+  {
+  public:
+    ShockleyReadHallFixedTemperature(double intrinsic_carrier_concentration,
+                                     double electron_life_time,
+                                     double hole_life_time);
+
+    ShockleyReadHallFixedTemperature(double conduction_band_density,
+                                     double valence_band_density,
+                                     double conduction_band_edge_energy,
+                                     double valence_band_edge_energy,
+                                     double temperature,
+                                     double electron_life_time,
+                                     double hole_life_time);
+
+    std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+    generate_ddhdg_recombination_term() override;
+
+    const double intrinsic_carrier_concentration;
+    const double electron_life_time;
+    const double hole_life_time;
+  };
+
+  template <int dim>
+  class AugerFixedTemperature : public RecombinationTerm<dim>
+  {
+  public:
+    AugerFixedTemperature(double intrinsic_carrier_concentration,
+                          double n_coefficient,
+                          double p_coefficient);
+
+    AugerFixedTemperature(double conduction_band_density,
+                          double valence_band_density,
+                          double conduction_band_edge_energy,
+                          double valence_band_edge_energy,
+                          double temperature,
+                          double n_coefficient,
+                          double p_coefficient);
+
+    std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+    generate_ddhdg_recombination_term() override;
+
+    const double intrinsic_carrier_concentration;
+    const double n_coefficient;
+    const double p_coefficient;
+  };
+
+  template <int dim>
+  class ShockleyReadHall : public RecombinationTerm<dim>
+  {
+  public:
+    ShockleyReadHall(double              conduction_band_density,
+                     double              valence_band_density,
+                     double              conduction_band_edge_energy,
+                     double              valence_band_edge_energy,
+                     DealIIFunction<dim> temperature,
+                     double              electron_life_time,
+                     double              hole_life_time);
+
+    std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+    generate_ddhdg_recombination_term() override;
+
+    const double              conduction_band_density;
+    const double              valence_band_density;
+    const double              conduction_band_edge_energy;
+    const double              valence_band_edge_energy;
+    const DealIIFunction<dim> temperature;
+
+    const double electron_life_time;
+    const double hole_life_time;
+  };
+
+  template <int dim>
+  class Auger : public RecombinationTerm<dim>
+  {
+  public:
+    Auger(double              conduction_band_density,
+          double              valence_band_density,
+          double              conduction_band_edge_energy,
+          double              valence_band_edge_energy,
+          DealIIFunction<dim> temperature,
+          double              n_coefficient,
+          double              p_coefficient);
+
+    std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+    generate_ddhdg_recombination_term() override;
+
+    const double              conduction_band_density;
+    const double              valence_band_density;
+    const double              conduction_band_edge_energy;
+    const double              valence_band_edge_energy;
+    const DealIIFunction<dim> temperature;
+
+    const double n_coefficient;
+    const double p_coefficient;
+  };
+
+  template <int dim>
+  class SuperimposedRecombinationTerm : public RecombinationTerm<dim>
+  {
+  public:
+    static pybind11::list
+    put_in_a_list(pybind11::object recombination_term1,
+                  pybind11::object recombination_term2);
+
+    static pybind11::list
+    put_in_a_list(pybind11::object recombination_term1,
+                  pybind11::object recombination_term2,
+                  pybind11::object recombination_term3);
+
+    explicit SuperimposedRecombinationTerm(pybind11::list recombination_terms);
+
+    SuperimposedRecombinationTerm(pybind11::object recombination_term1,
+                                  pybind11::object recombination_term2);
+
+    SuperimposedRecombinationTerm(pybind11::object recombination_term1,
+                                  pybind11::object recombination_term2,
+                                  pybind11::object recombination_term3);
+
+    pybind11::list
+    get_recombination_terms() const;
+
+    std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+    generate_ddhdg_recombination_term() override;
+
+  private:
+    const pybind11::list recombination_terms;
   };
 
   template <int dim>
