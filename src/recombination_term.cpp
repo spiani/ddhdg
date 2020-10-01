@@ -13,6 +13,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    const double                           rescaling_factor,
     bool                                   clear_vector,
     std::vector<double> &                  r)
   {
@@ -30,7 +31,7 @@ namespace Ddhdg
         r[q] = 0.;
 
     for (std::size_t q = 0; q < n_of_points; q++)
-      r[q] += compute_recombination_term(n[q], p[q], P[q]);
+      r[q] += compute_recombination_term(n[q], p[q], P[q], rescaling_factor);
   }
 
 
@@ -41,6 +42,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    const double                           rescaling_factor,
     const Component                        c,
     bool                                   clear_vector,
     std::vector<double> &                  r)
@@ -59,7 +61,8 @@ namespace Ddhdg
         r[q] = 0.;
 
     for (std::size_t q = 0; q < n_of_points; q++)
-      r[q] += compute_derivative_of_recombination_term(n[q], p[q], P[q], c);
+      r[q] += compute_derivative_of_recombination_term(
+        n[q], p[q], P[q], rescaling_factor, c);
   }
 
 
@@ -122,12 +125,13 @@ namespace Ddhdg
   LinearRecombinationTerm<dim>::compute_recombination_term(
     const double              n,
     const double              p,
-    const dealii::Point<dim> &q) const
+    const dealii::Point<dim> &q,
+    const double              rescaling_factor) const
   {
     const double a = this->constant_term->value(q);
     const double b = this->n_linear_coefficient->value(q);
     const double c = this->p_linear_coefficient->value(q);
-    return a + n * b + p * c;
+    return a + (n * b + p * c) * rescaling_factor;
   }
 
 
@@ -138,10 +142,12 @@ namespace Ddhdg
     const double              n,
     const double              p,
     const dealii::Point<dim> &q,
+    const double              rescaling_factor,
     Component                 c) const
   {
     (void)n;
     (void)p;
+    (void)rescaling_factor;
     switch (c)
       {
         case Component::n:
@@ -163,6 +169,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    const double                           rescaling_factor,
     bool                                   clear_vector,
     std::vector<double> &                  r)
   {
@@ -189,7 +196,7 @@ namespace Ddhdg
     this->p_linear_coefficient->value_list(P, c);
 
     for (std::size_t q = 0; q < n_of_points; q++)
-      r[q] += a[q] + b[q] * n[q] + c[q] * p[q];
+      r[q] += a[q] + (b[q] * n[q] + c[q] * p[q]) * rescaling_factor;
   }
 
 
@@ -201,12 +208,14 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      const double                           rescaling_factor,
       const Component                        c,
       bool                                   clear_vector,
       std::vector<double> &                  r)
   {
     (void)n;
     (void)p;
+    (void)rescaling_factor;
 
     const std::size_t n_of_points = P.size();
 
@@ -293,11 +302,15 @@ namespace Ddhdg
   SuperimposedRecombinationTerm<dim>::compute_recombination_term(
     const double              n,
     const double              p,
-    const dealii::Point<dim> &q) const
+    const dealii::Point<dim> &q,
+    const double              rescaling_factor) const
   {
     double k = 0;
     for (const auto &recombination_term : this->recombination_terms)
-      k += recombination_term->compute_recombination_term(n, p, q);
+      k += recombination_term->compute_recombination_term(n,
+                                                          p,
+                                                          q,
+                                                          rescaling_factor);
     return k;
   }
 
@@ -309,14 +322,13 @@ namespace Ddhdg
     const double              n,
     const double              p,
     const dealii::Point<dim> &q,
+    const double              rescaling_factor,
     Component                 c) const
   {
     double k = 0;
     for (const auto &recombination_term : this->recombination_terms)
-      k += recombination_term->compute_derivative_of_recombination_term(n,
-                                                                        p,
-                                                                        q,
-                                                                        c);
+      k += recombination_term->compute_derivative_of_recombination_term(
+        n, p, q, rescaling_factor, c);
     return k;
   }
 
@@ -328,6 +340,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    const double                           rescaling_factor,
     bool                                   clear_vector,
     std::vector<double> &                  r)
   {
@@ -346,7 +359,7 @@ namespace Ddhdg
 
     for (const auto &recombination_term : this->recombination_terms)
       recombination_term->compute_multiple_recombination_terms(
-        n, p, P, false, r);
+        n, p, P, rescaling_factor, false, r);
   }
 
 
@@ -358,6 +371,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      const double                           rescaling_factor,
       const Component                        c,
       bool                                   clear_vector,
       std::vector<double> &                  r)
@@ -377,7 +391,7 @@ namespace Ddhdg
 
     for (const auto &recombination_term : this->recombination_terms)
       recombination_term->compute_multiple_derivatives_of_recombination_terms(
-        n, p, P, c, false, r);
+        n, p, P, rescaling_factor, c, false, r);
   }
 
 
@@ -421,30 +435,32 @@ namespace Ddhdg
   ShockleyReadHallFixedTemperature<dim>::compute_recombination_term(
     const double              n,
     const double              p,
-    const dealii::Point<dim> &q) const
+    const dealii::Point<dim> &q,
+    const double              rescaling_factor) const
   {
     (void)q;
-    const double ni    = this->intrinsic_carrier_concentration;
+    const double ni = this->intrinsic_carrier_concentration / rescaling_factor;
     const double tau_n = this->electron_life_time;
     const double tau_p = this->hole_life_time;
 
     const double num = n * p - ni * ni;
     const double den = tau_p * (n + ni) + tau_n * (p + ni);
-    return num / den;
+    return num * rescaling_factor / den;
   }
 
 
 
   template <int dim>
   double
-  ShockleyReadHallFixedTemperature<
-    dim>::compute_derivative_of_recombination_term(const double              n,
-                                                   const double              p,
-                                                   const dealii::Point<dim> &q,
-                                                   Component c) const
+  ShockleyReadHallFixedTemperature<dim>::
+    compute_derivative_of_recombination_term(const double              n,
+                                             const double              p,
+                                             const dealii::Point<dim> &q,
+                                             const double rescaling_factor,
+                                             Component    c) const
   {
     (void)q;
-    const double ni    = this->intrinsic_carrier_concentration;
+    const double ni = this->intrinsic_carrier_concentration / rescaling_factor;
     const double tau_n = this->electron_life_time;
     const double tau_p = this->hole_life_time;
 
@@ -471,6 +487,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    const double                           rescaling_factor,
     bool                                   clear_vector,
     std::vector<double> &                  r)
   {
@@ -487,7 +504,7 @@ namespace Ddhdg
       for (std::size_t q = 0; q < n_of_points; q++)
         r[q] = 0.;
 
-    const double ni    = this->intrinsic_carrier_concentration;
+    const double ni = this->intrinsic_carrier_concentration / rescaling_factor;
     const double tau_n = this->electron_life_time;
     const double tau_p = this->hole_life_time;
 
@@ -495,7 +512,7 @@ namespace Ddhdg
       {
         const double num = n[q] * p[q] - ni * ni;
         const double den = tau_p * (n[q] + ni) + tau_n * (p[q] + ni);
-        r[q] += num / den;
+        r[q] += num * rescaling_factor / den;
       }
   }
 
@@ -508,6 +525,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      const double                           rescaling_factor,
       const Component                        c,
       bool                                   clear_vector,
       std::vector<double> &                  r)
@@ -525,7 +543,7 @@ namespace Ddhdg
       for (std::size_t q = 0; q < n_of_points; q++)
         r[q] = 0.;
 
-    const double ni    = this->intrinsic_carrier_concentration;
+    const double ni = this->intrinsic_carrier_concentration / rescaling_factor;
     const double tau_n = this->electron_life_time;
     const double tau_p = this->hole_life_time;
 
@@ -592,11 +610,16 @@ namespace Ddhdg
   AugerFixedTemperature<dim>::compute_recombination_term(
     const double              n,
     const double              p,
-    const dealii::Point<dim> &q) const
+    const dealii::Point<dim> &q,
+    const double              rescaling_factor) const
   {
     (void)q;
-    const double ni = this->intrinsic_carrier_concentration;
-    return (this->n_coefficient * n + this->p_coefficient * p) * (n * p - ni);
+    const double ni         = this->intrinsic_carrier_concentration;
+    const double rescaled_n = n * rescaling_factor;
+    const double rescaled_p = p * rescaling_factor;
+    return (this->n_coefficient * rescaled_n +
+            this->p_coefficient * rescaled_p) *
+           (rescaled_n * rescaled_p - ni);
   }
 
 
@@ -607,19 +630,22 @@ namespace Ddhdg
     const double              n,
     const double              p,
     const dealii::Point<dim> &q,
+    const double              rescaling_factor,
     Component                 c) const
   {
     (void)q;
     const double ni  = this->intrinsic_carrier_concentration;
     const double C_n = this->n_coefficient;
     const double C_p = this->p_coefficient;
+    const double r_n = n * rescaling_factor;
+    const double r_p = p * rescaling_factor;
 
     switch (c)
       {
         case Component::n:
-          return C_p * p * p + 2 * C_n * n * p - C_n * ni * ni;
+          return C_p * r_p * r_p + 2 * C_n * r_n * r_p - C_n * ni * ni;
         case Component::p:
-          return C_n * n * n + 2 * C_n * n * p - C_p * ni * ni;
+          return C_n * r_n * r_n + 2 * C_n * r_n * r_p - C_p * ni * ni;
         default:
           Assert(false, InvalidComponent());
           return 9e99;
@@ -634,6 +660,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    const double                           rescaling_factor,
     bool                                   clear_vector,
     std::vector<double> &                  r)
   {
@@ -653,8 +680,12 @@ namespace Ddhdg
     const double ni = this->intrinsic_carrier_concentration;
 
     for (std::size_t q = 0; q < n_of_points; q++)
-      r[q] += (this->n_coefficient * n[q] + this->p_coefficient * p[q]) *
-              (n[q] * p[q] - ni);
+      {
+        const double r_n = n[q] * rescaling_factor;
+        const double r_p = p[q] * rescaling_factor;
+        r[q] += (this->n_coefficient * r_n + this->p_coefficient * r_p) *
+                (r_n * r_p - ni);
+      }
   }
 
 
@@ -666,6 +697,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      const double                           rescaling_factor,
       const Component                        c,
       bool                                   clear_vector,
       std::vector<double> &                  r)
@@ -691,12 +723,20 @@ namespace Ddhdg
       {
           case Component::n: {
             for (std::size_t q = 0; q < n_of_points; q++)
-              r[q] += C_p * p[q] * p[q] + 2 * C_n * n[q] * p[q] - C_n * ni * ni;
+              {
+                const double r_n = n[q] * rescaling_factor;
+                const double r_p = p[q] * rescaling_factor;
+                r[q] += C_p * r_p * r_p + 2 * C_n * r_n * r_p - C_n * ni * ni;
+              }
             break;
           }
           case Component::p: {
             for (std::size_t q = 0; q < n_of_points; q++)
-              r[q] += C_n * n[q] * n[q] + 2 * C_n * n[q] * p[q] - C_p * ni * ni;
+              {
+                const double r_n = n[q] * rescaling_factor;
+                const double r_p = p[q] * rescaling_factor;
+                r[q] += C_n * r_n * r_n + 2 * C_n * r_n * r_p - C_p * ni * ni;
+              }
             break;
           }
         default:
@@ -733,19 +773,20 @@ namespace Ddhdg
   ShockleyReadHall<dim>::compute_recombination_term(
     const double              n,
     const double              p,
-    const dealii::Point<dim> &q) const
+    const dealii::Point<dim> &q,
+    const double              rescaling_factor) const
   {
     const double T = this->temperature->value(q);
     const double ni =
       this->conduction_band_density * this->valence_band_density *
       exp((this->valence_band_edge_energy - this->conduction_band_edge_energy) /
-          (Constants::KB * T));
+          (Constants::KB * T * rescaling_factor));
     const double tau_n = this->electron_life_time;
     const double tau_p = this->hole_life_time;
 
     const double num = n * p - ni * ni;
     const double den = tau_p * (n + ni) + tau_n * (p + ni);
-    return num / den;
+    return num * rescaling_factor / den;
   }
 
 
@@ -756,13 +797,14 @@ namespace Ddhdg
     const double              n,
     const double              p,
     const dealii::Point<dim> &q,
+    const double              rescaling_factor,
     Component                 c) const
   {
     const double T = this->temperature->value(q);
     const double ni =
       this->conduction_band_density * this->valence_band_density *
       exp((this->valence_band_edge_energy - this->conduction_band_edge_energy) /
-          (Constants::KB * T));
+          (Constants::KB * T * rescaling_factor));
     const double tau_n = this->electron_life_time;
     const double tau_p = this->hole_life_time;
 
@@ -789,6 +831,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    const double                           rescaling_factor,
     bool                                   clear_vector,
     std::vector<double> &                  r)
   {
@@ -815,14 +858,14 @@ namespace Ddhdg
 
     for (std::size_t q = 0; q < n_of_points; q++)
       {
-        const double ni = this->conduction_band_density *
-                          this->valence_band_density *
-                          exp((this->valence_band_edge_energy -
-                               this->conduction_band_edge_energy) /
-                              (Constants::KB * temperature_buffer[q]));
+        const double ni =
+          this->conduction_band_density * this->valence_band_density *
+          exp((this->valence_band_edge_energy -
+               this->conduction_band_edge_energy) /
+              (Constants::KB * temperature_buffer[q] * rescaling_factor));
         const double num = n[q] * p[q] - ni * ni;
         const double den = tau_p * (n[q] + ni) + tau_n * (p[q] + ni);
-        r[q] += num / den;
+        r[q] += num * rescaling_factor / den;
       }
   }
 
@@ -834,6 +877,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    const double                           rescaling_factor,
     const Component                        c,
     bool                                   clear_vector,
     std::vector<double> &                  r)
@@ -864,11 +908,12 @@ namespace Ddhdg
           case Component::n: {
             for (std::size_t q = 0; q < n_of_points; q++)
               {
-                const double ni = this->conduction_band_density *
-                                  this->valence_band_density *
-                                  exp((this->valence_band_edge_energy -
-                                       this->conduction_band_edge_energy) /
-                                      (Constants::KB * temperature_buffer[q]));
+                const double ni =
+                  this->conduction_band_density * this->valence_band_density *
+                  exp(
+                    (this->valence_band_edge_energy -
+                     this->conduction_band_edge_energy) /
+                    (Constants::KB * temperature_buffer[q] * rescaling_factor));
                 const double num = n[q] * p[q] - ni * ni;
                 const double den = tau_p * (n[q] + ni) + tau_n * (p[q] + ni);
                 r[q] += p[q] / den - num * tau_p / (den * den);
@@ -878,11 +923,12 @@ namespace Ddhdg
           case Component::p: {
             for (std::size_t q = 0; q < n_of_points; q++)
               {
-                const double ni = this->conduction_band_density *
-                                  this->valence_band_density *
-                                  exp((this->valence_band_edge_energy -
-                                       this->conduction_band_edge_energy) /
-                                      (Constants::KB * temperature_buffer[q]));
+                const double ni =
+                  this->conduction_band_density * this->valence_band_density *
+                  exp(
+                    (this->valence_band_edge_energy -
+                     this->conduction_band_edge_energy) /
+                    (Constants::KB * temperature_buffer[q] * rescaling_factor));
                 const double num = n[q] * p[q] - ni * ni;
                 const double den = tau_p * (n[q] + ni) + tau_n * (p[q] + ni);
                 r[q] += n[q] / den - num * tau_n / (den * den);
@@ -919,14 +965,18 @@ namespace Ddhdg
   double
   Auger<dim>::compute_recombination_term(const double              n,
                                          const double              p,
-                                         const dealii::Point<dim> &q) const
+                                         const dealii::Point<dim> &q,
+                                         const double rescaling_factor) const
   {
     const double T = this->temperature->value(q);
     const double ni =
       this->conduction_band_density * this->valence_band_density *
       exp((this->valence_band_edge_energy - this->conduction_band_edge_energy) /
           (Constants::KB * T));
-    return (this->n_coefficient * n + this->p_coefficient * p) * (n * p - ni);
+    const double r_n = n * rescaling_factor;
+    const double r_p = p * rescaling_factor;
+    return (this->n_coefficient * r_n + this->p_coefficient * r_p) *
+           (r_n * r_p - ni);
   }
 
 
@@ -937,6 +987,7 @@ namespace Ddhdg
     const double              n,
     const double              p,
     const dealii::Point<dim> &q,
+    const double              rescaling_factor,
     Component                 c) const
   {
     const double T = this->temperature->value(q);
@@ -946,13 +997,15 @@ namespace Ddhdg
           (Constants::KB * T));
     const double C_n = this->n_coefficient;
     const double C_p = this->p_coefficient;
+    const double r_n = n * rescaling_factor;
+    const double r_p = p * rescaling_factor;
 
     switch (c)
       {
         case Component::n:
-          return C_p * p * p + 2 * C_n * n * p - C_n * ni * ni;
+          return C_p * r_p * r_p + 2 * C_n * r_n * r_p - C_n * ni * ni;
         case Component::p:
-          return C_n * n * n + 2 * C_n * n * p - C_p * ni * ni;
+          return C_n * r_n * r_n + 2 * C_n * r_n * r_p - C_p * ni * ni;
         default:
           Assert(false, InvalidComponent());
           return 9e99;
@@ -967,6 +1020,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    const double                           rescaling_factor,
     bool                                   clear_vector,
     std::vector<double> &                  r)
   {
@@ -995,8 +1049,10 @@ namespace Ddhdg
                           exp((this->valence_band_edge_energy -
                                this->conduction_band_edge_energy) /
                               (Constants::KB * temperature_buffer[q]));
-        r[q] += (this->n_coefficient * n[q] + this->p_coefficient * p[q]) *
-                (n[q] * p[q] - ni);
+        const double r_n = n[q] * rescaling_factor;
+        const double r_p = p[q] * rescaling_factor;
+        r[q] += (this->n_coefficient * r_n + this->p_coefficient * r_p) *
+                (r_n * r_p - ni);
       }
   }
 
@@ -1008,6 +1064,7 @@ namespace Ddhdg
     const std::vector<double> &            n,
     const std::vector<double> &            p,
     const std::vector<dealii::Point<dim>> &P,
+    const double                           rescaling_factor,
     const Component                        c,
     bool                                   clear_vector,
     std::vector<double> &                  r)
@@ -1043,8 +1100,9 @@ namespace Ddhdg
                      exp((this->valence_band_edge_energy -
                           this->conduction_band_edge_energy) /
                          (Constants::KB * temperature_buffer[q]));
-                r[q] +=
-                  C_p * p[q] * p[q] + 2 * C_n * n[q] * p[q] - C_n * ni * ni;
+                const double r_n = n[q] * rescaling_factor;
+                const double r_p = p[q] * rescaling_factor;
+                r[q] += C_p * r_p * r_p + 2 * C_n * r_n * r_p - C_n * ni * ni;
               }
             break;
           }
@@ -1056,8 +1114,9 @@ namespace Ddhdg
                      exp((this->valence_band_edge_energy -
                           this->conduction_band_edge_energy) /
                          (Constants::KB * temperature_buffer[q]));
-                r[q] +=
-                  C_n * n[q] * n[q] + 2 * C_n * n[q] * p[q] - C_p * ni * ni;
+                const double r_n = n[q] * rescaling_factor;
+                const double r_p = p[q] * rescaling_factor;
+                r[q] += C_n * r_n * r_n + 2 * C_n * r_n * r_p - C_p * ni * ni;
               }
             break;
           }

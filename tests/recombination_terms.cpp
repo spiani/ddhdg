@@ -31,7 +31,8 @@ TYPED_TEST(ShockleyReadHallFixedTemperatureTest,
 
   const auto r = Ddhdg::ShockleyReadHallFixedTemperature<dim>(ni, tau_n, tau_p);
 
-  const double value = r.compute_recombination_term(n, p, dealii::Point<dim>());
+  const double value =
+    r.compute_recombination_term(n, p, dealii::Point<dim>(), 1);
 
   EXPECT_DOUBLE_EQ(value, EXPECTED_VALUE);
 }
@@ -62,9 +63,9 @@ TYPED_TEST(ShockleyReadHallFixedTemperatureTest,
     Ddhdg::ShockleyReadHallFixedTemperature<dim>(ni, tau_n, tau_p);
 
   const double value1 =
-    r1.compute_recombination_term(n, p, dealii::Point<dim>());
+    r1.compute_recombination_term(n, p, dealii::Point<dim>(), 1);
   const double value2 =
-    r2.compute_recombination_term(n, p, dealii::Point<dim>());
+    r2.compute_recombination_term(n, p, dealii::Point<dim>(), 1);
 
   EXPECT_DOUBLE_EQ(value1, value2);
 }
@@ -120,16 +121,16 @@ TYPED_TEST(ShockleyReadHall, OutputTest) // NOLINT
       const auto r2 = Ddhdg::ShockleyReadHallFixedTemperature<dim>(
         Nc, Nv, Ec, Ev, T, tau_n, tau_p);
 
-      v1       = r1.compute_recombination_term(n, p, dealii::Point<dim>());
-      v2       = r2.compute_recombination_term(n, p, dealii::Point<dim>());
+      v1       = r1.compute_recombination_term(n, p, dealii::Point<dim>(), 1);
+      v2       = r2.compute_recombination_term(n, p, dealii::Point<dim>(), 1);
       v1_der_n = r1.compute_derivative_of_recombination_term(
-        n, p, dealii::Point<dim>(), Ddhdg::Component::n);
+        n, p, dealii::Point<dim>(), 1, Ddhdg::Component::n);
       v2_der_n = r2.compute_derivative_of_recombination_term(
-        n, p, dealii::Point<dim>(), Ddhdg::Component::n);
+        n, p, dealii::Point<dim>(), 1, Ddhdg::Component::n);
       v1_der_p = r1.compute_derivative_of_recombination_term(
-        n, p, dealii::Point<dim>(), Ddhdg::Component::p);
+        n, p, dealii::Point<dim>(), 1, Ddhdg::Component::p);
       v2_der_p = r2.compute_derivative_of_recombination_term(
-        n, p, dealii::Point<dim>(), Ddhdg::Component::p);
+        n, p, dealii::Point<dim>(), 1, Ddhdg::Component::p);
 
       EXPECT_DOUBLE_EQ(v1, v2);
       EXPECT_DOUBLE_EQ(v1_der_n, v2_der_n);
@@ -202,25 +203,25 @@ TYPED_TEST(ShockleyReadHall, Buffer) // NOLINT
     Ddhdg::ShockleyReadHall<dim>(Nc, Nv, Ec, Ev, temperature, tau_n, tau_p);
 
   recombination_term.compute_multiple_recombination_terms(
-    n_1, p_1, points_1, true, value_1);
+    n_1, p_1, points_1, 1, true, value_1);
   recombination_term.compute_multiple_recombination_terms(
-    n_2, p_2, points_2, true, value_2);
+    n_2, p_2, points_2, 1, true, value_2);
   recombination_term.compute_multiple_recombination_terms(
-    n_3, p_3, points_3, true, value_3);
+    n_3, p_3, points_3, 1, true, value_3);
 
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_1, p_1, points_1, Ddhdg::Component::n, true, der_n_1);
+    n_1, p_1, points_1, 1, Ddhdg::Component::n, true, der_n_1);
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_2, p_2, points_2, Ddhdg::Component::n, true, der_n_2);
+    n_2, p_2, points_2, 1, Ddhdg::Component::n, true, der_n_2);
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_3, p_3, points_3, Ddhdg::Component::n, true, der_n_3);
+    n_3, p_3, points_3, 1, Ddhdg::Component::n, true, der_n_3);
 
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_1, p_1, points_1, Ddhdg::Component::p, true, der_p_1);
+    n_1, p_1, points_1, 1, Ddhdg::Component::p, true, der_p_1);
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_2, p_2, points_2, Ddhdg::Component::p, true, der_p_2);
+    n_2, p_2, points_2, 1, Ddhdg::Component::p, true, der_p_2);
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_3, p_3, points_3, Ddhdg::Component::p, true, der_p_3);
+    n_3, p_3, points_3, 1, Ddhdg::Component::p, true, der_p_3);
 
   for (unsigned int i = 0; i < 100; ++i)
     {
@@ -291,16 +292,16 @@ TYPED_TEST(Auger, OutputTest) // NOLINT
       const auto r2 = Ddhdg::AugerFixedTemperature<dim>(
         Nc, Nv, Ec, Ev, T, n_coefficient, p_coefficient);
 
-      v1       = r1.compute_recombination_term(n, p, dealii::Point<dim>());
-      v2       = r2.compute_recombination_term(n, p, dealii::Point<dim>());
+      v1       = r1.compute_recombination_term(n, p, dealii::Point<dim>(), 1);
+      v2       = r2.compute_recombination_term(n, p, dealii::Point<dim>(), 1);
       v1_der_n = r1.compute_derivative_of_recombination_term(
-        n, p, dealii::Point<dim>(), Ddhdg::Component::n);
+        n, p, dealii::Point<dim>(), 1, Ddhdg::Component::n);
       v2_der_n = r2.compute_derivative_of_recombination_term(
-        n, p, dealii::Point<dim>(), Ddhdg::Component::n);
+        n, p, dealii::Point<dim>(), 1, Ddhdg::Component::n);
       v1_der_p = r1.compute_derivative_of_recombination_term(
-        n, p, dealii::Point<dim>(), Ddhdg::Component::p);
+        n, p, dealii::Point<dim>(), 1, Ddhdg::Component::p);
       v2_der_p = r2.compute_derivative_of_recombination_term(
-        n, p, dealii::Point<dim>(), Ddhdg::Component::p);
+        n, p, dealii::Point<dim>(), 1, Ddhdg::Component::p);
 
       EXPECT_DOUBLE_EQ(v1, v2);
       EXPECT_DOUBLE_EQ(v1_der_n, v2_der_n);
@@ -373,25 +374,25 @@ TYPED_TEST(Auger, Buffer) // NOLINT
     Nc, Nv, Ec, Ev, temperature, n_coefficient, p_coefficient);
 
   recombination_term.compute_multiple_recombination_terms(
-    n_1, p_1, points_1, true, value_1);
+    n_1, p_1, points_1, 1, true, value_1);
   recombination_term.compute_multiple_recombination_terms(
-    n_2, p_2, points_2, true, value_2);
+    n_2, p_2, points_2, 1, true, value_2);
   recombination_term.compute_multiple_recombination_terms(
-    n_3, p_3, points_3, true, value_3);
+    n_3, p_3, points_3, 1, true, value_3);
 
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_1, p_1, points_1, Ddhdg::Component::n, true, der_n_1);
+    n_1, p_1, points_1, 1, Ddhdg::Component::n, true, der_n_1);
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_2, p_2, points_2, Ddhdg::Component::n, true, der_n_2);
+    n_2, p_2, points_2, 1, Ddhdg::Component::n, true, der_n_2);
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_3, p_3, points_3, Ddhdg::Component::n, true, der_n_3);
+    n_3, p_3, points_3, 1, Ddhdg::Component::n, true, der_n_3);
 
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_1, p_1, points_1, Ddhdg::Component::p, true, der_p_1);
+    n_1, p_1, points_1, 1, Ddhdg::Component::p, true, der_p_1);
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_2, p_2, points_2, Ddhdg::Component::p, true, der_p_2);
+    n_2, p_2, points_2, 1, Ddhdg::Component::p, true, der_p_2);
   recombination_term.compute_multiple_derivatives_of_recombination_terms(
-    n_3, p_3, points_3, Ddhdg::Component::p, true, der_p_3);
+    n_3, p_3, points_3, 1, Ddhdg::Component::p, true, der_p_3);
 
   for (unsigned int i = 0; i < 100; ++i)
     {
@@ -451,34 +452,34 @@ TYPED_TEST(SuperimposedRecombinationTest, sum_of_two) // NOLINT
     std::make_shared<Ddhdg::SuperimposedRecombinationTerm<dim>>(r1, r2);
 
   const double value1 =
-    r1->compute_recombination_term(n, p, dealii::Point<dim>());
+    r1->compute_recombination_term(n, p, dealii::Point<dim>(), 1);
   const double value2 =
-    r2->compute_recombination_term(n, p, dealii::Point<dim>());
+    r2->compute_recombination_term(n, p, dealii::Point<dim>(), 1);
 
   const auto tot_value =
-    superimposed_r->compute_recombination_term(n, p, dealii::Point<dim>());
+    superimposed_r->compute_recombination_term(n, p, dealii::Point<dim>(), 1);
 
   EXPECT_DOUBLE_EQ(value1 + value2, tot_value);
 
   const double der_n_1 = r1->compute_derivative_of_recombination_term(
-    n, p, dealii::Point<dim>(), Ddhdg::Component::n);
+    n, p, dealii::Point<dim>(), 1, Ddhdg::Component::n);
   const double der_n_2 = r2->compute_derivative_of_recombination_term(
-    n, p, dealii::Point<dim>(), Ddhdg::Component::n);
+    n, p, dealii::Point<dim>(), 1, Ddhdg::Component::n);
 
   const auto tot_der_n =
     superimposed_r->compute_derivative_of_recombination_term(
-      n, p, dealii::Point<dim>(), Ddhdg::Component::n);
+      n, p, dealii::Point<dim>(), 1, Ddhdg::Component::n);
 
   EXPECT_DOUBLE_EQ(der_n_1 + der_n_2, tot_der_n);
 
   const double der_p_1 = r1->compute_derivative_of_recombination_term(
-    n, p, dealii::Point<dim>(), Ddhdg::Component::p);
+    n, p, dealii::Point<dim>(), 1, Ddhdg::Component::p);
   const double der_p_2 = r2->compute_derivative_of_recombination_term(
-    n, p, dealii::Point<dim>(), Ddhdg::Component::p);
+    n, p, dealii::Point<dim>(), 1, Ddhdg::Component::p);
 
   const auto tot_der_p =
     superimposed_r->compute_derivative_of_recombination_term(
-      n, p, dealii::Point<dim>(), Ddhdg::Component::p);
+      n, p, dealii::Point<dim>(), 1, Ddhdg::Component::p);
 
   EXPECT_DOUBLE_EQ(der_p_1 + der_p_2, tot_der_p);
 }
@@ -520,40 +521,40 @@ TYPED_TEST(SuperimposedRecombinationTest, sum_of_three) // NOLINT
     std::make_shared<Ddhdg::SuperimposedRecombinationTerm<dim>>(r1, r2, r3);
 
   const double value1 =
-    r1->compute_recombination_term(n, p, dealii::Point<dim>());
+    r1->compute_recombination_term(n, p, dealii::Point<dim>(), 1);
   const double value2 =
-    r2->compute_recombination_term(n, p, dealii::Point<dim>());
+    r2->compute_recombination_term(n, p, dealii::Point<dim>(), 1);
   const double value3 =
-    r3->compute_recombination_term(n, p, dealii::Point<dim>());
+    r3->compute_recombination_term(n, p, dealii::Point<dim>(), 1);
 
   const auto tot_value =
-    superimposed_r->compute_recombination_term(n, p, dealii::Point<dim>());
+    superimposed_r->compute_recombination_term(n, p, dealii::Point<dim>(), 1);
 
   EXPECT_DOUBLE_EQ(value1 + value2 + value3, tot_value);
 
   const double der_n_1 = r1->compute_derivative_of_recombination_term(
-    n, p, dealii::Point<dim>(), Ddhdg::Component::n);
+    n, p, dealii::Point<dim>(), 1, Ddhdg::Component::n);
   const double der_n_2 = r2->compute_derivative_of_recombination_term(
-    n, p, dealii::Point<dim>(), Ddhdg::Component::n);
+    n, p, dealii::Point<dim>(), 1, Ddhdg::Component::n);
   const double der_n_3 = r3->compute_derivative_of_recombination_term(
-    n, p, dealii::Point<dim>(), Ddhdg::Component::n);
+    n, p, dealii::Point<dim>(), 1, Ddhdg::Component::n);
 
   const auto tot_der_n =
     superimposed_r->compute_derivative_of_recombination_term(
-      n, p, dealii::Point<dim>(), Ddhdg::Component::n);
+      n, p, dealii::Point<dim>(), 1, Ddhdg::Component::n);
 
   EXPECT_DOUBLE_EQ(der_n_1 + der_n_2 + der_n_3, tot_der_n);
 
   const double der_p_1 = r1->compute_derivative_of_recombination_term(
-    n, p, dealii::Point<dim>(), Ddhdg::Component::p);
+    n, p, dealii::Point<dim>(), 1, Ddhdg::Component::p);
   const double der_p_2 = r2->compute_derivative_of_recombination_term(
-    n, p, dealii::Point<dim>(), Ddhdg::Component::p);
+    n, p, dealii::Point<dim>(), 1, Ddhdg::Component::p);
   const double der_p_3 = r3->compute_derivative_of_recombination_term(
-    n, p, dealii::Point<dim>(), Ddhdg::Component::p);
+    n, p, dealii::Point<dim>(), 1, Ddhdg::Component::p);
 
   const auto tot_der_p =
     superimposed_r->compute_derivative_of_recombination_term(
-      n, p, dealii::Point<dim>(), Ddhdg::Component::p);
+      n, p, dealii::Point<dim>(), 1, Ddhdg::Component::p);
 
   EXPECT_DOUBLE_EQ(der_p_1 + der_p_2 + der_p_3, tot_der_p);
 }
@@ -632,30 +633,26 @@ TYPED_TEST(RecombinationTerms, multiple_evaluation) // NOLINT
 
   for (auto r : recombination_terms)
     {
-      r->compute_multiple_recombination_terms(n, p, points, true, values);
+      r->compute_multiple_recombination_terms(n, p, points, 1, true, values);
       r->compute_multiple_derivatives_of_recombination_terms(
-        n, p, points, Ddhdg::Component::n, true, der_n);
+        n, p, points, 1, Ddhdg::Component::n, true, der_n);
       r->compute_multiple_derivatives_of_recombination_terms(
-        n, p, points, Ddhdg::Component::p, true, der_p);
+        n, p, points, 1, Ddhdg::Component::p, true, der_p);
 
       for (unsigned int q = 0; q < 100; ++q)
         {
           const double current_value =
-            r->compute_recombination_term(n[q], p[q], points[q]);
+            r->compute_recombination_term(n[q], p[q], points[q], 1);
           EXPECT_DOUBLE_EQ(values[q], current_value);
 
           const double current_der_n =
-            r->compute_derivative_of_recombination_term(n[q],
-                                                        p[q],
-                                                        points[q],
-                                                        Ddhdg::Component::n);
+            r->compute_derivative_of_recombination_term(
+              n[q], p[q], points[q], 1, Ddhdg::Component::n);
           EXPECT_DOUBLE_EQ(der_n[q], current_der_n);
 
           const double current_der_p =
-            r->compute_derivative_of_recombination_term(n[q],
-                                                        p[q],
-                                                        points[q],
-                                                        Ddhdg::Component::p);
+            r->compute_derivative_of_recombination_term(
+              n[q], p[q], points[q], 1, Ddhdg::Component::p);
           EXPECT_DOUBLE_EQ(der_p[q], current_der_p);
         }
     }

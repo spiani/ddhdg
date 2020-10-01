@@ -16,12 +16,14 @@ namespace Ddhdg
     virtual double
     compute_recombination_term(double                    n,
                                double                    p,
-                               const dealii::Point<dim> &q) const = 0;
+                               const dealii::Point<dim> &q,
+                               double rescaling_factor) const = 0;
 
     virtual double
     compute_derivative_of_recombination_term(double                    n,
                                              double                    p,
                                              const dealii::Point<dim> &q,
+                                             double    rescaling_factor,
                                              Component c) const = 0;
 
     virtual void
@@ -29,6 +31,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       bool                                   clear_vector,
       std::vector<double> &                  r);
 
@@ -37,6 +40,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
       std::vector<double> &                  r);
@@ -85,12 +89,14 @@ namespace Ddhdg
     double
     compute_recombination_term(double                    n,
                                double                    p,
-                               const dealii::Point<dim> &q) const override;
+                               const dealii::Point<dim> &q,
+                               double rescaling_factor) const override;
 
     double
     compute_derivative_of_recombination_term(double                    n,
                                              double                    p,
                                              const dealii::Point<dim> &q,
+                                             double    rescaling_factor,
                                              Component c) const override;
 
     void
@@ -98,6 +104,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;
 
@@ -106,6 +113,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;
@@ -147,12 +155,14 @@ namespace Ddhdg
     double
     compute_recombination_term(double                    n,
                                double                    p,
-                               const dealii::Point<dim> &q) const override;
+                               const dealii::Point<dim> &q,
+                               double rescaling_factor) const override;
 
     double
     compute_derivative_of_recombination_term(double                    n,
                                              double                    p,
                                              const dealii::Point<dim> &q,
+                                             double    rescaling_factor,
                                              Component c) const override;
 
     void
@@ -160,6 +170,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;
 
@@ -168,6 +179,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;
@@ -219,12 +231,14 @@ namespace Ddhdg
     double
     compute_recombination_term(double                    n,
                                double                    p,
-                               const dealii::Point<dim> &q) const override;
+                               const dealii::Point<dim> &q,
+                               double rescaling_factor) const override;
 
     double
     compute_derivative_of_recombination_term(double                    n,
                                              double                    p,
                                              const dealii::Point<dim> &q,
+                                             double    rescaling_factor,
                                              Component c) const override;
 
     void
@@ -232,6 +246,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;
 
@@ -240,6 +255,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;
@@ -290,12 +306,14 @@ namespace Ddhdg
     double
     compute_recombination_term(double                    n,
                                double                    p,
-                               const dealii::Point<dim> &q) const override;
+                               const dealii::Point<dim> &q,
+                               double rescaling_factor) const override;
 
     double
     compute_derivative_of_recombination_term(double                    n,
                                              double                    p,
                                              const dealii::Point<dim> &q,
+                                             double    rescaling_factor,
                                              Component c) const override;
 
     void
@@ -303,6 +321,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;
 
@@ -311,6 +330,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;
@@ -346,12 +366,14 @@ namespace Ddhdg
     double
     compute_recombination_term(double                    n,
                                double                    p,
-                               const dealii::Point<dim> &q) const override;
+                               const dealii::Point<dim> &q,
+                               double rescaling_factor) const override;
 
     double
     compute_derivative_of_recombination_term(double                    n,
                                              double                    p,
                                              const dealii::Point<dim> &q,
+                                             double    rescaling_factor,
                                              Component c) const override;
 
     void
@@ -359,6 +381,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;
 
@@ -367,6 +390,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;
@@ -409,12 +433,14 @@ namespace Ddhdg
     double
     compute_recombination_term(double                    n,
                                double                    p,
-                               const dealii::Point<dim> &q) const override;
+                               const dealii::Point<dim> &q,
+                               double rescaling_factor) const override;
 
     double
     compute_derivative_of_recombination_term(double                    n,
                                              double                    p,
                                              const dealii::Point<dim> &q,
+                                             double    rescaling_factor,
                                              Component c) const override;
 
     void
@@ -422,6 +448,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;
 
@@ -430,6 +457,7 @@ namespace Ddhdg
       const std::vector<double> &            n,
       const std::vector<double> &            p,
       const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
       std::vector<double> &                  r) override;

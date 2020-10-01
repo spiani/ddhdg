@@ -198,6 +198,7 @@ namespace Ddhdg
           scratch.previous_c_cell.at(Component::n),
           scratch.previous_c_cell.at(Component::p),
           scratch.cell_quadrature_points,
+          this->adimensionalizer->get_component_rescaling_factor(Component::n),
           true,
           scratch.r_cell);
         this->recombination_term
@@ -205,6 +206,8 @@ namespace Ddhdg
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
+            this->adimensionalizer->get_component_rescaling_factor(
+              Component::n),
             Component::n,
             true,
             dr_n);
@@ -213,6 +216,8 @@ namespace Ddhdg
             scratch.previous_c_cell.at(Component::n),
             scratch.previous_c_cell.at(Component::p),
             scratch.cell_quadrature_points,
+            this->adimensionalizer->get_component_rescaling_factor(
+              Component::n),
             Component::p,
             true,
             dr_p);
