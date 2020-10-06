@@ -5,6 +5,8 @@ target_include_directories(pyddhdg PRIVATE ${pybind11_INCLUDE_DIRS})
 target_link_libraries(pyddhdg DDHDG)
 DEAL_II_SETUP_TARGET(pyddhdg)
 
+set_target_properties(pyddhdg PROPERTIES CXX_VISIBILITY_PRESET hidden)
+
 add_library(pyddhdg_common MODULE pyddhdg_common.cpp)
 
 IF (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
