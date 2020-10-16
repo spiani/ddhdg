@@ -109,13 +109,11 @@ class ComponentsNamespace:
 
 Components = ComponentsNamespace()
 
-
 # Export also the components and the others enum; in this way we avoid to
 # pollute the global namespace with the name of the single elements of the
 # enums (i.e. it will be necessary to write Displacement.E and not simply E)
 Displacements = pyddhdg_common.Displacement
 BoundaryConditionType = pyddhdg_common.BoundaryConditionType
-
 
 # Now, we also import the common classes from the pyddhdg_common module
 ErrorPerCell = pyddhdg_common.ErrorPerCell

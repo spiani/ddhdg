@@ -315,6 +315,11 @@ namespace Ddhdg
     compute_current(const dealii::DoFHandler<dim> &dof,
                     dealii::Vector<double> &       data) const;
 
+    template <Component cmp>
+    void
+    compute_qf_potential(const dealii::DoFHandler<dim> &dof,
+                         dealii::Vector<double> &       data) const;
+
     void
     output_results(const std::string &solution_filename,
                    bool               save_update) const override;

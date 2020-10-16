@@ -1751,6 +1751,9 @@ namespace Ddhdg
     dealii::DoFHandler<dim> n_current_dofs(*(this->triangulation));
     dealii::DoFHandler<dim> p_current_dofs(*(this->triangulation));
 
+    dealii::DoFHandler<dim> phi_n_dofs(*(this->triangulation));
+    dealii::DoFHandler<dim> phi_p_dofs(*(this->triangulation));
+
     const unsigned int V_degree = this->parameters->degree.at(Component::V);
     const unsigned int n_degree = this->parameters->degree.at(Component::n);
     const unsigned int p_degree = this->parameters->degree.at(Component::p);
@@ -1758,14 +1761,28 @@ namespace Ddhdg
     const unsigned int Jn_degree = (V_degree > n_degree) ? V_degree : n_degree;
     const unsigned int Jp_degree = (V_degree > p_degree) ? V_degree : p_degree;
 
+    const unsigned int phi_n_degree =
+      (V_degree > n_degree) ? V_degree : n_degree;
+    const unsigned int phi_p_degree =
+      (V_degree > p_degree) ? V_degree : p_degree;
+
     n_current_dofs.distribute_dofs(FESystem(FE_DGQ<dim>(Jn_degree), dim));
     p_current_dofs.distribute_dofs(FESystem(FE_DGQ<dim>(Jp_degree), dim));
+
+    phi_n_dofs.distribute_dofs(FE_DGQ<dim>(phi_n_degree));
+    phi_p_dofs.distribute_dofs(FE_DGQ<dim>(phi_p_degree));
 
     dealii::Vector<double> Jn_data;
     dealii::Vector<double> Jp_data;
 
+    dealii::Vector<double> phi_n_data;
+    dealii::Vector<double> phi_p_data;
+
     this->compute_current<Component::n>(n_current_dofs, Jn_data);
     this->compute_current<Component::p>(p_current_dofs, Jp_data);
+
+    this->compute_qf_potential<Component::n>(phi_n_dofs, phi_n_data);
+    this->compute_qf_potential<Component::p>(phi_p_dofs, phi_p_data);
 
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       J_component_interpretation(
@@ -1779,6 +1796,13 @@ namespace Ddhdg
                              Jp_data,
                              std::vector<std::string>(dim, "hole_current"),
                              J_component_interpretation);
+
+    data_out.add_data_vector(phi_n_dofs,
+                             phi_n_data,
+                             "electron_quasi_fermi_potential");
+    data_out.add_data_vector(phi_p_dofs,
+                             phi_p_data,
+                             "hole_quasi_fermi_potential");
 
     data_out.build_patches(StaticMappingQ1<dim>::mapping,
                            this->fe_cell->degree,

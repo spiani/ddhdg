@@ -6,6 +6,206 @@ namespace Ddhdg
 {
   namespace DerivativeQuantitiesInternalTools
   {
+    struct DQ_phi_n
+    {
+      static constexpr bool is_a_vector   = false;
+      static constexpr bool needs_V       = true;
+      static constexpr bool needs_E       = false;
+      static constexpr bool needs_n       = true;
+      static constexpr bool needs_Wn      = false;
+      static constexpr bool needs_p       = false;
+      static constexpr bool needs_Wp      = false;
+      static constexpr bool needs_epsilon = false;
+      static constexpr bool needs_mu_n    = false;
+      static constexpr bool needs_mu_p    = false;
+      static constexpr bool needs_D_n     = false;
+      static constexpr bool needs_D_p     = false;
+      static constexpr bool needs_T       = true;
+
+      template <int dim>
+      static constexpr void
+      generate_epsilon_input(dealii::Tensor<1, dim> &epsilon_input)
+      {
+        (void)epsilon_input;
+      }
+
+      template <int dim>
+      static constexpr void
+      generate_mu_n_input(const dealii::Tensor<1, dim> &E,
+                          dealii::Tensor<1, dim> &      mu_n_input)
+      {
+        (void)E;
+        (void)mu_n_input;
+      }
+
+      template <int dim>
+      static constexpr void
+      generate_mu_p_input(const dealii::Tensor<1, dim> &E,
+                          dealii::Tensor<1, dim> &      mu_p_input)
+      {
+        (void)E;
+        (void)mu_p_input;
+      }
+
+      template <int dim>
+      static constexpr void
+      generate_D_n_input(const dealii::Tensor<1, dim> &E,
+                         const dealii::Tensor<1, dim> &Wn,
+                         const dealii::Tensor<1, dim> &Wp,
+                         dealii::Tensor<1, dim> &      D_n_input)
+      {
+        (void)E;
+        (void)Wn;
+        (void)Wp;
+        (void)D_n_input;
+      }
+
+      template <int dim>
+      static constexpr void
+      generate_D_p_input(const dealii::Tensor<1, dim> &E,
+                         const dealii::Tensor<1, dim> &Wn,
+                         const dealii::Tensor<1, dim> &Wp,
+                         dealii::Tensor<1, dim> &      D_p_input)
+      {
+        (void)E;
+        (void)Wn;
+        (void)Wp;
+        (void)D_p_input;
+      }
+
+      template <int dim, typename ProblemType>
+      static constexpr double
+      compute(double                          V,
+              dealii::Tensor<1, dim>          E,
+              double                          n,
+              dealii::Tensor<1, dim>          Wn,
+              double                          p,
+              dealii::Tensor<1, dim>          Wp,
+              dealii::Tensor<1, dim>          epsilon_output,
+              dealii::Tensor<1, dim>          mu_n_output,
+              dealii::Tensor<1, dim>          mu_p_output,
+              dealii::Tensor<1, dim>          D_n_output,
+              dealii::Tensor<1, dim>          D_p_output,
+              double                          T,
+              const Solver<dim, ProblemType> &solver,
+              unsigned int                    dimension = 0)
+      {
+        (void)E;
+        (void)Wn;
+        (void)p;
+        (void)Wp;
+        (void)epsilon_output;
+        (void)mu_n_output;
+        (void)mu_p_output;
+        (void)D_n_output;
+        (void)D_p_output;
+        (void)dimension;
+        return solver.template compute_quasi_fermi_potential<Component::n>(n,
+                                                                           V,
+                                                                           T);
+      }
+    };
+
+    struct DQ_phi_p
+    {
+      static constexpr bool is_a_vector   = false;
+      static constexpr bool needs_V       = true;
+      static constexpr bool needs_E       = false;
+      static constexpr bool needs_n       = false;
+      static constexpr bool needs_Wn      = false;
+      static constexpr bool needs_p       = true;
+      static constexpr bool needs_Wp      = false;
+      static constexpr bool needs_epsilon = false;
+      static constexpr bool needs_mu_n    = false;
+      static constexpr bool needs_mu_p    = false;
+      static constexpr bool needs_D_n     = false;
+      static constexpr bool needs_D_p     = false;
+      static constexpr bool needs_T       = true;
+
+      template <int dim>
+      static constexpr void
+      generate_epsilon_input(dealii::Tensor<1, dim> &epsilon_input)
+      {
+        (void)epsilon_input;
+      }
+
+      template <int dim>
+      static constexpr void
+      generate_mu_n_input(const dealii::Tensor<1, dim> &E,
+                          dealii::Tensor<1, dim> &      mu_n_input)
+      {
+        (void)E;
+        (void)mu_n_input;
+      }
+
+      template <int dim>
+      static constexpr void
+      generate_mu_p_input(const dealii::Tensor<1, dim> &E,
+                          dealii::Tensor<1, dim> &      mu_p_input)
+      {
+        (void)E;
+        (void)mu_p_input;
+      }
+
+      template <int dim>
+      static constexpr void
+      generate_D_n_input(const dealii::Tensor<1, dim> &E,
+                         const dealii::Tensor<1, dim> &Wn,
+                         const dealii::Tensor<1, dim> &Wp,
+                         dealii::Tensor<1, dim> &      D_n_input)
+      {
+        (void)E;
+        (void)Wn;
+        (void)Wp;
+        (void)D_n_input;
+      }
+
+      template <int dim>
+      static constexpr void
+      generate_D_p_input(const dealii::Tensor<1, dim> &E,
+                         const dealii::Tensor<1, dim> &Wn,
+                         const dealii::Tensor<1, dim> &Wp,
+                         dealii::Tensor<1, dim> &      D_p_input)
+      {
+        (void)E;
+        (void)Wn;
+        (void)Wp;
+        (void)D_p_input;
+      }
+
+      template <int dim, typename ProblemType>
+      static constexpr double
+      compute(double                          V,
+              dealii::Tensor<1, dim>          E,
+              double                          n,
+              dealii::Tensor<1, dim>          Wn,
+              double                          p,
+              dealii::Tensor<1, dim>          Wp,
+              dealii::Tensor<1, dim>          epsilon_output,
+              dealii::Tensor<1, dim>          mu_n_output,
+              dealii::Tensor<1, dim>          mu_p_output,
+              dealii::Tensor<1, dim>          D_n_output,
+              dealii::Tensor<1, dim>          D_p_output,
+              double                          T,
+              const Solver<dim, ProblemType> &solver,
+              unsigned int                    dimension = 0)
+      {
+        (void)E;
+        (void)n;
+        (void)Wn;
+        (void)Wp;
+        (void)epsilon_output;
+        (void)mu_n_output;
+        (void)mu_p_output;
+        (void)D_n_output;
+        (void)D_p_output;
+        (void)dimension;
+        return solver.template compute_quasi_fermi_potential<Component::p>(p,
+                                                                           V,
+                                                                           T);
+      }
+    };
+
     struct DQ_Jn
     {
       static constexpr bool is_a_vector   = true;
@@ -20,6 +220,7 @@ namespace Ddhdg
       static constexpr bool needs_mu_p    = false;
       static constexpr bool needs_D_n     = true;
       static constexpr bool needs_D_p     = false;
+      static constexpr bool needs_T       = false;
 
       template <int dim>
       static constexpr void
@@ -69,20 +270,22 @@ namespace Ddhdg
         (void)D_p_input;
       }
 
-      template <int dim>
+      template <int dim, typename ProblemType>
       static constexpr double
-      compute(double                 V,
-              dealii::Tensor<1, dim> E,
-              double                 n,
-              dealii::Tensor<1, dim> Wn,
-              double                 p,
-              dealii::Tensor<1, dim> Wp,
-              dealii::Tensor<1, dim> epsilon_output,
-              dealii::Tensor<1, dim> mu_n_output,
-              dealii::Tensor<1, dim> mu_p_output,
-              dealii::Tensor<1, dim> D_n_output,
-              dealii::Tensor<1, dim> D_p_output,
-              unsigned int           dimension = 0)
+      compute(double                          V,
+              dealii::Tensor<1, dim>          E,
+              double                          n,
+              dealii::Tensor<1, dim>          Wn,
+              double                          p,
+              dealii::Tensor<1, dim>          Wp,
+              dealii::Tensor<1, dim>          epsilon_output,
+              dealii::Tensor<1, dim>          mu_n_output,
+              dealii::Tensor<1, dim>          mu_p_output,
+              dealii::Tensor<1, dim>          D_n_output,
+              dealii::Tensor<1, dim>          D_p_output,
+              double                          T,
+              const Solver<dim, ProblemType> &solver,
+              unsigned int                    dimension = 0)
       {
         (void)V;
         (void)E;
@@ -92,6 +295,8 @@ namespace Ddhdg
         (void)epsilon_output;
         (void)mu_p_output;
         (void)D_p_output;
+        (void)T;
+        (void)solver;
         return (n * mu_n_output[dimension] - D_n_output[dimension]) *
                Constants::Q;
       }
@@ -113,6 +318,7 @@ namespace Ddhdg
       static constexpr bool needs_mu_p    = true;
       static constexpr bool needs_D_n     = false;
       static constexpr bool needs_D_p     = true;
+      static constexpr bool needs_T       = false;
 
       template <int dim>
       static constexpr void
@@ -162,20 +368,22 @@ namespace Ddhdg
         D_p_input = Wp;
       }
 
-      template <int dim>
+      template <int dim, typename ProblemType>
       static constexpr double
-      compute(double                 V,
-              dealii::Tensor<1, dim> E,
-              double                 n,
-              dealii::Tensor<1, dim> Wn,
-              double                 p,
-              dealii::Tensor<1, dim> Wp,
-              dealii::Tensor<1, dim> epsilon_output,
-              dealii::Tensor<1, dim> mu_n_output,
-              dealii::Tensor<1, dim> mu_p_output,
-              dealii::Tensor<1, dim> D_n_output,
-              dealii::Tensor<1, dim> D_p_output,
-              unsigned int           dimension = 0)
+      compute(double                          V,
+              dealii::Tensor<1, dim>          E,
+              double                          n,
+              dealii::Tensor<1, dim>          Wn,
+              double                          p,
+              dealii::Tensor<1, dim>          Wp,
+              dealii::Tensor<1, dim>          epsilon_output,
+              dealii::Tensor<1, dim>          mu_n_output,
+              dealii::Tensor<1, dim>          mu_p_output,
+              dealii::Tensor<1, dim>          D_n_output,
+              dealii::Tensor<1, dim>          D_p_output,
+              double                          T,
+              const Solver<dim, ProblemType> &solver,
+              unsigned int                    dimension = 0)
       {
         (void)V;
         (void)E;
@@ -185,6 +393,8 @@ namespace Ddhdg
         (void)epsilon_output;
         (void)mu_n_output;
         (void)D_n_output;
+        (void)T;
+        (void)solver;
         return (p * mu_p_output[dimension] + D_p_output[dimension]) *
                Constants::Q;
       }
@@ -322,12 +532,13 @@ namespace Ddhdg
       , Wn_values((quantity::needs_Wn) ? quadrature_formula.size() : 0)
       , p_values((quantity::needs_p) ? quadrature_formula.size() : 0)
       , Wp_values((quantity::needs_Wp) ? quadrature_formula.size() : 0)
-      , T((quantity::needs_D_n || quantity::needs_D_p) ?
+      , T((quantity::needs_T || quantity::needs_D_n || quantity::needs_D_p) ?
             quadrature_formula.size() :
             0)
-      , U_T_cell((quantity::needs_D_n || quantity::needs_D_p) ?
-                   quadrature_formula.size() :
-                   0)
+      , U_T_cell(
+          (quantity::needs_T || quantity::needs_D_n || quantity::needs_D_p) ?
+            quadrature_formula.size() :
+            0)
       , eps_output((quantity::needs_epsilon) ? quadrature_formula.size() : 0)
       , mu_n_output((quantity::needs_mu_n) ? quadrature_formula.size() : 0)
       , mu_p_output((quantity::needs_mu_p) ? quadrature_formula.size() : 0)
@@ -492,7 +703,8 @@ namespace Ddhdg
         scratch.n_mobility.initialize_on_cell(scratch.cell_quadrature_points,
                                               1.);
       }
-    if constexpr (quantity::needs_D_n || quantity::needs_D_p)
+    if constexpr (quantity::needs_T || quantity::needs_D_n ||
+                  quantity::needs_D_p)
       {
         this->problem->temperature->value_list(scratch.cell_quadrature_points,
                                                scratch.T);
@@ -568,6 +780,7 @@ namespace Ddhdg
               (quantity::needs_n) ? scratch.n_values[q] : 0.;
             const double p_value =
               (quantity::needs_p) ? scratch.p_values[q] : 0.;
+            const double T_value = (quantity::needs_T) ? scratch.T[q] : 0.;
 
             const dealii::Tensor<1, dim> &E_value =
               (quantity::needs_E) ? scratch.E_values[q] : empty_tensor;
@@ -597,6 +810,8 @@ namespace Ddhdg
                                                            mu_p_output,
                                                            D_n_output,
                                                            D_p_output,
+                                                           T_value,
+                                                           *this,
                                                            d);
           }
 
@@ -731,6 +946,55 @@ namespace Ddhdg
   }
 
 
+
+  template <int dim, typename ProblemType>
+  template <Component cmp>
+  void
+  NPSolver<dim, ProblemType>::compute_qf_potential(
+    const dealii::DoFHandler<dim> &dof,
+    dealii::Vector<double> &       data) const
+  {
+    switch (cmp)
+      {
+        case Component::n:
+          this->derivative_quantities_compute_derived_quantity<
+            DerivativeQuantitiesInternalTools::DQ_phi_n>(dof, data);
+          break;
+        case Component::p:
+          this->derivative_quantities_compute_derived_quantity<
+            DerivativeQuantitiesInternalTools::DQ_phi_p>(dof, data);
+          break;
+        default:
+          Assert(false, InvalidComponent())
+      }
+  }
+
+
+
+  template void
+  NPSolver<1, HomogeneousProblem<1>>::compute_qf_potential<Component::n>(
+    const dealii::DoFHandler<1> &dof,
+    dealii::Vector<double> &     data) const;
+  template void
+  NPSolver<2, HomogeneousProblem<2>>::compute_qf_potential<Component::n>(
+    const dealii::DoFHandler<2> &dof,
+    dealii::Vector<double> &     data) const;
+  template void
+  NPSolver<3, HomogeneousProblem<3>>::compute_qf_potential<Component::n>(
+    const dealii::DoFHandler<3> &dof,
+    dealii::Vector<double> &     data) const;
+  template void
+  NPSolver<1, HomogeneousProblem<1>>::compute_qf_potential<Component::p>(
+    const dealii::DoFHandler<1> &dof,
+    dealii::Vector<double> &     data) const;
+  template void
+  NPSolver<2, HomogeneousProblem<2>>::compute_qf_potential<Component::p>(
+    const dealii::DoFHandler<2> &dof,
+    dealii::Vector<double> &     data) const;
+  template void
+  NPSolver<3, HomogeneousProblem<3>>::compute_qf_potential<Component::p>(
+    const dealii::DoFHandler<3> &dof,
+    dealii::Vector<double> &     data) const;
 
   template void
   NPSolver<1, HomogeneousProblem<1>>::compute_current<Component::n>(
