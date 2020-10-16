@@ -77,12 +77,45 @@ class ConstantsNamespace:
 
 Constants = ConstantsNamespace()
 
+
+class ComponentsNamespace:
+    def __init__(self):
+        self._data = {
+            'v': pyddhdg_common.Component.v,
+            'n': pyddhdg_common.Component.n,
+            'p': pyddhdg_common.Component.p,
+        }
+
+    def __getattr__(self, attr):
+        if attr in self._data:
+            return self._data[attr]
+        raise AttributeError(
+            '"{}" is not a valid constant'.format(attr)
+        )
+
+    def __getitem__(self, item):
+        return self._data[item]
+
+    def as_dict(self):
+        return self._data.copy()
+
+    def __iter__(self):
+        v = self._data['v']
+        n = self._data['n']
+        p = self._data['p']
+        cmps = (v, n, p)
+        return cmps.__iter__()
+
+
+Components = ComponentsNamespace()
+
+
 # Export also the components and the others enum; in this way we avoid to
 # pollute the global namespace with the name of the single elements of the
-# enums (i.e. it will be necessary to write Component.v and not simply v)
-Component = pyddhdg_common.Component
-Displacement = pyddhdg_common.Displacement
+# enums (i.e. it will be necessary to write Displacement.E and not simply E)
+Displacements = pyddhdg_common.Displacement
 BoundaryConditionType = pyddhdg_common.BoundaryConditionType
+
 
 # Now, we also import the common classes from the pyddhdg_common module
 ErrorPerCell = pyddhdg_common.ErrorPerCell
