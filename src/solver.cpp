@@ -64,10 +64,34 @@ namespace Ddhdg
 
   template <int dim, typename ProblemType>
   void
+  Solver<dim, ProblemType>::output_results(const std::string &solution_filename,
+                                           const bool         save_update) const
+  {
+    return this->output_results(solution_filename, save_update, true);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  void
   Solver<dim, ProblemType>::output_results(
     const std::string &solution_filename) const
   {
     return this->output_results(solution_filename, false);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  void
+  Solver<dim, ProblemType>::output_results(const std::string &solution_filename,
+                                           const std::string &trace_filename,
+                                           const bool         save_update) const
+  {
+    return this->output_results(solution_filename,
+                                trace_filename,
+                                save_update,
+                                true);
   }
 
 

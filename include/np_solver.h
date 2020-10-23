@@ -322,12 +322,14 @@ namespace Ddhdg
 
     void
     output_results(const std::string &solution_filename,
-                   bool               save_update) const override;
+                   bool               save_update,
+                   bool redimensionalize_quantities) const override;
 
     void
     output_results(const std::string &solution_filename,
                    const std::string &trace_filename,
-                   bool               save_update) const override;
+                   bool               save_update,
+                   bool redimensionalize_quantities) const override;
 
     void
     print_convergence_table(

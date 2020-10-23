@@ -187,7 +187,12 @@ namespace Ddhdg
 
     virtual void
     output_results(const std::string &solution_filename,
-                   bool               save_update) const = 0;
+                   bool               save_update,
+                   bool               redimensionalize_quantities) const = 0;
+
+    virtual void
+    output_results(const std::string &solution_filename,
+                   bool               save_update) const;
 
     virtual void
     output_results(const std::string &solution_filename) const;
@@ -195,7 +200,13 @@ namespace Ddhdg
     virtual void
     output_results(const std::string &solution_filename,
                    const std::string &trace_filename,
-                   bool               save_update) const = 0;
+                   bool               save_update) const;
+
+    virtual void
+    output_results(const std::string &solution_filename,
+                   const std::string &trace_filename,
+                   bool               save_update,
+                   bool               redimensionalize_quantities) const = 0;
 
     virtual void
     output_results(const std::string &solution_filename,

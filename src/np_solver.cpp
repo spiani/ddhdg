@@ -1674,7 +1674,8 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::output_results(
     const std::string &solution_filename,
-    const bool         save_update) const
+    const bool         save_update,
+    const bool         redimensionalize_quantities) const
   {
     std::ofstream output(solution_filename);
     DataOut<dim>  data_out;
@@ -1706,19 +1707,26 @@ namespace Ddhdg
     for (const auto &n : names)
       update_names.push_back(n + "_updates");
 
-    std::vector<Component> dof_to_component_map(
-      this->dof_handler_cell.n_dofs());
-    std::vector<DofType> dof_to_dof_type_map(this->dof_handler_cell.n_dofs());
-    this->generate_dof_to_component_map(dof_to_component_map,
-                                        dof_to_dof_type_map,
-                                        false);
+    std::vector<Component> dof_to_component_map;
+    std::vector<DofType>   dof_to_dof_type_map;
+    Vector<double>         rescaled_solution;
+    Vector<double>         rescaled_update;
 
-    Vector<double> rescaled_solution(this->current_solution_cell.size());
-    this->adimensionalizer->redimensionalize_dof_vector(
-      this->current_solution_cell,
-      dof_to_component_map,
-      dof_to_dof_type_map,
-      rescaled_solution);
+    if (redimensionalize_quantities)
+      {
+        dof_to_component_map.resize(this->dof_handler_cell.n_dofs());
+        dof_to_dof_type_map.resize(this->dof_handler_cell.n_dofs());
+        rescaled_solution.reinit(this->current_solution_cell.size());
+        this->generate_dof_to_component_map(dof_to_component_map,
+                                            dof_to_dof_type_map,
+                                            false);
+
+        this->adimensionalizer->redimensionalize_dof_vector(
+          this->current_solution_cell,
+          dof_to_component_map,
+          dof_to_dof_type_map,
+          rescaled_solution);
+      }
 
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       component_interpretation(
@@ -1729,21 +1737,27 @@ namespace Ddhdg
         DataComponentInterpretation::component_is_scalar;
 
     data_out.add_data_vector(this->dof_handler_cell,
-                             rescaled_solution,
+                             (redimensionalize_quantities) ?
+                               rescaled_solution :
+                               this->current_solution_cell,
                              names,
                              component_interpretation);
 
-    Vector<double> rescaled_update;
     if (save_update)
       {
-        rescaled_update.reinit(this->dof_handler_cell.n_dofs());
-        this->adimensionalizer->redimensionalize_dof_vector(
-          this->update_cell,
-          dof_to_component_map,
-          dof_to_dof_type_map,
-          rescaled_update);
+        if (redimensionalize_quantities)
+          {
+            rescaled_update.reinit(this->dof_handler_cell.n_dofs());
+            this->adimensionalizer->redimensionalize_dof_vector(
+              this->update_cell,
+              dof_to_component_map,
+              dof_to_dof_type_map,
+              rescaled_update);
+          }
         data_out.add_data_vector(this->dof_handler_cell,
-                                 rescaled_update,
+                                 (redimensionalize_quantities) ?
+                                   rescaled_update :
+                                   this->update_cell,
                                  update_names,
                                  component_interpretation);
       }
@@ -1821,11 +1835,13 @@ namespace Ddhdg
                    HomogeneousElectronMobility<1>>>::
     output_results(const std::string &solution_filename,
                    const std::string &trace_filename,
-                   const bool         save_update) const
+                   const bool         save_update,
+                   const bool         redimensionalize_quantities) const
   {
     (void)solution_filename;
     (void)trace_filename;
     (void)save_update;
+    (void)redimensionalize_quantities;
     AssertThrow(false, NoTraceIn1D());
   }
 
@@ -1836,9 +1852,12 @@ namespace Ddhdg
   NPSolver<dim, ProblemType>::output_results(
     const std::string &solution_filename,
     const std::string &trace_filename,
-    const bool         save_update) const
+    const bool         save_update,
+    const bool         redimensionalize_quantities) const
   {
-    this->output_results(solution_filename, save_update);
+    this->output_results(solution_filename,
+                         save_update,
+                         redimensionalize_quantities);
 
     std::ofstream     face_output(trace_filename);
     DataOutFaces<dim> data_out_face(false);
@@ -1854,39 +1873,52 @@ namespace Ddhdg
     for (const auto &n : face_names)
       update_face_names.push_back(n + "_updates");
 
-    std::vector<Component> dof_to_component_map(
-      this->dof_handler_trace.n_dofs());
-    std::vector<DofType> dof_to_dof_type_map(this->dof_handler_trace.n_dofs());
-    this->generate_dof_to_component_map(dof_to_component_map,
-                                        dof_to_dof_type_map,
-                                        true);
+    std::vector<Component> dof_to_component_map;
+    std::vector<DofType>   dof_to_dof_type_map;
+    Vector<double>         rescaled_solution;
+    Vector<double>         rescaled_update;
 
-    Vector<double> rescaled_solution(this->current_solution_trace.size());
-    this->adimensionalizer->redimensionalize_dof_vector(
-      this->current_solution_trace,
-      dof_to_component_map,
-      dof_to_dof_type_map,
-      rescaled_solution);
+    if (redimensionalize_quantities)
+      {
+        dof_to_component_map.resize(this->dof_handler_trace.n_dofs());
+        dof_to_dof_type_map.resize(this->dof_handler_trace.n_dofs());
+        rescaled_solution.reinit(this->dof_handler_trace.n_dofs());
+        this->generate_dof_to_component_map(dof_to_component_map,
+                                            dof_to_dof_type_map,
+                                            true);
+
+        this->adimensionalizer->redimensionalize_dof_vector(
+          this->current_solution_trace,
+          dof_to_component_map,
+          dof_to_dof_type_map,
+          rescaled_solution);
+      }
 
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       face_component_type(n_of_components,
                           DataComponentInterpretation::component_is_scalar);
     data_out_face.add_data_vector(this->dof_handler_trace,
-                                  rescaled_solution,
+                                  (redimensionalize_quantities) ?
+                                    rescaled_solution :
+                                    this->current_solution_trace,
                                   face_names,
                                   face_component_type);
 
-    Vector<double> rescaled_update(0);
     if (save_update)
       {
-        rescaled_update.reinit(this->update_trace.size());
-        this->adimensionalizer->redimensionalize_dof_vector(
-          this->update_trace,
-          dof_to_component_map,
-          dof_to_dof_type_map,
-          rescaled_update);
+        if (redimensionalize_quantities)
+          {
+            rescaled_update.reinit(this->dof_handler_trace.n_dofs());
+            this->adimensionalizer->redimensionalize_dof_vector(
+              this->update_trace,
+              dof_to_component_map,
+              dof_to_dof_type_map,
+              rescaled_update);
+          }
         data_out_face.add_data_vector(this->dof_handler_trace,
-                                      rescaled_update,
+                                      (redimensionalize_quantities) ?
+                                        rescaled_update :
+                                        this->update_trace,
                                       update_face_names,
                                       face_component_type);
       }
