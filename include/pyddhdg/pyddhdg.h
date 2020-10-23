@@ -544,12 +544,14 @@ namespace pyddhdg
 
     void
     output_results(const std::string &solution_filename,
-                   bool               save_update = false) const;
+                   bool               save_update                 = false,
+                   bool               redimensionalize_quantities = true) const;
 
     void
     output_results(const std::string &solution_filename,
                    const std::string &trace_filename,
-                   bool               save_update = false) const;
+                   bool               save_update                 = false,
+                   bool               redimensionalize_quantities = true) const;
 
     void
     print_convergence_table(const std::string &expected_V_solution,

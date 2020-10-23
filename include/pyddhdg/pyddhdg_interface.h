@@ -496,19 +496,23 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("point"),
        py::arg("component"))
   .def("output_results",
-       py::overload_cast<const std::string &, const bool>(
+       py::overload_cast<const std::string &, const bool, const bool>(
          &NPSolver<DIM>::output_results,
          py::const_),
        py::arg("solution_filename"),
-       py::arg("save_update") = false)
+       py::arg("save_update")                  = false,
+       py ::arg("redimensionalize_quantities") = true)
 #  if DIM != 1
   .def("output_results",
-       py::overload_cast<const std::string &, const std::string &, const bool>(
-         &NPSolver<DIM>::output_results,
-         py::const_),
+       py::overload_cast<const std::string &,
+                         const std::string &,
+                         const bool,
+                         const bool>(&NPSolver<DIM>::output_results,
+                                     py::const_),
        py::arg("solution_filename"),
        py::arg("trace_filename"),
-       py::arg("save_update") = false)
+       py::arg("save_update")                 = false,
+       py::arg("redimensionalize_quantities") = true)
 #  endif
   .def("print_convergence_table",
        py::overload_cast<const std::string &,

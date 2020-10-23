@@ -1310,9 +1310,12 @@ namespace pyddhdg
   template <int dim>
   void
   NPSolver<dim>::output_results(const std::string &solution_filename,
-                                const bool         save_update) const
+                                const bool         save_update,
+                                const bool redimensionalize_quantities) const
   {
-    this->ddhdg_solver->output_results(solution_filename, save_update);
+    this->ddhdg_solver->output_results(solution_filename,
+                                       save_update,
+                                       redimensionalize_quantities);
   }
 
 
@@ -1321,11 +1324,13 @@ namespace pyddhdg
   void
   NPSolver<dim>::output_results(const std::string &solution_filename,
                                 const std::string &trace_filename,
-                                const bool         save_update) const
+                                const bool         save_update,
+                                const bool redimensionalize_quantities) const
   {
     this->ddhdg_solver->output_results(solution_filename,
                                        trace_filename,
-                                       save_update);
+                                       save_update,
+                                       redimensionalize_quantities);
   }
 
 
