@@ -22,6 +22,8 @@ namespace Ddhdg
       static constexpr bool needs_D_p     = false;
       static constexpr bool needs_T       = true;
 
+      static constexpr bool redimensionalize = true;
+
       template <int dim>
       static constexpr void
       generate_epsilon_input(dealii::Tensor<1, dim> &epsilon_input)
@@ -121,6 +123,8 @@ namespace Ddhdg
       static constexpr bool needs_D_n     = false;
       static constexpr bool needs_D_p     = false;
       static constexpr bool needs_T       = true;
+
+      static constexpr bool redimensionalize = true;
 
       template <int dim>
       static constexpr void
@@ -222,6 +226,8 @@ namespace Ddhdg
       static constexpr bool needs_D_p     = false;
       static constexpr bool needs_T       = false;
 
+      static constexpr bool redimensionalize = true;
+
       template <int dim>
       static constexpr void
       generate_epsilon_input(dealii::Tensor<1, dim> &epsilon_input)
@@ -319,6 +325,8 @@ namespace Ddhdg
       static constexpr bool needs_D_n     = false;
       static constexpr bool needs_D_p     = true;
       static constexpr bool needs_T       = false;
+
+      static constexpr bool redimensionalize = true;
 
       template <int dim>
       static constexpr void
@@ -632,9 +640,10 @@ namespace Ddhdg
         const auto extractor = this->get_component_extractor(Component::V);
         scratch.fe_values_cell[extractor].get_function_values(
           this->current_solution_cell, scratch.V_values);
-        this->adimensionalizer
-          ->template inplace_redimensionalize_component<Component::V>(
-            scratch.V_values);
+        if (quantity::redimensionalize)
+          this->adimensionalizer
+            ->template inplace_redimensionalize_component<Component::V>(
+              scratch.V_values);
       }
     if constexpr (quantity::needs_E)
       {
@@ -642,17 +651,19 @@ namespace Ddhdg
           this->get_displacement_extractor(Displacement::E);
         scratch.fe_values_cell[extractor].get_function_values(
           this->current_solution_cell, scratch.E_values);
-        this->adimensionalizer->inplace_redimensionalize_displacement(
-          scratch.E_values, Displacement::E);
+        if (quantity::redimensionalize)
+          this->adimensionalizer->inplace_redimensionalize_displacement(
+            scratch.E_values, Displacement::E);
       }
     if constexpr (quantity::needs_n)
       {
         const auto extractor = this->get_component_extractor(Component::n);
         scratch.fe_values_cell[extractor].get_function_values(
           this->current_solution_cell, scratch.n_values);
-        this->adimensionalizer
-          ->template inplace_redimensionalize_component<Component::n>(
-            scratch.n_values);
+        if (quantity::redimensionalize)
+          this->adimensionalizer
+            ->template inplace_redimensionalize_component<Component::n>(
+              scratch.n_values);
       }
     if constexpr (quantity::needs_Wn)
       {
@@ -660,17 +671,19 @@ namespace Ddhdg
           this->get_displacement_extractor(Displacement::Wn);
         scratch.fe_values_cell[extractor].get_function_values(
           this->current_solution_cell, scratch.Wn_values);
-        this->adimensionalizer->inplace_redimensionalize_displacement(
-          scratch.Wn_values, Displacement::Wn);
+        if (quantity::redimensionalize)
+          this->adimensionalizer->inplace_redimensionalize_displacement(
+            scratch.Wn_values, Displacement::Wn);
       }
     if constexpr (quantity::needs_p)
       {
         const auto extractor = this->get_component_extractor(Component::p);
         scratch.fe_values_cell[extractor].get_function_values(
           this->current_solution_cell, scratch.p_values);
-        this->adimensionalizer
-          ->template inplace_redimensionalize_component<Component::p>(
-            scratch.p_values);
+        if (quantity::redimensionalize)
+          this->adimensionalizer
+            ->template inplace_redimensionalize_component<Component::p>(
+              scratch.p_values);
       }
     if constexpr (quantity::needs_Wp)
       {
@@ -678,13 +691,17 @@ namespace Ddhdg
           this->get_displacement_extractor(Displacement::Wp);
         scratch.fe_values_cell[extractor].get_function_values(
           this->current_solution_cell, scratch.Wp_values);
-        this->adimensionalizer->inplace_redimensionalize_displacement(
-          scratch.Wp_values, Displacement::Wp);
+        if (quantity::redimensionalize)
+          this->adimensionalizer->inplace_redimensionalize_displacement(
+            scratch.Wp_values, Displacement::Wp);
       }
     if constexpr (quantity::needs_epsilon)
       {
-        scratch.permittivity.initialize_on_cell(scratch.cell_quadrature_points,
-                                                1.);
+        scratch.permittivity.initialize_on_cell(
+          scratch.cell_quadrature_points,
+          (quantity::redimensionalize) ?
+            1. :
+            this->adimensionalizer->get_permittivity_rescaling_factor());
         dealii::Tensor<1, dim> epsilon_input;
         for (unsigned int q = 0; q < n_q_points; q++)
           {
@@ -695,13 +712,19 @@ namespace Ddhdg
       }
     if constexpr (quantity::needs_mu_n || quantity::needs_D_n)
       {
-        scratch.n_mobility.initialize_on_cell(scratch.cell_quadrature_points,
-                                              1.);
+        scratch.n_mobility.initialize_on_cell(
+          scratch.cell_quadrature_points,
+          (quantity::redimensionalize) ?
+            1. :
+            this->adimensionalizer->get_mobility_rescaling_factor());
       }
     if constexpr (quantity::needs_mu_p || quantity::needs_D_p)
       {
-        scratch.n_mobility.initialize_on_cell(scratch.cell_quadrature_points,
-                                              1.);
+        scratch.p_mobility.initialize_on_cell(
+          scratch.cell_quadrature_points,
+          (quantity::redimensionalize) ?
+            1. :
+            this->adimensionalizer->get_mobility_rescaling_factor());
       }
     if constexpr (quantity::needs_T || quantity::needs_D_n ||
                   quantity::needs_D_p)
@@ -761,7 +784,7 @@ namespace Ddhdg
           }
       }
 
-    // This tensor will be used as a placeholder for the values that have not be
+    // This tensor will be used as a placeholder for the values that must not be
     // computed
     dealii::Tensor<1, dim> empty_tensor;
 

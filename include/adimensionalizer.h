@@ -51,7 +51,7 @@ namespace Ddhdg
     get_displacement_rescaling_factor() const
     {
       const Component c = displacement2component(d);
-      return this->get_component_rescaling_factor<c>();
+      return this->get_component_rescaling_factor<c>() / this->scale_length;
     }
 
     [[nodiscard]] double
