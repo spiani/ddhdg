@@ -313,7 +313,8 @@ namespace Ddhdg
     template <Component cmp>
     void
     compute_current(const dealii::DoFHandler<dim> &dof,
-                    dealii::Vector<double> &       data) const;
+                    dealii::Vector<double> &       data,
+                    bool redimensionalize = true) const;
 
     template <Component cmp>
     void

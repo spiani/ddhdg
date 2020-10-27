@@ -1792,8 +1792,12 @@ namespace Ddhdg
     dealii::Vector<double> phi_n_data;
     dealii::Vector<double> phi_p_data;
 
-    this->compute_current<Component::n>(n_current_dofs, Jn_data);
-    this->compute_current<Component::p>(p_current_dofs, Jp_data);
+    this->compute_current<Component::n>(n_current_dofs,
+                                        Jn_data,
+                                        redimensionalize_quantities);
+    this->compute_current<Component::p>(p_current_dofs,
+                                        Jp_data,
+                                        redimensionalize_quantities);
 
     this->compute_qf_potential<Component::n>(phi_n_dofs, phi_n_data);
     this->compute_qf_potential<Component::p>(phi_p_dofs, phi_p_data);

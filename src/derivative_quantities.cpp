@@ -226,7 +226,7 @@ namespace Ddhdg
       static constexpr bool needs_D_p     = false;
       static constexpr bool needs_T       = false;
 
-      static constexpr bool redimensionalize = true;
+      static constexpr bool redimensionalize = false;
 
       template <int dim>
       static constexpr void
@@ -303,8 +303,7 @@ namespace Ddhdg
         (void)D_p_output;
         (void)T;
         (void)solver;
-        return (n * mu_n_output[dimension] - D_n_output[dimension]) *
-               Constants::Q;
+        return n * mu_n_output[dimension] - D_n_output[dimension];
       }
     };
 
@@ -326,7 +325,7 @@ namespace Ddhdg
       static constexpr bool needs_D_p     = true;
       static constexpr bool needs_T       = false;
 
-      static constexpr bool redimensionalize = true;
+      static constexpr bool redimensionalize = false;
 
       template <int dim>
       static constexpr void
@@ -403,8 +402,7 @@ namespace Ddhdg
         (void)D_n_output;
         (void)T;
         (void)solver;
-        return (p * mu_p_output[dimension] + D_p_output[dimension]) *
-               Constants::Q;
+        return p * mu_p_output[dimension] + D_p_output[dimension];
       }
     };
 
@@ -731,8 +729,16 @@ namespace Ddhdg
       {
         this->problem->temperature->value_list(scratch.cell_quadrature_points,
                                                scratch.T);
+
+        const double thermal_voltage_rescaling_factor =
+          (quantity::redimensionalize) ?
+            1 :
+            this->adimensionalizer->get_thermal_voltage_rescaling_factor();
+
         for (unsigned int q = 0; q < n_q_points; q++)
-          scratch.U_T_cell[q] = scratch.T[q] * Constants::KB / Constants::Q;
+          scratch.U_T_cell[q] =
+            scratch.T[q] * Constants::KB /
+            (Constants::Q * thermal_voltage_rescaling_factor);
       }
 
     if constexpr (quantity::needs_mu_n)
@@ -951,7 +957,8 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::compute_current(
     const dealii::DoFHandler<dim> &dof,
-    dealii::Vector<double> &       data) const
+    dealii::Vector<double> &       data,
+    const bool                     redimensionalize) const
   {
     switch (cmp)
       {
@@ -966,6 +973,19 @@ namespace Ddhdg
         default:
           Assert(false, InvalidComponent())
       }
+
+    const double thermal_voltage_rf =
+      this->adimensionalizer->get_thermal_voltage_rescaling_factor();
+    const double mu_rf =
+      this->adimensionalizer->get_mobility_rescaling_factor();
+    const double n_rf =
+      this->adimensionalizer
+        ->template get_displacement_rescaling_factor<Displacement::Wn>();
+    const double J_rf = thermal_voltage_rf * mu_rf * n_rf * Constants::Q;
+
+    if (redimensionalize)
+      for (unsigned int i = 0; i < data.size(); ++i)
+        data[i] *= J_rf;
   }
 
 
@@ -1022,25 +1042,31 @@ namespace Ddhdg
   template void
   NPSolver<1, HomogeneousProblem<1>>::compute_current<Component::n>(
     const dealii::DoFHandler<1> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double> &     data,
+    bool                         redimensionalize) const;
   template void
   NPSolver<2, HomogeneousProblem<2>>::compute_current<Component::n>(
     const dealii::DoFHandler<2> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double> &     data,
+    bool                         redimensionalize) const;
   template void
   NPSolver<3, HomogeneousProblem<3>>::compute_current<Component::n>(
     const dealii::DoFHandler<3> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double> &     data,
+    bool                         redimensionalize) const;
   template void
   NPSolver<1, HomogeneousProblem<1>>::compute_current<Component::p>(
     const dealii::DoFHandler<1> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double> &     data,
+    bool                         redimensionalize) const;
   template void
   NPSolver<2, HomogeneousProblem<2>>::compute_current<Component::p>(
     const dealii::DoFHandler<2> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double> &     data,
+    bool                         redimensionalize) const;
   template void
   NPSolver<3, HomogeneousProblem<3>>::compute_current<Component::p>(
     const dealii::DoFHandler<3> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double> &     data,
+    bool                         redimensionalize) const;
 } // namespace Ddhdg
