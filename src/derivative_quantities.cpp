@@ -102,9 +102,12 @@ namespace Ddhdg
         (void)D_n_output;
         (void)D_p_output;
         (void)dimension;
-        return solver.template compute_quasi_fermi_potential<Component::n>(n,
-                                                                           V,
-                                                                           T);
+        const double rescaling_factor =
+          solver.adimensionalizer
+            ->template get_component_rescaling_factor<Component::V>();
+        const double phi_n =
+          solver.template compute_quasi_fermi_potential<Component::n>(n, V, T);
+        return phi_n / rescaling_factor;
       }
     };
 
@@ -204,9 +207,12 @@ namespace Ddhdg
         (void)D_n_output;
         (void)D_p_output;
         (void)dimension;
-        return solver.template compute_quasi_fermi_potential<Component::p>(p,
-                                                                           V,
-                                                                           T);
+        const double rescaling_factor =
+          solver.adimensionalizer
+            ->template get_component_rescaling_factor<Component::V>();
+        const double phi_p =
+          solver.template compute_quasi_fermi_potential<Component::p>(p, V, T);
+        return phi_p / rescaling_factor;
       }
     };
 
@@ -1010,6 +1016,12 @@ namespace Ddhdg
         default:
           Assert(false, InvalidComponent())
       }
+    const double rescaling_factor =
+      this->adimensionalizer
+        ->template get_component_rescaling_factor<Component::V>();
+
+    for (unsigned int i = 0; i < data.size(); ++i)
+      data[i] *= rescaling_factor;
   }
 
 
