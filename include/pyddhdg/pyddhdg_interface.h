@@ -313,6 +313,10 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("v_enabled"),
        py::arg("n_enabled"),
        py::arg("p_enabled"))
+  .def("assemble_system", &NPSolver<DIM>::assemble_system)
+  .def("get_dirichlet_boundary_dofs",
+       &NPSolver<DIM>::get_dirichlet_boundary_dofs)
+  .def("get_residual", &NPSolver<DIM>::get_residual)
   .def("run", &NPSolver<DIM>::run)
   .def("copy_triangulation_from", &NPSolver<DIM>::copy_triangulation_from)
   .def("copy_solution_from", &NPSolver<DIM>::copy_solution_from)

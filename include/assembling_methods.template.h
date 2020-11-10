@@ -14,6 +14,10 @@ namespace Ddhdg
   {
     Assert(this->initialized, dealii::ExcNotInitialized());
 
+    // The number of the Dirichlet constraints will increase as soon as we found
+    // them on the cells; for this reason, right now must be 0
+    this->n_dirichlet_constraints = 0;
+
     const QGauss<dim> quadrature_formula(
       this->get_number_of_quadrature_points());
     const QGauss<dim - 1> face_quadrature_formula(

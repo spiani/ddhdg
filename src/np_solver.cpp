@@ -332,7 +332,10 @@ namespace Ddhdg
           multiplicities.push_back(1);
         }
 
-    const auto output = new FESystem<dim>(fe_systems, multiplicities);
+    Assert(fe_systems.size() > 0,
+           dealii::ExcMessage(
+             "Trying to build an empty fe_system. No component enabled!"))
+      const auto output = new FESystem<dim>(fe_systems, multiplicities);
 
     for (const FiniteElement<dim> *fe : fe_systems)
       delete (fe);
@@ -625,18 +628,27 @@ namespace Ddhdg
       "the active components: %s",
       trace_restricted_dofs);
 
-    std::vector<bool>  dirichlet_constraints(trace_restricted_dofs, false);
-    const unsigned int n_dirichlet_constraints =
+    std::vector<bool> dirichlet_constraints(trace_restricted_dofs, false);
+    this->n_dirichlet_constraints =
       this->get_dofs_constrained_by_dirichlet_conditions(dirichlet_constraints);
 
     this->n_dirichlet_constraints = n_dirichlet_constraints;
-    this->constrained_dof_indices.resize(n_dirichlet_constraints);
-    this->constrained_dof_values.resize(n_dirichlet_constraints);
+    this->constrained_dof_indices.resize(this->n_dirichlet_constraints);
+    this->constrained_dof_values.resize(this->n_dirichlet_constraints);
+
+    // This is tricky; we need as way to recognize if we have computed the
+    // the values of the previous vectors (or if they are still just allocated)
+    // For this reason, we put a "invalid flag" at the beginning of the vector
+    // to make clear that they do not contain (yet) reasonable values. If there
+    // are no dirichlet constraints this is useless because they contain
+    // already the right values (which is no one)
+    if (this->n_dirichlet_constraints > 0)
+      this->constrained_dof_indices[0] = dealii::numbers::invalid_dof_index;
 
     this->write_log(
       "%s degree of freedom (on the skeleton) are constrained by Dirichlet "
       "boundary conditions",
-      n_dirichlet_constraints);
+      this->n_dirichlet_constraints);
 
     this->system_rhs.reinit(trace_restricted_dofs);
     this->system_solution.reinit(trace_restricted_dofs);
@@ -1169,13 +1181,19 @@ namespace Ddhdg
   NPSolver<dim, ProblemType>::generate_dof_to_component_map(
     std::vector<Component> &dof_to_component,
     std::vector<DofType> &  dof_to_dof_type,
-    const bool              for_trace) const
+    const bool              for_trace,
+    const bool              restricted) const
   {
     Assert(this->initialized, dealii::ExcNotInitialized());
 
-    const auto &fe = (for_trace) ? *(this->fe_trace) : *(this->fe_cell);
+    const auto &fe =
+      (for_trace) ?
+        ((restricted) ? *(this->fe_trace_restricted) : *(this->fe_trace)) :
+        *(this->fe_cell);
     const auto &dof_handler =
-      (for_trace) ? this->dof_handler_trace : this->dof_handler_cell;
+      (for_trace) ? ((restricted) ? this->dof_handler_trace_restricted :
+                                    this->dof_handler_trace) :
+                    this->dof_handler_cell;
 
     const unsigned int dofs_per_cell = fe.dofs_per_cell;
 
@@ -1188,10 +1206,17 @@ namespace Ddhdg
     std::vector<dealii::types::global_dof_index> global_indices(dofs_per_cell);
 
     std::map<unsigned int, Component> component_from_index;
-    for (const Component c : Ddhdg::all_primary_components())
-      component_from_index.insert({get_component_index(c), c});
+    std::set<Component>               cmps;
+    if (for_trace && restricted)
+      cmps = this->enabled_components;
+    else
+      cmps = Ddhdg::all_primary_components();
+    for (const Component c : cmps)
+      component_from_index.insert({get_component_index(c, cmps), c});
 
-    // Create a map that associates to each component its FESystem
+    // Create a map that associates to each component its FESystem (this is used
+    // only when we are on a cell and we have a complex FESystem for each
+    // component
     std::map<const Component, const dealii::FiniteElement<dim> &>
       component_to_fe_system;
     if (!for_trace)
@@ -1298,6 +1323,11 @@ namespace Ddhdg
         const unsigned int constrained_dofs = data.n_dirichlet_constrained_dofs;
         for (unsigned int i = 0; i < constrained_dofs; ++i)
           {
+            Logging::write_log<Logging::severity_level::trace>(
+              "Saving that dof %s must assume value %s because of the "
+              "Dirichlet boundary conditions",
+              data.dirichlet_trace_dof_indices[i],
+              data.dirichlet_trace_dof_values[i]);
             this->constrained_dof_indices[this->n_dirichlet_constraints + i] =
               data.dirichlet_trace_dof_indices[i];
             this->constrained_dof_values[this->n_dirichlet_constraints + i] =
@@ -1444,7 +1474,7 @@ namespace Ddhdg
     const bool   compute_thermodynamic_equilibrium)
   {
     if (!this->initialized)
-      setup_overall_system();
+      this->setup_overall_system();
 
     bool   convergence_reached = false;
     int    step                = 0;

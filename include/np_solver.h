@@ -103,6 +103,12 @@ namespace Ddhdg
         other.current_solution_cell,
         this->dof_handler_cell,
         this->current_solution_cell);
+
+      dealii::VectorTools::interpolate_to_different_mesh(
+        other.dof_handler_trace,
+        other.current_solution_trace,
+        this->dof_handler_trace,
+        this->current_solution_trace);
     }
 
     void
@@ -406,7 +412,8 @@ namespace Ddhdg
     void
     generate_dof_to_component_map(std::vector<Component> &dof_to_component_map,
                                   std::vector<DofType> &  dof_to_dof_type,
-                                  bool                    for_trace) const;
+                                  bool                    for_trace,
+                                  bool restricted = false) const;
 
     void
     project_cell_function_on_trace(

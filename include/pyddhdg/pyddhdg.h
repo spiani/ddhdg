@@ -4,6 +4,7 @@
 
 #include <deal.II/grid/grid_generator.h>
 
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
 #include "boundary_conditions.h"
@@ -418,6 +419,19 @@ namespace pyddhdg
 
     void
     set_enabled_components(bool V_enabled, bool n_enabled, bool p_enabled);
+
+    void
+    assemble_system();
+
+    std::map<
+      Ddhdg::Component,
+      std::pair<pybind11::array_t<unsigned int, pybind11::array::c_style>,
+                pybind11::array_t<double, pybind11::array::c_style>>>
+    get_dirichlet_boundary_dofs();
+
+    std::map<Ddhdg::Component,
+             pybind11::array_t<double, pybind11::array::c_style>>
+    get_residual();
 
     Ddhdg::NonlinearIterationResults
     run();

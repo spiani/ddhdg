@@ -246,6 +246,15 @@ namespace Ddhdg
       Logging::write_log(log_message, n, this->log_standard_level);
     }
 
+    template <typename Element1, typename Element2>
+    inline void
+    write_log(const std::string &log_message,
+              const Element1     n,
+              const Element2     m) const
+    {
+      Logging::write_log(log_message, n, m, this->log_standard_level);
+    }
+
     template <Component c>
     inline double
     compute_quasi_fermi_potential(const double density,

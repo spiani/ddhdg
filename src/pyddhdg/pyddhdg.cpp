@@ -1,5 +1,6 @@
 #include "pyddhdg/pyddhdg.h"
 
+#include <stdexcept>
 #include <utility>
 
 #include "function_tools.h"
@@ -842,6 +843,227 @@ namespace pyddhdg
   NPSolver<dim>::get_parameters() const
   {
     return *(this->ddhdg_solver->parameters);
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::assemble_system()
+  {
+    if (!this->ddhdg_solver->initialized)
+      this->ddhdg_solver->setup_overall_system();
+
+    this->ddhdg_solver->system_matrix = 0;
+    this->ddhdg_solver->system_rhs    = 0;
+
+    if (this->ddhdg_solver->parameters->multithreading)
+      this->ddhdg_solver->template assemble_system<true>(false, false);
+    else
+      this->ddhdg_solver->template assemble_system<false>(false, false);
+  }
+
+
+
+  template <int dim>
+  std::map<Ddhdg::Component,
+           std::pair<pybind11::array_t<unsigned int, pybind11::array::c_style>,
+                     pybind11::array_t<double, pybind11::array::c_style>>>
+  NPSolver<dim>::get_dirichlet_boundary_dofs()
+  {
+    if (!this->ddhdg_solver->initialized)
+      this->ddhdg_solver->setup_overall_system();
+
+    const unsigned int n_dofs =
+      this->ddhdg_solver->dof_handler_trace_restricted.n_dofs();
+
+    std::vector<Ddhdg::Component> dof_to_component_map(n_dofs);
+    std::vector<Ddhdg::DofType>   dof_to_dof_type_map(n_dofs);
+
+    this->ddhdg_solver->generate_dof_to_component_map(dof_to_component_map,
+                                                      dof_to_dof_type_map,
+                                                      true,
+                                                      true);
+
+    // Now we create a map that associates to each global dof its index for
+    // the current component
+    std::vector<dealii::types::global_dof_index> dof_to_local_dof_map(
+      n_dofs, dealii::numbers::invalid_dof_index);
+
+    // This one, instead, associates for each component its number of dofs
+    std::map<Ddhdg::Component, unsigned int> n_of_component_dofs;
+
+    // Let us fill the previous maps
+    for (const auto c : this->ddhdg_solver->enabled_components)
+      {
+        unsigned int n_of_current_component_dofs = 0;
+        for (unsigned int i = 0; i < n_dofs; ++i)
+          if (dof_to_component_map[i] == c)
+            dof_to_local_dof_map[i] = n_of_current_component_dofs++;
+
+        Assert(n_of_current_component_dofs > 0,
+               dealii::ExcMessage("No dofs for current component"));
+
+        n_of_component_dofs.insert({c, n_of_current_component_dofs});
+      }
+
+    std::vector<bool>  dirichlet_constraints(n_dofs, false);
+    const unsigned int n_dirichlet_constraints =
+      this->ddhdg_solver->get_dofs_constrained_by_dirichlet_conditions(
+        dirichlet_constraints);
+
+    // This map is the final output
+    std::map<
+      Ddhdg::Component,
+      std::pair<pybind11::array_t<unsigned int, pybind11::array::c_style>,
+                pybind11::array_t<double, pybind11::array::c_style>>>
+      dirichlet_bc_dofs;
+
+    // Check if the values have been computed or not
+    if (n_dirichlet_constraints > 0 and
+        this->ddhdg_solver->constrained_dof_indices[0] ==
+          dealii::numbers::invalid_dof_index)
+      {
+        throw std::runtime_error(
+          "Dirichlet boundary conditions have not been computed yet!");
+      }
+
+    for (const auto c : this->ddhdg_solver->enabled_components)
+      {
+        // Now we count the dofs constrained by Dirichlet boundary conditions
+        // on the current component
+        unsigned int constrained_dofs = 0;
+        for (unsigned int i = 0; i < n_dofs; ++i)
+          if (dirichlet_constraints[i] && dof_to_component_map[i] == c)
+            ++constrained_dofs;
+
+        auto *component_dirichlet_bc_indices =
+          new unsigned int[constrained_dofs];
+        auto *component_dirichlet_bc_values = new double[constrained_dofs];
+
+        unsigned int k = 0;
+        for (unsigned int i = 0; i < n_dirichlet_constraints; ++i)
+          {
+            dealii::types::global_dof_index current_index =
+              this->ddhdg_solver->constrained_dof_indices[i];
+            if (dof_to_component_map[current_index] == c)
+              {
+                const unsigned int local_dof_index =
+                  dof_to_local_dof_map[current_index];
+                component_dirichlet_bc_indices[k] = local_dof_index;
+                component_dirichlet_bc_values[k] =
+                  this->ddhdg_solver->constrained_dof_values[i];
+                ++k;
+              }
+          }
+
+        Assert(
+          k == constrained_dofs,
+          dealii::ExcMessage(
+            "Copied a number of elements that is different from constrained_dofs"));
+
+        const auto vector_shape         = std::vector<long>{constrained_dofs};
+        const auto vector_stride_index  = std::vector<long>{4};
+        const auto vector_stride_values = std::vector<long>{8};
+
+        pybind11::capsule free_indices(component_dirichlet_bc_indices,
+                                       [](void *f) {
+                                         auto *data =
+                                           reinterpret_cast<unsigned int *>(f);
+                                         delete[] data;
+                                       });
+        pybind11::capsule free_values(component_dirichlet_bc_values,
+                                      [](void *f) {
+                                        auto *data =
+                                          reinterpret_cast<double *>(f);
+                                        delete[] data;
+                                      });
+
+        auto indices =
+          pybind11::array_t<unsigned int, pybind11::array::c_style>(
+            vector_shape,
+            vector_stride_index,
+            component_dirichlet_bc_indices,
+            free_indices);
+        auto values = pybind11::array_t<double, pybind11::array::c_style>(
+          vector_shape,
+          vector_stride_values,
+          component_dirichlet_bc_values,
+          free_values);
+
+        dirichlet_bc_dofs.insert({c, {indices, values}});
+      }
+
+    return dirichlet_bc_dofs;
+  }
+
+
+
+  template <int dim>
+  std::map<Ddhdg::Component,
+           pybind11::array_t<double, pybind11::array::c_style>>
+  NPSolver<dim>::get_residual()
+  {
+    if (!this->ddhdg_solver->initialized)
+      this->ddhdg_solver->setup_overall_system();
+
+    std::map<Ddhdg::Component,
+             pybind11::array_t<double, pybind11::array::c_style>>
+      residual_map;
+
+    const unsigned int n_dofs =
+      this->ddhdg_solver->dof_handler_trace_restricted.n_dofs();
+
+    std::vector<Ddhdg::Component> dof_to_component_map(n_dofs);
+    std::vector<Ddhdg::DofType>   dof_to_dof_type_map(n_dofs);
+
+    this->ddhdg_solver->generate_dof_to_component_map(dof_to_component_map,
+                                                      dof_to_dof_type_map,
+                                                      true,
+                                                      true);
+    for (const auto c : this->ddhdg_solver->enabled_components)
+      {
+        unsigned int n_of_component_dofs = 0;
+        for (unsigned int i = 0; i < n_dofs; ++i)
+          if (dof_to_component_map[i] == c)
+            n_of_component_dofs += 1;
+
+        Assert(n_of_component_dofs > 0,
+               dealii::ExcMessage("No dofs for current component"));
+
+        auto *component_residual_data = new double[n_of_component_dofs];
+
+        unsigned int k = 0;
+        for (unsigned int i = 0; i < n_dofs; ++i)
+          if (dof_to_component_map[i] == c)
+            component_residual_data[k++] = this->ddhdg_solver->system_rhs[i];
+
+        Assert(
+          k == n_of_component_dofs,
+          dealii::ExcMessage(
+            "Copied a number of elements that is different from n_of_component_dofs"));
+
+        const auto vector_shape  = std::vector<long>{n_of_component_dofs};
+        const auto vector_stride = std::vector<long>{8};
+
+        // Create a Python object that will free the allocated
+        // memory when destroyed:
+        pybind11::capsule free_when_done(component_residual_data, [](void *f) {
+          auto *data = reinterpret_cast<double *>(f);
+          delete[] data;
+        });
+
+        auto component_residual =
+          pybind11::array_t<double, pybind11::array::c_style>(
+            vector_shape,
+            vector_stride,
+            component_residual_data,
+            free_when_done);
+
+        residual_map.insert({c, component_residual});
+      }
+
+    return residual_map;
   }
 
 

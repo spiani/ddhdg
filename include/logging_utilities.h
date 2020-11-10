@@ -299,5 +299,37 @@ namespace Ddhdg
         }
     }
 
+    template <typename Element1, typename Element2>
+    inline void
+    write_log(const std::string &  log_message,
+              const Element1       n1,
+              const Element2       n2,
+              const severity_level level)
+    {
+      switch (level)
+        {
+          case (severity_level::trace):
+            write_log<severity_level::trace>(log_message, n1, n2);
+            break;
+          case (severity_level::debug):
+            write_log<severity_level::debug>(log_message, n1, n2);
+            break;
+          case (severity_level::info):
+            write_log<severity_level::info>(log_message, n1, n2);
+            break;
+          case (severity_level::warning):
+            write_log<severity_level::warning>(log_message, n1, n2);
+            break;
+          case (severity_level::error):
+            write_log<severity_level::error>(log_message, n1, n2);
+            break;
+          case (severity_level::fatal):
+            write_log<severity_level::fatal>(log_message, n1, n2);
+            break;
+          default:
+            Assert(false, InvalidSeverityLevel());
+            break;
+        }
+    }
   } // namespace Logging
 } // namespace Ddhdg
