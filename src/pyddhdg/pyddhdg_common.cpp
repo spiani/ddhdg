@@ -33,6 +33,11 @@ namespace pyddhdg
       .value("ROBIN", Ddhdg::BoundaryConditionType::robin)
       .export_values();
 
+    py::enum_<Ddhdg::DDFluxType>(m, "DDFluxType")
+      .value("use_cell", Ddhdg::DDFluxType::use_cell)
+      .value("use_trace", Ddhdg::DDFluxType::use_trace)
+      .export_values();
+
     py::class_<ErrorPerCell>(m, "ErrorPerCell")
       .def("as_numpy_array", [](const ErrorPerCell &self) {
         const size_t size = self.data_vector->size();
@@ -68,7 +73,8 @@ namespace pyddhdg
                     const double,
                     const double,
                     const bool,
-                    const bool>(),
+                    const bool,
+                    const Ddhdg::DDFluxType>(),
            py::arg("v_degree")                 = 1,
            py::arg("n_degree")                 = 1,
            py::arg("p_degree")                 = 1,
@@ -79,7 +85,8 @@ namespace pyddhdg
            py::arg("n_tau")                    = 1.,
            py::arg("p_tau")                    = 1.,
            py::arg("iterative_linear_solver")  = false,
-           py::arg("multithreading")           = true)
+           py::arg("multithreading")           = true,
+           py::arg("dd_flux_type")             = Ddhdg::DDFluxType::use_cell)
       .def("degree",
            [](const Ddhdg::NPSolverParameters &a, const Ddhdg::Component c) {
              return a.degree.at(c);

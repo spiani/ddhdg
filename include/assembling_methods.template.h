@@ -824,7 +824,7 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
-  template <typename prm>
+  template <typename prm, DDFluxType dd_flux_type>
   inline void
   NPSolver<dim, ProblemType>::assemble_ct_matrix(
     Ddhdg::NPSolver<dim, ProblemType>::ScratchData &scratch,
@@ -858,6 +858,11 @@ namespace Ddhdg
         auto &z3   = scratch.c.at(Component::p);
         auto &tr_p = scratch.tr_c.at(Component::p);
 
+        const auto &E0 = scratch.previous_d_face.at(Component::V);
+
+        dealii::Tensor<1, dim> mu_n_times_previous_E;
+        dealii::Tensor<1, dim> mu_p_times_previous_E;
+
         const double V_tau = this->parameters->tau.at(Component::V);
         const double n_tau = this->parameters->tau.at(Component::n);
         const double p_tau = this->parameters->tau.at(Component::p);
@@ -890,6 +895,17 @@ namespace Ddhdg
             const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
             const Tensor<1, dim> normal =
               scratch.fe_face_values_trace_restricted.normal_vector(q);
+
+            if constexpr (prm::is_n_enabled &&
+                          dd_flux_type != DDFluxType::use_cell)
+              scratch.n_mobility.mu_operator_on_face(q,
+                                                     E0[q],
+                                                     mu_n_times_previous_E);
+            if constexpr (prm::is_p_enabled &&
+                          dd_flux_type != DDFluxType::use_cell)
+              scratch.p_mobility.mu_operator_on_face(q,
+                                                     E0[q],
+                                                     mu_p_times_previous_E);
 
             if constexpr (prm::is_V_enabled)
               V_tau_stabilized =
@@ -929,20 +945,34 @@ namespace Ddhdg
                     // the restriction of cell test function on the border
                     // i is the index of the test function
                     if constexpr (prm::is_V_enabled)
-                      scratch.ct_matrix(ii, jj) +=
-                        (tr_V[j] * (q1[i] * normal) -
-                         V_tau_stabilized * tr_V[j] * z1[i]) *
-                        JxW;
+                      {
+                        scratch.ct_matrix(ii, jj) +=
+                          (tr_V[j] * (q1[i] * normal) -
+                           V_tau_stabilized * tr_V[j] * z1[i]) *
+                          JxW;
+                      }
                     if constexpr (prm::is_n_enabled)
-                      scratch.ct_matrix(ii, jj) +=
-                        (tr_n[j] * (q2[i] * normal) +
-                         n_tau_stabilized * (tr_n[j] * z2[i])) *
-                        JxW;
+                      {
+                        if constexpr (dd_flux_type == DDFluxType::use_trace)
+                          scratch.ct_matrix(ii, jj) += mu_n_times_previous_E *
+                                                       normal * tr_n[j] *
+                                                       z2[i] * JxW;
+                        scratch.ct_matrix(ii, jj) +=
+                          (tr_n[j] * (q2[i] * normal) +
+                           n_tau_stabilized * (tr_n[j] * z2[i])) *
+                          JxW;
+                      }
                     if constexpr (prm::is_p_enabled)
-                      scratch.ct_matrix(ii, jj) +=
-                        (tr_p[j] * (q3[i] * normal) +
-                         p_tau_stabilized * (tr_p[j] * z3[i])) *
-                        JxW;
+                      {
+                        if constexpr (dd_flux_type == DDFluxType::use_trace)
+                          scratch.ct_matrix(ii, jj) += - mu_p_times_previous_E *
+                                                       normal * tr_p[j] *
+                                                       z3[i] * JxW;
+                        scratch.ct_matrix(ii, jj) +=
+                          (tr_p[j] * (q3[i] * normal) +
+                           p_tau_stabilized * (tr_p[j] * z3[i])) *
+                          JxW;
+                      }
                   }
               }
           }
@@ -1112,7 +1142,7 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
-  template <typename prm, Component c>
+  template <typename prm, Component c, DDFluxType dd_flux_type>
   inline void
   NPSolver<dim, ProblemType>::assemble_tc_matrix(
     Ddhdg::NPSolver<dim, ProblemType>::ScratchData &scratch,
@@ -1128,7 +1158,7 @@ namespace Ddhdg
     auto &f  = scratch.d.at(c);
     auto &xi = scratch.tr_c.at(c);
 
-    const auto &E = scratch.previous_d_face.at(Component::V);
+    const auto &E0 = scratch.previous_d_face.at(Component::V);
 
     dealii::Tensor<1, dim> epsilon_times_E;
 
@@ -1141,8 +1171,13 @@ namespace Ddhdg
     dealii::Tensor<1, dim> n_einstein_diffusion_coefficient_times_f;
     dealii::Tensor<1, dim> p_einstein_diffusion_coefficient_times_f;
 
-    const std::vector<double> n0 = scratch.previous_c_face.at(Component::n);
-    const std::vector<double> p0 = scratch.previous_c_face.at(Component::p);
+    const std::vector<double> &n0 = scratch.previous_c_face.at(Component::n);
+    const std::vector<double> &p0 = scratch.previous_c_face.at(Component::p);
+
+    const std::vector<double> &tr_n0 =
+      scratch.previous_tr_c_face.at(Component::n);
+    const std::vector<double> &tr_p0 =
+      scratch.previous_tr_c_face.at(Component::p);
 
     const double tau = this->parameters->tau.at(c);
 
@@ -1157,11 +1192,11 @@ namespace Ddhdg
 
         if constexpr (c == Component::n)
           scratch.n_mobility.mu_operator_on_face(q,
-                                                 E[q],
+                                                 E0[q],
                                                  mu_n_times_previous_E);
         if constexpr (c == Component::p)
           scratch.p_mobility.mu_operator_on_face(q,
-                                                 E[q],
+                                                 E0[q],
                                                  mu_p_times_previous_E);
 
         const double rescaled_tau =
@@ -1173,6 +1208,10 @@ namespace Ddhdg
           scratch.fe_trace_support_on_face[face].size();
         const unsigned int cell_dofs_per_face =
           scratch.fe_cell_support_on_face[face].size();
+
+        double cE_flux;
+        if constexpr (c == Component::V)
+          (void)cE_flux; // Prevent unused-but-set-variable under GCC
 
         for (unsigned int i = 0; i < trace_dofs_per_face; ++i)
           {
@@ -1206,9 +1245,17 @@ namespace Ddhdg
                                     f[j],
                                     n_einstein_diffusion_coefficient_times_f);
 
+                    if constexpr (dd_flux_type == DDFluxType::use_cell)
+                      cE_flux =
+                        (c_[j] * mu_n_times_previous_E + n0[q] * mu_n_times_E) *
+                        normal;
+                    else if constexpr (dd_flux_type == DDFluxType::use_trace)
+                      cE_flux = (tr_n0[q] * mu_n_times_E) * normal;
+                    else
+                      Assert(false, InvalidDDFluxType());
+
                     scratch.tc_matrix(ii, jj) -=
-                      ((c_[j] * mu_n_times_previous_E + n0[q] * mu_n_times_E) *
-                         normal -
+                      (cE_flux -
                        n_einstein_diffusion_coefficient_times_f * normal -
                        tau_stabilized * c_[j]) *
                       xi[i] * JxW;
@@ -1224,9 +1271,17 @@ namespace Ddhdg
                                     f[j],
                                     p_einstein_diffusion_coefficient_times_f);
 
+                    if constexpr (dd_flux_type == DDFluxType::use_cell)
+                      cE_flux = (-c_[j] * mu_p_times_previous_E -
+                                 p0[q] * mu_p_times_E) *
+                                normal;
+                    else if constexpr (dd_flux_type == DDFluxType::use_trace)
+                      cE_flux = (-tr_p0[q] * mu_p_times_E) * normal;
+                    else
+                      Assert(false, InvalidDDFluxType());
+
                     scratch.tc_matrix(ii, jj) -=
-                      (-(c_[j] * mu_p_times_previous_E + p0[q] * mu_p_times_E) *
-                         normal -
+                      (cE_flux -
                        p_einstein_diffusion_coefficient_times_f * normal -
                        tau_stabilized * c_[j]) *
                       xi[i] * JxW;
@@ -1239,7 +1294,7 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
-  template <typename prm, Component c>
+  template <typename prm, Component c, DDFluxType dd_flux_type>
   inline void
   NPSolver<dim, ProblemType>::add_tc_matrix_terms_to_tt_rhs(
     Ddhdg::NPSolver<dim, ProblemType>::ScratchData &scratch,
@@ -1255,8 +1310,9 @@ namespace Ddhdg
     const FEValuesExtractors::Scalar tr_c_extractor =
       this->get_trace_component_extractor(c, true);
 
-    auto &c0 = scratch.previous_c_face.at(c);
-    auto &f0 = scratch.previous_d_face.at(c);
+    auto &c0    = scratch.previous_c_face.at(c);
+    auto &f0    = scratch.previous_d_face.at(c);
+    auto &tr_c0 = scratch.previous_tr_c_face.at(c);
 
     const auto &E0 = scratch.previous_d_face[Component::V];
 
@@ -1279,6 +1335,9 @@ namespace Ddhdg
     dealii::Tensor<1, dim> p_einstein_diffusion_coefficient_times_f0;
 
     const double tau = this->parameters->tau.at(c);
+
+    double n0;
+    double p0;
 
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
@@ -1334,16 +1393,30 @@ namespace Ddhdg
               }
             if constexpr (c == Component::n)
               {
+                if constexpr (dd_flux_type == DDFluxType::use_cell)
+                  n0 = c0[q];
+                else if constexpr (dd_flux_type == DDFluxType::use_trace)
+                  n0 = tr_c0[q];
+                else
+                  Assert(false, InvalidDDFluxType());
+
                 task_data.tt_vector[ii] +=
-                  (-c0[q] * mu_n_times_previous_E_times_normal +
+                  (-n0 * mu_n_times_previous_E_times_normal +
                    n_einstein_diffusion_coefficient_times_f0 * normal +
                    tau_stabilized * c0[q]) *
                   xi * JxW;
               }
             if constexpr (c == Component::p)
               {
+                if constexpr (dd_flux_type == DDFluxType::use_cell)
+                  p0 = c0[q];
+                else if constexpr (dd_flux_type == DDFluxType::use_trace)
+                  p0 = tr_c0[q];
+                else
+                  Assert(false, InvalidDDFluxType());
+
                 task_data.tt_vector[ii] +=
-                  (c0[q] * mu_p_times_previous_E_times_normal +
+                  (p0 * mu_p_times_previous_E_times_normal +
                    p_einstein_diffusion_coefficient_times_f0 * normal +
                    tau_stabilized * c0[q]) *
                   xi * JxW;
@@ -1355,7 +1428,7 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
-  template <typename prm, Component c>
+  template <typename prm, Component c, DDFluxType dd_flux_type>
   inline void
   NPSolver<dim, ProblemType>::assemble_tt_matrix(
     Ddhdg::NPSolver<dim, ProblemType>::ScratchData &scratch,
@@ -1371,6 +1444,11 @@ namespace Ddhdg
     const double tau  = this->parameters->tau.at(c);
     const double sign = (c == V) ? -1 : 1;
 
+    const auto &E0 = scratch.previous_d_face.at(Component::V);
+
+    dealii::Tensor<1, dim> mu_n_times_previous_E;
+    dealii::Tensor<1, dim> mu_p_times_previous_E;
+
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
     const unsigned int trace_dofs_per_face =
@@ -1384,6 +1462,15 @@ namespace Ddhdg
         const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
         const Tensor<1, dim> normal =
           scratch.fe_face_values_trace_restricted.normal_vector(q);
+
+        if constexpr (c == Component::n && dd_flux_type != DDFluxType::use_cell)
+          scratch.n_mobility.mu_operator_on_face(q,
+                                                 E0[q],
+                                                 mu_n_times_previous_E);
+        if constexpr (c == Component::p && dd_flux_type != DDFluxType::use_cell)
+          scratch.p_mobility.mu_operator_on_face(q,
+                                                 E0[q],
+                                                 mu_p_times_previous_E);
 
         const double tau_rescaled =
           this->adimensionalizer->template adimensionalize_tau<c>(tau);
@@ -1405,6 +1492,17 @@ namespace Ddhdg
               {
                 const unsigned int jj =
                   scratch.fe_trace_support_on_face[face][j];
+
+                if constexpr (c == Component::n)
+                  if constexpr (dd_flux_type == DDFluxType::use_trace)
+                    task_data.tt_matrix(ii, jj) +=
+                      mu_n_times_previous_E * normal * tr_c[j] * xi[i] * JxW;
+
+                if constexpr (c == Component::p)
+                  if constexpr (dd_flux_type == DDFluxType::use_trace)
+                    task_data.tt_matrix(ii, jj) +=
+                      -mu_p_times_previous_E * normal * tr_c[j] * xi[i] * JxW;
+
                 task_data.tt_matrix(ii, jj) +=
                   sign * tau_stabilized * tr_c[j] * xi[i] * JxW;
               }
@@ -1616,7 +1714,7 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
-  template <typename prm>
+  template <typename prm, DDFluxType dd_flux_type>
   inline void
   NPSolver<dim, ProblemType>::add_border_products_to_cc_matrix(
     Ddhdg::NPSolver<dim, ProblemType>::ScratchData &scratch,
@@ -1646,9 +1744,11 @@ namespace Ddhdg
         auto &z2 = scratch.c.at(Component::n);
         auto &z3 = scratch.c.at(Component::p);
 
-        const auto  n0 = scratch.previous_c_face.at(Component::n);
-        const auto  p0 = scratch.previous_c_face.at(Component::p);
-        const auto &E0 = scratch.previous_d_face.at(Component::V);
+        const auto  n0    = scratch.previous_c_face.at(Component::n);
+        const auto  p0    = scratch.previous_c_face.at(Component::p);
+        const auto &E0    = scratch.previous_d_face.at(Component::V);
+        const auto  tr_n0 = scratch.previous_tr_c_face.at(Component::n);
+        const auto  tr_p0 = scratch.previous_tr_c_face.at(Component::p);
 
         const double V_tau = this->parameters->tau.at(Component::V);
         const double n_tau = this->parameters->tau.at(Component::n);
@@ -1684,6 +1784,10 @@ namespace Ddhdg
 
         dealii::Tensor<1, dim> n_einstein_diffusion_coefficient_times_Wn;
         dealii::Tensor<1, dim> p_einstein_diffusion_coefficient_times_Wp;
+
+        double cE_flux;
+        if constexpr (!prm::is_n_enabled && !prm::is_p_enabled)
+          (void)cE_flux; // Prevent unused-but-set-variable under GCC
 
         for (unsigned int q = 0; q < n_face_q_points; ++q)
           {
@@ -1760,10 +1864,18 @@ namespace Ddhdg
                           Wn[j],
                           n_einstein_diffusion_coefficient_times_Wn);
 
+                        if constexpr (dd_flux_type == DDFluxType::use_cell)
+                          cE_flux = (n[j] * mu_n_times_previous_E +
+                                     mu_n_times_E * n0[q]) *
+                                    normal;
+                        else if constexpr (dd_flux_type ==
+                                           DDFluxType::use_trace)
+                          cE_flux = mu_n_times_E * normal * tr_n0[q];
+                        else
+                          Assert(false, InvalidDDFluxType());
+
                         scratch.cc_matrix(ii, jj) +=
-                          ((n[j] * mu_n_times_previous_E +
-                            mu_n_times_E * n0[q]) *
-                             normal * z2[i] -
+                          (cE_flux * z2[i] -
                            n_einstein_diffusion_coefficient_times_Wn * normal *
                              z2[i] -
                            n_tau_stabilized * n[j] * z2[i]) *
@@ -1782,10 +1894,18 @@ namespace Ddhdg
                           Wp[j],
                           p_einstein_diffusion_coefficient_times_Wp);
 
+                        if constexpr (dd_flux_type == DDFluxType::use_cell)
+                          cE_flux = -(p[j] * mu_p_times_previous_E +
+                                      mu_p_times_E * p0[q]) *
+                                    normal;
+                        else if constexpr (dd_flux_type ==
+                                           DDFluxType::use_trace)
+                          cE_flux = -mu_p_times_E * normal * tr_p0[q];
+                        else
+                          Assert(false, InvalidDDFluxType());
+
                         scratch.cc_matrix(ii, jj) +=
-                          (-(p[j] * mu_p_times_previous_E +
-                             mu_p_times_E * p0[q]) *
-                             normal * z3[i] -
+                          (cE_flux * z3[i] -
                            p_einstein_diffusion_coefficient_times_Wp * normal *
                              z3[i] -
                            p_tau_stabilized * p[j] * z3[i]) *
@@ -1800,7 +1920,7 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
-  template <typename prm>
+  template <typename prm, DDFluxType dd_flux_type>
   inline void
   NPSolver<dim, ProblemType>::add_border_products_to_cc_rhs(
     Ddhdg::NPSolver<dim, ProblemType>::ScratchData &scratch,
@@ -1837,6 +1957,9 @@ namespace Ddhdg
         auto &Wn0 = scratch.previous_d_face.at(Component::n);
         auto &p0  = scratch.previous_c_face.at(Component::p);
         auto &Wp0 = scratch.previous_d_face.at(Component::p);
+
+        auto &tr_n0 = scratch.previous_tr_c_face.at(Component::n);
+        auto &tr_p0 = scratch.previous_tr_c_face.at(Component::p);
 
         const double V_tau = this->parameters->tau.at(Component::V);
         const double n_tau = this->parameters->tau.at(Component::n);
@@ -1901,9 +2024,16 @@ namespace Ddhdg
                     Wn0[q],
                     n_einstein_diffusion_coefficient_times_Wn0);
 
-                Jn_flux = (n0[q] * mu_n_times_previous_E -
-                           n_einstein_diffusion_coefficient_times_Wn0) *
-                          normal;
+                if constexpr (dd_flux_type == DDFluxType::use_cell)
+                  Jn_flux = (n0[q] * mu_n_times_previous_E -
+                             n_einstein_diffusion_coefficient_times_Wn0) *
+                            normal;
+                else if constexpr (dd_flux_type == DDFluxType::use_trace)
+                  Jn_flux = (tr_n0[q] * mu_n_times_previous_E -
+                             n_einstein_diffusion_coefficient_times_Wn0) *
+                            normal;
+                else
+                  Assert(false, InvalidDDFluxType());
               }
 
             if constexpr (prm::is_p_enabled)
@@ -1919,9 +2049,16 @@ namespace Ddhdg
                     Wp0[q],
                     p_einstein_diffusion_coefficient_times_Wp0);
 
-                Jp_flux = (-p0[q] * mu_p_times_previous_E -
-                           p_einstein_diffusion_coefficient_times_Wp0) *
-                          normal;
+                if constexpr (dd_flux_type == DDFluxType::use_cell)
+                  Jp_flux = (-p0[q] * mu_p_times_previous_E -
+                             p_einstein_diffusion_coefficient_times_Wp0) *
+                            normal;
+                else if constexpr (dd_flux_type == DDFluxType::use_trace)
+                  Jp_flux = (-tr_p0[q] * mu_p_times_previous_E -
+                             p_einstein_diffusion_coefficient_times_Wp0) *
+                            normal;
+                else
+                  Assert(false, InvalidDDFluxType());
               }
 
             if constexpr (prm::is_V_enabled)
@@ -2091,9 +2228,31 @@ namespace Ddhdg
       }
     else
       {
-        this->assemble_tc_matrix<prm, c>(scratch, face);
-        this->add_tc_matrix_terms_to_tt_rhs<prm, c>(scratch, task_data, face);
-        this->assemble_tt_matrix<prm, c>(scratch, task_data, face);
+        switch (this->parameters->dd_flux_type)
+          {
+            case DDFluxType::use_cell:
+              this->assemble_tc_matrix<prm, c, DDFluxType::use_cell>(scratch,
+                                                                     face);
+              this->add_tc_matrix_terms_to_tt_rhs<prm, c, DDFluxType::use_cell>(
+                scratch, task_data, face);
+              this->assemble_tt_matrix<prm, c, DDFluxType::use_cell>(scratch,
+                                                                     task_data,
+                                                                     face);
+              break;
+            case DDFluxType::use_trace:
+              this->assemble_tc_matrix<prm, c, DDFluxType::use_trace>(scratch,
+                                                                      face);
+              this
+                ->add_tc_matrix_terms_to_tt_rhs<prm, c, DDFluxType::use_trace>(
+                  scratch, task_data, face);
+              this->assemble_tt_matrix<prm, c, DDFluxType::use_trace>(scratch,
+                                                                      task_data,
+                                                                      face);
+              break;
+            default:
+              Assert(false, InvalidDDFluxType());
+              break;
+          }
         this->add_tt_matrix_terms_to_tt_rhs<prm, c>(scratch, task_data, face);
         if (has_neumann_conditions)
           {
@@ -2255,39 +2414,136 @@ namespace Ddhdg
         // calling the add_cell_products_to_cc_matrix method)
         if (!task_data.trace_reconstruct)
           {
-            this->assemble_ct_matrix<prm>(scratch, face);
+            switch (this->parameters->dd_flux_type)
+              {
+                case DDFluxType::use_cell:
+                  this->assemble_ct_matrix<prm, DDFluxType::use_cell>(scratch,
+                                                                      face);
+                  break;
+                case DDFluxType::use_trace:
+                  this->assemble_ct_matrix<prm, DDFluxType::use_trace>(scratch,
+                                                                       face);
+                  break;
+                default:
+                  Assert(false, InvalidComponent());
+                  break;
+              }
             if constexpr (!has_boundary_conditions)
               {
                 if constexpr (prm::is_V_enabled)
                   {
-                    this->assemble_tc_matrix<prm, Component::V>(scratch, face);
-                    this->add_tc_matrix_terms_to_tt_rhs<prm, Component::V>(
-                      scratch, task_data, face);
-                    this->assemble_tt_matrix<prm, Component::V>(scratch,
-                                                                task_data,
-                                                                face);
+                    switch (this->parameters->dd_flux_type)
+                      {
+                        case DDFluxType::use_cell:
+                          this->assemble_tc_matrix<prm,
+                                                   Component::V,
+                                                   DDFluxType::use_cell>(
+                            scratch, face);
+                          this->add_tc_matrix_terms_to_tt_rhs<
+                            prm,
+                            Component::V,
+                            DDFluxType::use_cell>(scratch, task_data, face);
+                          this->assemble_tt_matrix<prm,
+                                                   Component::V,
+                                                   DDFluxType::use_cell>(
+                            scratch, task_data, face);
+                          break;
+                        case DDFluxType::use_trace:
+                          this->assemble_tc_matrix<prm,
+                                                   Component::V,
+                                                   DDFluxType::use_trace>(
+                            scratch, face);
+                          this->add_tc_matrix_terms_to_tt_rhs<
+                            prm,
+                            Component::V,
+                            DDFluxType::use_trace>(scratch, task_data, face);
+                          this->assemble_tt_matrix<prm,
+                                                   Component::V,
+                                                   DDFluxType::use_cell>(
+                            scratch, task_data, face);
+                          break;
+                        default:
+                          Assert(false, InvalidComponent());
+                          break;
+                      }
                     this->add_tt_matrix_terms_to_tt_rhs<prm, Component::V>(
                       scratch, task_data, face);
                   }
                 if constexpr (prm::is_n_enabled)
                   {
-                    this->assemble_tc_matrix<prm, Component::n>(scratch, face);
-                    this->add_tc_matrix_terms_to_tt_rhs<prm, Component::n>(
-                      scratch, task_data, face);
-                    this->assemble_tt_matrix<prm, Component::n>(scratch,
-                                                                task_data,
-                                                                face);
+                    switch (this->parameters->dd_flux_type)
+                      {
+                        case DDFluxType::use_cell:
+                          this->assemble_tc_matrix<prm,
+                                                   Component::n,
+                                                   DDFluxType::use_cell>(
+                            scratch, face);
+                          this->add_tc_matrix_terms_to_tt_rhs<
+                            prm,
+                            Component::n,
+                            DDFluxType::use_cell>(scratch, task_data, face);
+                          this->assemble_tt_matrix<prm,
+                                                   Component::n,
+                                                   DDFluxType::use_cell>(
+                            scratch, task_data, face);
+                          break;
+                        case DDFluxType::use_trace:
+                          this->assemble_tc_matrix<prm,
+                                                   Component::n,
+                                                   DDFluxType::use_trace>(
+                            scratch, face);
+                          this->add_tc_matrix_terms_to_tt_rhs<
+                            prm,
+                            Component::n,
+                            DDFluxType::use_trace>(scratch, task_data, face);
+                          this->assemble_tt_matrix<prm,
+                                                   Component::n,
+                                                   DDFluxType::use_trace>(
+                            scratch, task_data, face);
+                          break;
+                        default:
+                          Assert(false, InvalidComponent());
+                          break;
+                      }
                     this->add_tt_matrix_terms_to_tt_rhs<prm, Component::n>(
                       scratch, task_data, face);
                   }
                 if constexpr (prm::is_p_enabled)
                   {
-                    this->assemble_tc_matrix<prm, Component::p>(scratch, face);
-                    this->add_tc_matrix_terms_to_tt_rhs<prm, Component::p>(
-                      scratch, task_data, face);
-                    this->assemble_tt_matrix<prm, Component::p>(scratch,
-                                                                task_data,
-                                                                face);
+                    switch (this->parameters->dd_flux_type)
+                      {
+                        case DDFluxType::use_cell:
+                          this->assemble_tc_matrix<prm,
+                                                   Component::p,
+                                                   DDFluxType::use_cell>(
+                            scratch, face);
+                          this->add_tc_matrix_terms_to_tt_rhs<
+                            prm,
+                            Component::p,
+                            DDFluxType::use_cell>(scratch, task_data, face);
+                          this->assemble_tt_matrix<prm,
+                                                   Component::p,
+                                                   DDFluxType::use_cell>(
+                            scratch, task_data, face);
+                          break;
+                        case DDFluxType::use_trace:
+                          this->assemble_tc_matrix<prm,
+                                                   Component::p,
+                                                   DDFluxType::use_trace>(
+                            scratch, face);
+                          this->add_tc_matrix_terms_to_tt_rhs<
+                            prm,
+                            Component::p,
+                            DDFluxType::use_trace>(scratch, task_data, face);
+                          this->assemble_tt_matrix<prm,
+                                                   Component::p,
+                                                   DDFluxType::use_trace>(
+                            scratch, task_data, face);
+                          break;
+                        default:
+                          Assert(false, InvalidComponent());
+                          break;
+                      }
                     this->add_tt_matrix_terms_to_tt_rhs<prm, Component::p>(
                       scratch, task_data, face);
                   }
@@ -2320,8 +2576,25 @@ namespace Ddhdg
 
         // These are the last terms of the ll matrix, the ones that are
         // generated by L2 products only on the boundary of the cell
-        this->add_border_products_to_cc_matrix<prm>(scratch, face);
-        this->add_border_products_to_cc_rhs<prm>(scratch, face);
+        switch (this->parameters->dd_flux_type)
+          {
+            case DDFluxType::use_cell:
+              this->add_border_products_to_cc_matrix<prm, DDFluxType::use_cell>(
+                scratch, face);
+              this->add_border_products_to_cc_rhs<prm, DDFluxType::use_cell>(
+                scratch, face);
+              break;
+            case DDFluxType::use_trace:
+              this
+                ->add_border_products_to_cc_matrix<prm, DDFluxType::use_trace>(
+                  scratch, face);
+              this->add_border_products_to_cc_rhs<prm, DDFluxType::use_trace>(
+                scratch, face);
+              break;
+            default:
+              Assert(false, InvalidComponent());
+              break;
+          }
 
         if (task_data.trace_reconstruct)
           this->add_trace_terms_to_cc_rhs<prm>(scratch, face);

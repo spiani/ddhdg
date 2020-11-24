@@ -39,7 +39,8 @@ namespace Ddhdg
     const double       n_tau,
     const double       p_tau,
     const bool         iterative_linear_solver,
-    const bool         multithreading)
+    const bool         multithreading,
+    const DDFluxType   dd_flux_type)
     : degree{{Component::V, V_degree},
              {Component::n, n_degree},
              {Component::p, p_degree}}
@@ -50,6 +51,7 @@ namespace Ddhdg
     , tau{{Component::V, V_tau}, {Component::n, n_tau}, {Component::p, p_tau}}
     , iterative_linear_solver(iterative_linear_solver)
     , multithreading(multithreading)
+    , dd_flux_type(dd_flux_type)
   {}
 
 

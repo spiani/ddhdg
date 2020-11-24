@@ -22,6 +22,15 @@ namespace Ddhdg
   template <int dim, class Permittivity, unsigned int parameter_mask>
   class TemplatizedParameters;
 
+  enum DDFluxType
+  {
+    use_cell,
+    use_trace
+  };
+
+  DeclExceptionMsg(InvalidDDFluxType,
+                   "Invalid flux specified for drift-diffusion equation");
+
   enum TraceProjectionStrategy
   {
     l2_average,
@@ -43,7 +52,8 @@ namespace Ddhdg
       double       n_tau                                     = 1.,
       double       p_tau                                     = 1.,
       bool         iterative_linear_solver                   = false,
-      bool         multithreading                            = true);
+      bool         multithreading                            = true,
+      DDFluxType   dd_flux_type                              = use_cell);
 
     NPSolverParameters(const NPSolverParameters &solver) = default;
 
@@ -56,6 +66,7 @@ namespace Ddhdg
     const std::map<Component, double> tau;
     const bool                        iterative_linear_solver;
     bool                              multithreading;
+    const DDFluxType                  dd_flux_type;
   };
 
   template <int dim, typename ProblemType>
@@ -552,7 +563,7 @@ namespace Ddhdg
                              unsigned int face,
                              unsigned int q);
 
-    template <typename prm>
+    template <typename prm, DDFluxType dd_flux_type>
     inline void
     assemble_ct_matrix(ScratchData &scratch, unsigned int face);
 
@@ -560,18 +571,18 @@ namespace Ddhdg
     inline void
     add_ct_matrix_terms_to_cc_rhs(ScratchData &scratch, unsigned int face);
 
-    template <typename prm, Component c>
+    template <typename prm, Component c, DDFluxType dd_flux_type>
     inline void
     assemble_tc_matrix(ScratchData &scratch, unsigned int face);
 
-    template <typename prm, Component c>
+    template <typename prm, Component c, DDFluxType dd_flux_type>
     inline void
     add_tc_matrix_terms_to_tt_rhs(
       ScratchData &                                   scratch,
       Ddhdg::NPSolver<dim, ProblemType>::PerTaskData &task_data,
       unsigned int                                    face);
 
-    template <typename prm, Component c>
+    template <typename prm, Component c, DDFluxType dd_flux_type>
     inline void
     assemble_tt_matrix(ScratchData &scratch,
                        PerTaskData &task_data,
@@ -617,11 +628,11 @@ namespace Ddhdg
                                      types::boundary_id face_boundary_id,
                                      unsigned int       face);
 
-    template <typename prm>
+    template <typename prm, DDFluxType dd_flux_type>
     inline void
     add_border_products_to_cc_matrix(ScratchData &scratch, unsigned int face);
 
-    template <typename prm>
+    template <typename prm, DDFluxType dd_flux_type>
     inline void
     add_border_products_to_cc_rhs(ScratchData &scratch, unsigned int face);
 

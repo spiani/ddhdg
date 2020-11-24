@@ -114,6 +114,7 @@ Components = ComponentsNamespace()
 # enums (i.e. it will be necessary to write Displacement.E and not simply E)
 Displacements = pyddhdg_common.Displacement
 BoundaryConditionType = pyddhdg_common.BoundaryConditionType
+DDFluxType = pyddhdg_common.DDFluxType
 
 # Now, we also import the common classes from the pyddhdg_common module
 ErrorPerCell = pyddhdg_common.ErrorPerCell
