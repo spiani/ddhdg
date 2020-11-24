@@ -436,6 +436,11 @@ namespace pyddhdg
     Ddhdg::NonlinearIterationResults
     run();
 
+    Ddhdg::NonlinearIterationResults
+    run(std::optional<double> absolute_tol,
+        std::optional<double> relative_tol,
+        std::optional<int>    max_number_of_iterations);
+
     void
     compute_local_charge_neutrality_on_trace(bool only_at_boundary = false);
 

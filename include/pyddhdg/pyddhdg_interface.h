@@ -317,7 +317,14 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
   .def("get_dirichlet_boundary_dofs",
        &NPSolver<DIM>::get_dirichlet_boundary_dofs)
   .def("get_residual", &NPSolver<DIM>::get_residual)
-  .def("run", &NPSolver<DIM>::run)
+  .def("run", py::overload_cast<>(&NPSolver<DIM>::run))
+  .def("run",
+       py::overload_cast<std::optional<double>,
+                         std::optional<double>,
+                         std::optional<int>>(&NPSolver<DIM>::run),
+       py::arg("absolute_tol")             = py::none(),
+       py::arg("relative_tol")             = py::none(),
+       py::arg("max_number_of_iterations") = py::none())
   .def("copy_triangulation_from", &NPSolver<DIM>::copy_triangulation_from)
   .def("copy_solution_from", &NPSolver<DIM>::copy_solution_from)
   .def("get_parameters", &NPSolver<DIM>::get_parameters)

@@ -1078,6 +1078,30 @@ namespace pyddhdg
 
 
   template <int dim>
+  Ddhdg::NonlinearIterationResults
+  NPSolver<dim>::run(const std::optional<double> absolute_tol,
+                     const std::optional<double> relative_tol,
+                     const std::optional<int>    max_number_of_iterations)
+  {
+    double abs_tol =
+      (absolute_tol.has_value()) ?
+        absolute_tol.value() :
+        this->get_parameters().nonlinear_solver_absolute_tolerance;
+    double rel_tol =
+      (relative_tol.has_value()) ?
+        relative_tol.value() :
+        this->get_parameters().nonlinear_solver_relative_tolerance;
+    int iterations =
+      (max_number_of_iterations.has_value()) ?
+        max_number_of_iterations.value() :
+        this->get_parameters().nonlinear_solver_max_number_of_iterations;
+
+    return this->ddhdg_solver->run(abs_tol, rel_tol, iterations);
+  }
+
+
+
+  template <int dim>
   void
   NPSolver<dim>::compute_local_charge_neutrality_on_trace(
     const bool only_at_boundary)
