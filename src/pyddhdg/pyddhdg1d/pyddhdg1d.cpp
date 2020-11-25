@@ -1,3 +1,4 @@
+#include <pybind11/eigen.h>
 #include <pybind11/stl.h>
 
 #include "pyddhdg/pyddhdg.h"

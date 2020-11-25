@@ -9,6 +9,8 @@
 
 #include "boundary_conditions.h"
 #include "ddhdg.h"
+#include <Eigen/Sparse>
+
 
 namespace pyddhdg
 {
@@ -432,6 +434,10 @@ namespace pyddhdg
     std::map<Ddhdg::Component,
              pybind11::array_t<double, pybind11::array::c_style>>
     get_residual();
+
+    std::map<std::pair<Ddhdg::Component, Ddhdg::Component>,
+             Eigen::SparseMatrix<double>>
+    get_jacobian();
 
     Ddhdg::NonlinearIterationResults
     run();

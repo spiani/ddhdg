@@ -1,8 +1,9 @@
 find_package(pybind11 REQUIRED)
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 add_library(pyddhdg STATIC pyddhdg.cpp)
 target_include_directories(pyddhdg PRIVATE ${pybind11_INCLUDE_DIRS})
-target_link_libraries(pyddhdg DDHDG)
+target_link_libraries(pyddhdg DDHDG Eigen3::Eigen)
 DEAL_II_SETUP_TARGET(pyddhdg)
 
 set_target_properties(pyddhdg PROPERTIES CXX_VISIBILITY_PRESET hidden)

@@ -1,7 +1,6 @@
 #include "pyddhdg/pyddhdg.h"
 
 #include <stdexcept>
-#include <utility>
 
 #include "function_tools.h"
 
@@ -1064,6 +1063,96 @@ namespace pyddhdg
       }
 
     return residual_map;
+  }
+
+
+
+  template <int dim>
+  std::map<std::pair<Ddhdg::Component, Ddhdg::Component>,
+           Eigen::SparseMatrix<double>>
+  NPSolver<dim>::get_jacobian()
+  {
+    if (!this->ddhdg_solver->initialized)
+      this->ddhdg_solver->setup_overall_system();
+
+    std::map<std::pair<Ddhdg::Component, Ddhdg::Component>,
+             Eigen::SparseMatrix<double>>
+      jacobian_map;
+
+    const unsigned int n_dofs =
+      this->ddhdg_solver->dof_handler_trace_restricted.n_dofs();
+
+    std::vector<Ddhdg::Component> dof_to_component_map(n_dofs);
+    std::vector<Ddhdg::DofType>   dof_to_dof_type_map(n_dofs);
+
+    this->ddhdg_solver->generate_dof_to_component_map(dof_to_component_map,
+                                                      dof_to_dof_type_map,
+                                                      true,
+                                                      true);
+
+    std::map<Ddhdg::Component, unsigned int> n_of_component_dofs;
+
+    for (const auto c : this->ddhdg_solver->enabled_components)
+      {
+        unsigned int n_of_current_component_dofs = 0;
+        for (unsigned int i = 0; i < n_dofs; ++i)
+          if (dof_to_component_map[i] == c)
+            n_of_current_component_dofs += 1;
+
+        Assert(n_of_current_component_dofs > 0,
+               dealii::ExcMessage("No dofs for current component"));
+
+        n_of_component_dofs.insert({c, n_of_current_component_dofs});
+      }
+
+    for (const auto c1 : this->ddhdg_solver->enabled_components)
+      for (const auto c2 : this->ddhdg_solver->enabled_components)
+        {
+          unsigned int c1_dofs = n_of_component_dofs.at(c1);
+          unsigned int c2_dofs = n_of_component_dofs.at(c2);
+
+          // Count number of entries
+          unsigned int n_of_entries = 0;
+          for (unsigned int i = 0; i < n_dofs; ++i)
+            if (dof_to_component_map[i] == c1)
+              for (unsigned int j = 0; j < n_dofs; ++j)
+                if (dof_to_component_map[j] == c2)
+                  ++n_of_entries;
+
+          std::vector<Eigen::Triplet<double>> triplet_list;
+          triplet_list.reserve(n_of_entries);
+
+          int k1 = 0;
+          int k2;
+          for (unsigned int i = 0; i < n_dofs; ++i)
+            if (dof_to_component_map[i] == c1)
+              {
+                k2 = 0;
+                for (unsigned int j = 0; j < n_dofs; ++j)
+                  if (dof_to_component_map[j] == c2)
+                    {
+                      if (this->ddhdg_solver->sparsity_pattern.exists(i, j))
+                        triplet_list.push_back(
+                          {k1, k2, this->ddhdg_solver->system_matrix(i, j)});
+                      ++k2;
+                    }
+                ++k1;
+              }
+          Assert(k1 == (int)c1_dofs,
+                 dealii::ExcMessage(
+                   "Copied a number of rows that is different from c1_dofs"));
+          Assert(
+            k2 == (int)c2_dofs,
+            dealii::ExcMessage(
+              "Copied a number of columns that is different from c2_dofs"));
+
+          jacobian_map.insert(
+            {{c1, c2}, Eigen::SparseMatrix<double>(c1_dofs, c2_dofs)});
+          jacobian_map.at({c1, c2}).setFromTriplets(triplet_list.begin(),
+                                                    triplet_list.end());
+        }
+
+    return jacobian_map;
   }
 
 

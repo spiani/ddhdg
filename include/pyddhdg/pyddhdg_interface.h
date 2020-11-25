@@ -317,6 +317,7 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
   .def("get_dirichlet_boundary_dofs",
        &NPSolver<DIM>::get_dirichlet_boundary_dofs)
   .def("get_residual", &NPSolver<DIM>::get_residual)
+  .def("get_jacobian", &NPSolver<DIM>::get_jacobian)
   .def("run", py::overload_cast<>(&NPSolver<DIM>::run))
   .def("run",
        py::overload_cast<std::optional<double>,
