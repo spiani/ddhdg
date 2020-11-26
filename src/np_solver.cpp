@@ -1800,12 +1800,17 @@ namespace Ddhdg
     dealii::DoFHandler<dim> phi_n_dofs(*(this->triangulation));
     dealii::DoFHandler<dim> phi_p_dofs(*(this->triangulation));
 
+    dealii::DoFHandler<dim> problem_const_dofs(*(this->triangulation));
+
     const unsigned int V_degree = this->parameters->degree.at(Component::V);
     const unsigned int n_degree = this->parameters->degree.at(Component::n);
     const unsigned int p_degree = this->parameters->degree.at(Component::p);
 
     const unsigned int Jn_degree = (V_degree > n_degree) ? V_degree : n_degree;
     const unsigned int Jp_degree = (V_degree > p_degree) ? V_degree : p_degree;
+
+    const unsigned int max_degree =
+      (Jn_degree > Jp_degree) ? Jn_degree : Jp_degree;
 
     const unsigned int phi_n_degree =
       (V_degree > n_degree) ? V_degree : n_degree;
@@ -1818,11 +1823,28 @@ namespace Ddhdg
     phi_n_dofs.distribute_dofs(FE_DGQ<dim>(phi_n_degree));
     phi_p_dofs.distribute_dofs(FE_DGQ<dim>(phi_p_degree));
 
+    problem_const_dofs.distribute_dofs(FE_DGQ<dim>(max_degree));
+
     dealii::Vector<double> Jn_data;
     dealii::Vector<double> Jp_data;
 
     dealii::Vector<double> phi_n_data;
     dealii::Vector<double> phi_p_data;
+
+    dealii::Vector<double> doping_data(problem_const_dofs.n_dofs());
+    dealii::Vector<double> temperature_data(problem_const_dofs.n_dofs());
+
+    dealii::VectorTools::interpolate(problem_const_dofs,
+                                     *(this->problem->doping),
+                                     doping_data);
+    dealii::VectorTools::interpolate(problem_const_dofs,
+                                     *(this->problem->temperature),
+                                     temperature_data);
+
+    if (!redimensionalize_quantities)
+      doping_data /= this->adimensionalizer->doping_magnitude;
+    if (!redimensionalize_quantities)
+      temperature_data /= this->adimensionalizer->temperature_magnitude;
 
     this->compute_current<Component::n>(n_current_dofs,
                                         Jn_data,
@@ -1837,6 +1859,11 @@ namespace Ddhdg
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       J_component_interpretation(
         dim, DataComponentInterpretation::component_is_part_of_vector);
+
+    data_out.add_data_vector(problem_const_dofs, doping_data, "doping");
+    data_out.add_data_vector(problem_const_dofs,
+                             temperature_data,
+                             "temperature");
 
     data_out.add_data_vector(n_current_dofs,
                              Jn_data,
