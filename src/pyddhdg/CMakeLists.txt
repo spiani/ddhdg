@@ -1,5 +1,5 @@
 find_package(pybind11 REQUIRED)
-find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 add_library(pyddhdg STATIC pyddhdg.cpp)
 target_include_directories(pyddhdg PRIVATE ${pybind11_INCLUDE_DIRS})

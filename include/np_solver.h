@@ -25,7 +25,8 @@ namespace Ddhdg
   enum DDFluxType
   {
     use_cell,
-    use_trace
+    use_trace,
+    qiu_shi_stabilization
   };
 
   DeclExceptionMsg(InvalidDDFluxType,

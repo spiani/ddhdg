@@ -36,6 +36,7 @@ namespace pyddhdg
     py::enum_<Ddhdg::DDFluxType>(m, "DDFluxType")
       .value("use_cell", Ddhdg::DDFluxType::use_cell)
       .value("use_trace", Ddhdg::DDFluxType::use_trace)
+      .value("qiu_shi_stabilization", Ddhdg::DDFluxType::qiu_shi_stabilization)
       .export_values();
 
     py::class_<ErrorPerCell>(m, "ErrorPerCell")

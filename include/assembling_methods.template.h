@@ -871,6 +871,8 @@ namespace Ddhdg
         double n_tau_stabilized = 0.;
         double p_tau_stabilized = 0.;
 
+        double E0_times_n = 0.;
+
         if constexpr (!prm::is_V_enabled)
           {
             (void)V_tau;
@@ -895,6 +897,10 @@ namespace Ddhdg
             const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
             const Tensor<1, dim> normal =
               scratch.fe_face_values_trace_restricted.normal_vector(q);
+
+            if constexpr (dd_flux_type == DDFluxType::qiu_shi_stabilization &&
+                          (prm::is_n_enabled || prm::is_p_enabled))
+              E0_times_n = E0[q] * normal;
 
             if constexpr (prm::is_n_enabled &&
                           dd_flux_type != DDFluxType::use_cell)
@@ -957,6 +963,12 @@ namespace Ddhdg
                           scratch.ct_matrix(ii, jj) += mu_n_times_previous_E *
                                                        normal * tr_n[j] *
                                                        z2[i] * JxW;
+                        if constexpr (dd_flux_type ==
+                                      DDFluxType::qiu_shi_stabilization)
+                          if (E0_times_n <= 0)
+                            scratch.ct_matrix(ii, jj) += mu_n_times_previous_E *
+                                                         normal * tr_n[j] *
+                                                         z2[i] * JxW;
                         scratch.ct_matrix(ii, jj) +=
                           (tr_n[j] * (q2[i] * normal) +
                            n_tau_stabilized * (tr_n[j] * z2[i])) *
@@ -965,9 +977,15 @@ namespace Ddhdg
                     if constexpr (prm::is_p_enabled)
                       {
                         if constexpr (dd_flux_type == DDFluxType::use_trace)
-                          scratch.ct_matrix(ii, jj) += - mu_p_times_previous_E *
+                          scratch.ct_matrix(ii, jj) += -mu_p_times_previous_E *
                                                        normal * tr_p[j] *
                                                        z3[i] * JxW;
+                        if constexpr (dd_flux_type ==
+                                      DDFluxType::qiu_shi_stabilization)
+                          if (E0_times_n <= 0)
+                            scratch.ct_matrix(ii, jj) +=
+                              -mu_p_times_previous_E * normal * tr_p[j] *
+                              z3[i] * JxW;
                         scratch.ct_matrix(ii, jj) +=
                           (tr_p[j] * (q3[i] * normal) +
                            p_tau_stabilized * (tr_p[j] * z3[i])) *
@@ -1181,6 +1199,8 @@ namespace Ddhdg
 
     const double tau = this->parameters->tau.at(c);
 
+    double E0_times_n = 0.;
+
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
         copy_fe_values_on_scratch(scratch, face, q);
@@ -1189,6 +1209,10 @@ namespace Ddhdg
         const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
         const Tensor<1, dim> normal =
           scratch.fe_face_values_trace_restricted.normal_vector(q);
+
+        if constexpr (dd_flux_type == DDFluxType::qiu_shi_stabilization &&
+                      (c == Component::n || c == Component::p))
+          E0_times_n = E0[q] * normal;
 
         if constexpr (c == Component::n)
           scratch.n_mobility.mu_operator_on_face(q,
@@ -1251,6 +1275,13 @@ namespace Ddhdg
                         normal;
                     else if constexpr (dd_flux_type == DDFluxType::use_trace)
                       cE_flux = (tr_n0[q] * mu_n_times_E) * normal;
+                    else if constexpr (dd_flux_type ==
+                                       DDFluxType::qiu_shi_stabilization)
+                      cE_flux = (E0_times_n > 0) ?
+                                  (c_[j] * mu_n_times_previous_E +
+                                   n0[q] * mu_n_times_E) *
+                                    normal :
+                                  (tr_n0[q] * mu_n_times_E) * normal;
                     else
                       Assert(false, InvalidDDFluxType());
 
@@ -1277,6 +1308,13 @@ namespace Ddhdg
                                 normal;
                     else if constexpr (dd_flux_type == DDFluxType::use_trace)
                       cE_flux = (-tr_p0[q] * mu_p_times_E) * normal;
+                    else if constexpr (dd_flux_type ==
+                                       DDFluxType::qiu_shi_stabilization)
+                      cE_flux = (E0_times_n > 0) ?
+                                  (-c_[j] * mu_p_times_previous_E -
+                                   p0[q] * mu_p_times_E) *
+                                    normal :
+                                  (-tr_p0[q] * mu_p_times_E) * normal;
                     else
                       Assert(false, InvalidDDFluxType());
 
@@ -1339,11 +1377,17 @@ namespace Ddhdg
     double n0;
     double p0;
 
+    double E0_times_n = 0.;
+
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
         const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
         const Tensor<1, dim> normal =
           scratch.fe_face_values_trace_restricted.normal_vector(q);
+
+        if constexpr (dd_flux_type == DDFluxType::qiu_shi_stabilization &&
+                      (c == Component::n || c == Component::p))
+          E0_times_n = E0[q] * normal;
 
         if constexpr (c == Component::V)
           {
@@ -1397,6 +1441,9 @@ namespace Ddhdg
                   n0 = c0[q];
                 else if constexpr (dd_flux_type == DDFluxType::use_trace)
                   n0 = tr_c0[q];
+                else if constexpr (dd_flux_type ==
+                                   DDFluxType::qiu_shi_stabilization)
+                  n0 = (E0_times_n > 0) ? c0[q] : tr_c0[q];
                 else
                   Assert(false, InvalidDDFluxType());
 
@@ -1412,6 +1459,9 @@ namespace Ddhdg
                   p0 = c0[q];
                 else if constexpr (dd_flux_type == DDFluxType::use_trace)
                   p0 = tr_c0[q];
+                else if constexpr (dd_flux_type ==
+                                   DDFluxType::qiu_shi_stabilization)
+                  p0 = (E0_times_n > 0) ? c0[q] : tr_c0[q];
                 else
                   Assert(false, InvalidDDFluxType());
 
@@ -1454,6 +1504,8 @@ namespace Ddhdg
     const unsigned int trace_dofs_per_face =
       scratch.fe_trace_support_on_face[face].size();
 
+    double E0_times_n = 0;
+
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
         copy_fe_values_on_scratch(scratch, face, q);
@@ -1462,6 +1514,10 @@ namespace Ddhdg
         const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
         const Tensor<1, dim> normal =
           scratch.fe_face_values_trace_restricted.normal_vector(q);
+
+        if constexpr (dd_flux_type == DDFluxType::qiu_shi_stabilization &&
+                      (c == Component::n || c == Component::p))
+          E0_times_n = E0[q] * normal;
 
         if constexpr (c == Component::n && dd_flux_type != DDFluxType::use_cell)
           scratch.n_mobility.mu_operator_on_face(q,
@@ -1494,14 +1550,30 @@ namespace Ddhdg
                   scratch.fe_trace_support_on_face[face][j];
 
                 if constexpr (c == Component::n)
-                  if constexpr (dd_flux_type == DDFluxType::use_trace)
-                    task_data.tt_matrix(ii, jj) +=
-                      mu_n_times_previous_E * normal * tr_c[j] * xi[i] * JxW;
+                  {
+                    if constexpr (dd_flux_type == DDFluxType::use_trace)
+                      task_data.tt_matrix(ii, jj) +=
+                        mu_n_times_previous_E * normal * tr_c[j] * xi[i] * JxW;
+                    if constexpr (dd_flux_type ==
+                                  DDFluxType::qiu_shi_stabilization)
+                      if (E0_times_n <= 0)
+                        task_data.tt_matrix(ii, jj) += mu_n_times_previous_E *
+                                                       normal * tr_c[j] *
+                                                       xi[i] * JxW;
+                  }
 
                 if constexpr (c == Component::p)
-                  if constexpr (dd_flux_type == DDFluxType::use_trace)
-                    task_data.tt_matrix(ii, jj) +=
-                      -mu_p_times_previous_E * normal * tr_c[j] * xi[i] * JxW;
+                  {
+                    if constexpr (dd_flux_type == DDFluxType::use_trace)
+                      task_data.tt_matrix(ii, jj) +=
+                        -mu_p_times_previous_E * normal * tr_c[j] * xi[i] * JxW;
+                    if constexpr (dd_flux_type ==
+                                  DDFluxType::qiu_shi_stabilization)
+                      if (E0_times_n <= 0)
+                        task_data.tt_matrix(ii, jj) += -mu_p_times_previous_E *
+                                                       normal * tr_c[j] *
+                                                       xi[i] * JxW;
+                  }
 
                 task_data.tt_matrix(ii, jj) +=
                   sign * tau_stabilized * tr_c[j] * xi[i] * JxW;
@@ -1789,6 +1861,8 @@ namespace Ddhdg
         if constexpr (!prm::is_n_enabled && !prm::is_p_enabled)
           (void)cE_flux; // Prevent unused-but-set-variable under GCC
 
+        double E0_times_n = 0;
+
         for (unsigned int q = 0; q < n_face_q_points; ++q)
           {
             copy_fe_values_on_scratch(scratch, face, q);
@@ -1833,6 +1907,10 @@ namespace Ddhdg
                   normal,
                   q);
 
+            if constexpr (dd_flux_type == DDFluxType::qiu_shi_stabilization &&
+                          (prm::is_n_enabled || prm::is_p_enabled))
+              E0_times_n = E0[q] * normal;
+
             for (unsigned int i = 0; i < cell_dofs_per_face; ++i)
               {
                 const unsigned int ii =
@@ -1871,6 +1949,14 @@ namespace Ddhdg
                         else if constexpr (dd_flux_type ==
                                            DDFluxType::use_trace)
                           cE_flux = mu_n_times_E * normal * tr_n0[q];
+                        else if constexpr (dd_flux_type ==
+                                           DDFluxType::qiu_shi_stabilization)
+                          if (E0_times_n > 0)
+                            cE_flux = (n[j] * mu_n_times_previous_E +
+                                       mu_n_times_E * n0[q]) *
+                                      normal;
+                          else
+                            cE_flux = mu_n_times_E * normal * tr_n0[q];
                         else
                           Assert(false, InvalidDDFluxType());
 
@@ -1901,6 +1987,14 @@ namespace Ddhdg
                         else if constexpr (dd_flux_type ==
                                            DDFluxType::use_trace)
                           cE_flux = -mu_p_times_E * normal * tr_p0[q];
+                        else if constexpr (dd_flux_type ==
+                                           DDFluxType::qiu_shi_stabilization)
+                          if (E0_times_n > 0)
+                            cE_flux = -(p[j] * mu_p_times_previous_E +
+                                        mu_p_times_E * p0[q]) *
+                                      normal;
+                          else
+                            cE_flux = -mu_p_times_E * normal * tr_p0[q];
                         else
                           Assert(false, InvalidDDFluxType());
 
@@ -1994,6 +2088,8 @@ namespace Ddhdg
         dealii::Tensor<1, dim> n_einstein_diffusion_coefficient_times_Wn0;
         dealii::Tensor<1, dim> p_einstein_diffusion_coefficient_times_Wp0;
 
+        double E0_times_n = 0;
+
         double Jn_flux = 0.;
         double Jp_flux = 0.;
 
@@ -2002,6 +2098,10 @@ namespace Ddhdg
             const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
             const Tensor<1, dim> normal =
               scratch.fe_face_values_trace_restricted.normal_vector(q);
+
+            if constexpr (dd_flux_type == DDFluxType::qiu_shi_stabilization &&
+                          (prm::is_n_enabled || prm::is_p_enabled))
+              E0_times_n = E0[q] * normal;
 
             if constexpr (prm::is_V_enabled)
               {
@@ -2032,6 +2132,16 @@ namespace Ddhdg
                   Jn_flux = (tr_n0[q] * mu_n_times_previous_E -
                              n_einstein_diffusion_coefficient_times_Wn0) *
                             normal;
+                else if constexpr (dd_flux_type ==
+                                   DDFluxType::qiu_shi_stabilization)
+                  if (E0_times_n > 0)
+                    Jn_flux = (n0[q] * mu_n_times_previous_E -
+                               n_einstein_diffusion_coefficient_times_Wn0) *
+                              normal;
+                  else
+                    Jn_flux = (tr_n0[q] * mu_n_times_previous_E -
+                               n_einstein_diffusion_coefficient_times_Wn0) *
+                              normal;
                 else
                   Assert(false, InvalidDDFluxType());
               }
@@ -2057,6 +2167,16 @@ namespace Ddhdg
                   Jp_flux = (-tr_p0[q] * mu_p_times_previous_E -
                              p_einstein_diffusion_coefficient_times_Wp0) *
                             normal;
+                else if constexpr (dd_flux_type ==
+                                   DDFluxType::qiu_shi_stabilization)
+                  if (E0_times_n > 0)
+                    Jp_flux = (-p0[q] * mu_p_times_previous_E -
+                               p_einstein_diffusion_coefficient_times_Wp0) *
+                              normal;
+                  else
+                    Jp_flux = (-tr_p0[q] * mu_p_times_previous_E -
+                               p_einstein_diffusion_coefficient_times_Wp0) *
+                              normal;
                 else
                   Assert(false, InvalidDDFluxType());
               }
@@ -2249,6 +2369,18 @@ namespace Ddhdg
                                                                       task_data,
                                                                       face);
               break;
+            case DDFluxType::qiu_shi_stabilization:
+              this
+                ->assemble_tc_matrix<prm, c, DDFluxType::qiu_shi_stabilization>(
+                  scratch, face);
+              this->add_tc_matrix_terms_to_tt_rhs<
+                prm,
+                c,
+                DDFluxType::qiu_shi_stabilization>(scratch, task_data, face);
+              this
+                ->assemble_tt_matrix<prm, c, DDFluxType::qiu_shi_stabilization>(
+                  scratch, task_data, face);
+              break;
             default:
               Assert(false, InvalidDDFluxType());
               break;
@@ -2424,6 +2556,11 @@ namespace Ddhdg
                   this->assemble_ct_matrix<prm, DDFluxType::use_trace>(scratch,
                                                                        face);
                   break;
+                case DDFluxType::qiu_shi_stabilization:
+                  this->assemble_ct_matrix<prm,
+                                           DDFluxType::qiu_shi_stabilization>(
+                    scratch, face);
+                  break;
                 default:
                   Assert(false, InvalidComponent());
                   break;
@@ -2461,6 +2598,24 @@ namespace Ddhdg
                                                    Component::V,
                                                    DDFluxType::use_cell>(
                             scratch, task_data, face);
+                          break;
+                        case DDFluxType::qiu_shi_stabilization:
+                          this->assemble_tc_matrix<
+                            prm,
+                            Component::V,
+                            DDFluxType::qiu_shi_stabilization>(scratch, face);
+                          this->add_tc_matrix_terms_to_tt_rhs<
+                            prm,
+                            Component::V,
+                            DDFluxType::qiu_shi_stabilization>(scratch,
+                                                               task_data,
+                                                               face);
+                          this->assemble_tt_matrix<
+                            prm,
+                            Component::V,
+                            DDFluxType::qiu_shi_stabilization>(scratch,
+                                                               task_data,
+                                                               face);
                           break;
                         default:
                           Assert(false, InvalidComponent());
@@ -2501,6 +2656,24 @@ namespace Ddhdg
                                                    DDFluxType::use_trace>(
                             scratch, task_data, face);
                           break;
+                        case DDFluxType::qiu_shi_stabilization:
+                          this->assemble_tc_matrix<
+                            prm,
+                            Component::n,
+                            DDFluxType::qiu_shi_stabilization>(scratch, face);
+                          this->add_tc_matrix_terms_to_tt_rhs<
+                            prm,
+                            Component::n,
+                            DDFluxType::qiu_shi_stabilization>(scratch,
+                                                               task_data,
+                                                               face);
+                          this->assemble_tt_matrix<
+                            prm,
+                            Component::n,
+                            DDFluxType::qiu_shi_stabilization>(scratch,
+                                                               task_data,
+                                                               face);
+                          break;
                         default:
                           Assert(false, InvalidComponent());
                           break;
@@ -2539,6 +2712,24 @@ namespace Ddhdg
                                                    Component::p,
                                                    DDFluxType::use_trace>(
                             scratch, task_data, face);
+                          break;
+                        case DDFluxType::qiu_shi_stabilization:
+                          this->assemble_tc_matrix<
+                            prm,
+                            Component::p,
+                            DDFluxType::qiu_shi_stabilization>(scratch, face);
+                          this->add_tc_matrix_terms_to_tt_rhs<
+                            prm,
+                            Component::p,
+                            DDFluxType::qiu_shi_stabilization>(scratch,
+                                                               task_data,
+                                                               face);
+                          this->assemble_tt_matrix<
+                            prm,
+                            Component::p,
+                            DDFluxType::qiu_shi_stabilization>(scratch,
+                                                               task_data,
+                                                               face);
                           break;
                         default:
                           Assert(false, InvalidComponent());
@@ -2590,6 +2781,14 @@ namespace Ddhdg
                   scratch, face);
               this->add_border_products_to_cc_rhs<prm, DDFluxType::use_trace>(
                 scratch, face);
+              break;
+            case DDFluxType::qiu_shi_stabilization:
+              this->add_border_products_to_cc_matrix<
+                prm,
+                DDFluxType::qiu_shi_stabilization>(scratch, face);
+              this->add_border_products_to_cc_rhs<
+                prm,
+                DDFluxType::qiu_shi_stabilization>(scratch, face);
               break;
             default:
               Assert(false, InvalidComponent());
