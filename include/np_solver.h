@@ -54,7 +54,8 @@ namespace Ddhdg
       double       p_tau                                     = 1.,
       bool         iterative_linear_solver                   = false,
       bool         multithreading                            = true,
-      DDFluxType   dd_flux_type                              = use_cell);
+      DDFluxType   dd_flux_type                              = use_cell,
+      bool         phi_linearize                             = false);
 
     NPSolverParameters(const NPSolverParameters &solver) = default;
 
@@ -68,6 +69,7 @@ namespace Ddhdg
     const bool                        iterative_linear_solver;
     bool                              multithreading;
     const DDFluxType                  dd_flux_type;
+    const bool                        phi_linearize;
   };
 
   template <int dim, typename ProblemType>
@@ -823,6 +825,7 @@ namespace Ddhdg
     std::vector<double>                              doping_cell;
     std::vector<double>                              r_cell;
     std::map<Component, std::vector<double>>         dr_cell;
+    std::map<Component, std::vector<double>>         phi;
     std::map<Component, std::vector<double>>         previous_c_cell;
     std::map<Component, std::vector<double>>         previous_c_face;
     std::map<Component, std::vector<Tensor<1, dim>>> previous_d_cell;

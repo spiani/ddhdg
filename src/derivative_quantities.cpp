@@ -107,6 +107,11 @@ namespace Ddhdg
             ->template get_component_rescaling_factor<Component::V>();
         const double phi_n =
           solver.template compute_quasi_fermi_potential<Component::n>(n, V, T);
+
+        // I divide for the rescaling factor; this ensures that the number that
+        // I get is reasonable; after having solved the linear system, I will
+        // multiply the solution by the rescaling factor to restore the right
+        // number
         return phi_n / rescaling_factor;
       }
     };

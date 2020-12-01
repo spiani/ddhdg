@@ -40,7 +40,8 @@ namespace Ddhdg
     const double       p_tau,
     const bool         iterative_linear_solver,
     const bool         multithreading,
-    const DDFluxType   dd_flux_type)
+    const DDFluxType   dd_flux_type,
+    const bool         phi_linearize)
     : degree{{Component::V, V_degree},
              {Component::n, n_degree},
              {Component::p, p_degree}}
@@ -52,6 +53,7 @@ namespace Ddhdg
     , iterative_linear_solver(iterative_linear_solver)
     , multithreading(multithreading)
     , dd_flux_type(dd_flux_type)
+    , phi_linearize(phi_linearize)
   {}
 
 
@@ -160,6 +162,7 @@ namespace Ddhdg
     , doping_cell(quadrature_formula.size())
     , r_cell(quadrature_formula.size())
     , dr_cell(initialize_double_map_on_n_and_p(quadrature_formula.size()))
+    , phi(initialize_double_map_on_n_and_p(quadrature_formula.size()))
     , previous_c_cell(
         initialize_double_map_on_components(quadrature_formula.size()))
     , previous_c_face(
@@ -294,6 +297,7 @@ namespace Ddhdg
     , doping_cell(sd.doping_cell)
     , r_cell(sd.r_cell)
     , dr_cell(sd.dr_cell)
+    , phi(sd.phi)
     , previous_c_cell(sd.previous_c_cell)
     , previous_c_face(sd.previous_c_face)
     , previous_d_cell(sd.previous_d_cell)

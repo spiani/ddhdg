@@ -11,6 +11,15 @@ namespace Ddhdg
   class TemplatizedParametersInterface
   {
   public:
+    static constexpr unsigned int mask_max_value = 32 - 1;
+
+    [[nodiscard]] static unsigned int
+    get_parameter_mask(bool phi_linearize,
+                       bool compute_thermodynamic_equilibrium,
+                       bool is_V_enabled,
+                       bool is_n_enabled,
+                       bool is_p_enabled);
+
     [[nodiscard]] virtual unsigned int
     get_parameter_mask() const = 0;
 
@@ -29,11 +38,12 @@ namespace Ddhdg
     : public TemplatizedParametersInterface<dim, ProblemType>
   {
   public:
-    static const unsigned int mask         = parameter_mask;
-    static const bool         thermodyn_eq = (parameter_mask / 8) % 2;
-    static const bool         is_V_enabled = (parameter_mask / 4) % 2;
-    static const bool         is_n_enabled = (parameter_mask / 2) % 2;
-    static const bool         is_p_enabled = (parameter_mask / 1) % 2;
+    static const unsigned int mask          = parameter_mask;
+    static const bool         phi_linearize = (parameter_mask / 16) % 2;
+    static const bool         thermodyn_eq  = (parameter_mask / 8) % 2;
+    static const bool         is_V_enabled  = (parameter_mask / 4) % 2;
+    static const bool         is_n_enabled  = (parameter_mask / 2) % 2;
+    static const bool         is_p_enabled  = (parameter_mask / 1) % 2;
 
     [[nodiscard]] unsigned int
     get_parameter_mask() const override;
@@ -44,6 +54,29 @@ namespace Ddhdg
     typename NPSolver<dim, ProblemType>::assemble_system_one_cell_pointer
     get_assemble_system_one_cell_function() const override;
   };
+
+  template <int dim, typename ProblemType>
+  unsigned int
+  TemplatizedParametersInterface<dim, ProblemType>::get_parameter_mask(
+    const bool phi_linearize,
+    const bool compute_thermodynamic_equilibrium,
+    const bool is_V_enabled,
+    const bool is_n_enabled,
+    const bool is_p_enabled)
+  {
+    unsigned int parameter_mask = 0;
+    if (phi_linearize)
+      parameter_mask += 16;
+    if (compute_thermodynamic_equilibrium)
+      parameter_mask += 8;
+    if (is_V_enabled)
+      parameter_mask += 4;
+    if (is_n_enabled)
+      parameter_mask += 2;
+    if (is_p_enabled)
+      parameter_mask += 1;
+    return parameter_mask;
+  }
 
   template <int dim, typename ProblemType, unsigned int parameter_mask>
   unsigned int
@@ -59,7 +92,7 @@ namespace Ddhdg
   {
     if (parameter_mask == 0)
       Assert(false, MetaprogrammingError());
-    const unsigned int k = (parameter_mask == 0) ? 0 : parameter_mask - 1;
+    constexpr unsigned int k = (parameter_mask == 0) ? 0 : parameter_mask - 1;
     return new TemplatizedParameters<dim, ProblemType, k>();
   }
 

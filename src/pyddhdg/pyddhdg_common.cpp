@@ -75,7 +75,8 @@ namespace pyddhdg
                     const double,
                     const bool,
                     const bool,
-                    const Ddhdg::DDFluxType>(),
+                    const Ddhdg::DDFluxType,
+                    const bool>(),
            py::arg("v_degree")                 = 1,
            py::arg("n_degree")                 = 1,
            py::arg("p_degree")                 = 1,
@@ -87,7 +88,8 @@ namespace pyddhdg
            py::arg("p_tau")                    = 1.,
            py::arg("iterative_linear_solver")  = false,
            py::arg("multithreading")           = true,
-           py::arg("dd_flux_type")             = Ddhdg::DDFluxType::use_cell)
+           py::arg("dd_flux_type")             = Ddhdg::DDFluxType::use_cell,
+           py::arg("linearize_on_phi")         = false)
       .def("degree",
            [](const Ddhdg::NPSolverParameters &a, const Ddhdg::Component c) {
              return a.degree.at(c);

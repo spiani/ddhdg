@@ -94,20 +94,21 @@ namespace Ddhdg
     // The last three bits of parameter_mask are the values of the flags
     // this->is_enabled(Component::V), this->is_enabled(Component::n) and
     // this->is_enabled(Component::p); as usual 1 is for TRUE, 0 is FALSE.
-    unsigned int parameter_mask = 0;
-    if (compute_thermodynamic_equilibrium)
-      parameter_mask += 8;
-    if (this->is_enabled(Component::V))
-      parameter_mask += 4;
-    if (this->is_enabled(Component::n))
-      parameter_mask += 2;
-    if (this->is_enabled(Component::p))
-      parameter_mask += 1;
+    unsigned int parameter_mask =
+      TemplatizedParametersInterface<dim, ProblemType>::get_parameter_mask(
+        this->parameters->phi_linearize,
+        compute_thermodynamic_equilibrium,
+        this->is_enabled(Component::V),
+        this->is_enabled(Component::n),
+        this->is_enabled(Component::p));
 
     TemplatizedParametersInterface<dim, ProblemType> *p1;
     TemplatizedParametersInterface<dim, ProblemType> *p2;
 
-    p1 = new TemplatizedParameters<dim, ProblemType, 15>();
+    p1 = new TemplatizedParameters<
+      dim,
+      ProblemType,
+      TemplatizedParametersInterface<dim, ProblemType>::mask_max_value>();
     while (p1->get_parameter_mask() != parameter_mask)
       {
         p2 = p1->get_previous();
@@ -185,7 +186,6 @@ namespace Ddhdg
       scratch.U_T_cell[q] = (Constants::KB * scratch.T_cell[q] / Constants::Q) /
                             thermal_voltage_rescaling_factor;
 
-
     // Compute the value of the doping
     if (this->is_enabled(Component::V))
       this->rescaled_doping->value_list(scratch.cell_quadrature_points,
@@ -228,6 +228,43 @@ namespace Ddhdg
 
         this->adimensionalizer->adimensionalize_recombination_term(
           scratch.r_cell, dr_n, dr_p);
+      }
+
+    if (this->parameters->phi_linearize)
+      {
+        const auto & V_values = scratch.previous_c_cell.at(Component::V);
+        const double V_rescaling_factor =
+          this->adimensionalizer
+            ->template get_component_rescaling_factor<Component::V>();
+
+        if (this->is_enabled(Component::n))
+          {
+            auto &      phi_n    = scratch.phi.at(Component::n);
+            const auto &n_values = scratch.previous_c_cell.at(Component::n);
+            double      n_rescaling_factor =
+              this->adimensionalizer
+                ->template get_component_rescaling_factor<Component::n>();
+            for (unsigned int q = 0; q < n_q_points; ++q)
+              phi_n[q] =
+                this->template compute_quasi_fermi_potential<Component::n>(
+                  n_values[q] * n_rescaling_factor,
+                  V_values[q] * V_rescaling_factor,
+                  scratch.T_cell[q]);
+          }
+        if (this->is_enabled(Component::p))
+          {
+            auto &      phi_p    = scratch.phi.at(Component::p);
+            const auto &p_values = scratch.previous_c_cell.at(Component::p);
+            double      p_rescaling_factor =
+              this->adimensionalizer
+                ->template get_component_rescaling_factor<Component::p>();
+            for (unsigned int q = 0; q < n_q_points; ++q)
+              phi_p[q] =
+                this->template compute_quasi_fermi_potential<Component::p>(
+                  p_values[q] * p_rescaling_factor,
+                  V_values[q] * V_rescaling_factor,
+                  scratch.T_cell[q]);
+          }
       }
   }
 
@@ -312,6 +349,15 @@ namespace Ddhdg
         const auto &p0 = scratch.previous_c_cell.at(Component::p);
         const auto &E0 = scratch.previous_d_cell.at(Component::V);
 
+        const auto &phi_n_vector = scratch.phi.at(Component::n);
+        const auto &phi_p_vector = scratch.phi.at(Component::p);
+
+        if constexpr (!prm::phi_linearize)
+          {
+            (void)phi_n_vector;
+            (void)phi_p_vector;
+          }
+
         const unsigned int dofs_per_component =
           scratch.enabled_component_indices.size();
 
@@ -343,7 +389,7 @@ namespace Ddhdg
           this->adimensionalizer
             ->template get_component_rescaling_factor<Component::n>();
 
-        double thermodynamic_equilibrium_der = 0.;
+        double phi_V_der = 0.;
 
         double Q =
           this->adimensionalizer->get_poisson_equation_density_constant();
@@ -400,17 +446,23 @@ namespace Ddhdg
                                                      E0[q],
                                                      mu_p_times_previous_E);
 
-            if constexpr (prm::thermodyn_eq)
+            if constexpr (prm::phi_linearize || prm::thermodyn_eq)
               {
                 const double KbT_over_q = Constants::KB * scratch.T_cell[q] /
                                           (Constants::Q * V_rescale);
                 const double ev_rescaled = ev / (Constants::Q * V_rescale);
                 const double ec_rescaled = ec / (Constants::Q * V_rescale);
 
-                thermodynamic_equilibrium_der =
-                  -Q / n_rescale *
-                  (nv / KbT_over_q * exp((ev_rescaled - V0[q]) / KbT_over_q) +
-                   nc / KbT_over_q * exp((V0[q] - ec_rescaled) / KbT_over_q));
+                const double phi_n =
+                  (prm::thermodyn_eq) ? 0 : phi_n_vector[q] / V_rescale;
+                const double phi_p =
+                  (prm::thermodyn_eq) ? 0 : phi_p_vector[q] / V_rescale;
+
+                phi_V_der = -Q / n_rescale *
+                            (nv / KbT_over_q *
+                               exp((ev_rescaled - V0[q] + phi_p) / KbT_over_q) +
+                             nc / KbT_over_q *
+                               exp((V0[q] - phi_n - ec_rescaled) / KbT_over_q));
               }
 
             for (unsigned int i = 0; i < dofs_per_component; ++i)
@@ -429,10 +481,9 @@ namespace Ddhdg
                            epsilon_times_E * z1_grad[ii]) *
                           JxW;
 
-                        if constexpr (prm::thermodyn_eq)
+                        if constexpr (prm::phi_linearize || prm::thermodyn_eq)
                           scratch.cc_matrix(i, j) +=
-                            -thermodynamic_equilibrium_der * V[jj] * z1[ii] *
-                            JxW;
+                            -phi_V_der * V[jj] * z1[ii] * JxW;
                         else
                           scratch.cc_matrix(i, j) +=
                             Q * (n[jj] - p[jj]) * z1[ii] * JxW;
@@ -544,6 +595,15 @@ namespace Ddhdg
 
         const auto &c0 = scratch.doping_cell;
 
+        const auto &phi_n_vector = scratch.phi.at(Component::n);
+        const auto &phi_p_vector = scratch.phi.at(Component::p);
+
+        if constexpr (!prm::phi_linearize)
+          {
+            (void)phi_n_vector;
+            (void)phi_p_vector;
+          }
+
         dealii::Tensor<1, dim> epsilon_times_E;
 
         dealii::Tensor<1, dim> n_einstein_diffusion_coefficient_times_Wn0;
@@ -568,7 +628,7 @@ namespace Ddhdg
             (void)nv;
           }
 
-        double thermodynamic_equilibrium_rhs = 0.;
+        double phi_rhs = 0.;
 
         const double V_rescale =
           this->adimensionalizer
@@ -623,16 +683,22 @@ namespace Ddhdg
                      p_einstein_diffusion_coefficient_times_Wp0;
               }
 
-            if constexpr (prm::thermodyn_eq)
+            if constexpr (prm::phi_linearize || prm::thermodyn_eq)
               {
                 const double KbT_over_q = Constants::KB * scratch.T_cell[q] /
                                           (Constants::Q * V_rescale);
                 const double ev_rescaled = ev / (Constants::Q * V_rescale);
                 const double ec_rescaled = ec / (Constants::Q * V_rescale);
-                thermodynamic_equilibrium_rhs =
+
+                const double phi_n =
+                  (prm::thermodyn_eq) ? 0 : phi_n_vector[q] / V_rescale;
+                const double phi_p =
+                  (prm::thermodyn_eq) ? 0 : phi_p_vector[q] / V_rescale;
+
+                phi_rhs =
                   Q / n_rescale *
-                  (nv * exp((ev_rescaled - V0[q]) / KbT_over_q) -
-                   nc * exp((V0[q] - ec_rescaled) / KbT_over_q));
+                  (nv * exp((ev_rescaled - V0[q] + phi_p) / KbT_over_q) -
+                   nc * exp((V0[q] - phi_n - ec_rescaled) / KbT_over_q));
               }
 
             for (unsigned int i = 0; i < dofs_per_component; ++i)
@@ -655,9 +721,8 @@ namespace Ddhdg
                        Q * c0[q] * z1) *
                       JxW;
 
-                    if (prm::thermodyn_eq)
-                      scratch.cc_rhs[i] +=
-                        thermodynamic_equilibrium_rhs * z1 * JxW;
+                    if (prm::phi_linearize || prm::thermodyn_eq)
+                      scratch.cc_rhs[i] += phi_rhs * z1 * JxW;
                     else
                       scratch.cc_rhs[i] += Q * (-n0[q] + p0[q]) * z1 * JxW;
                   }
