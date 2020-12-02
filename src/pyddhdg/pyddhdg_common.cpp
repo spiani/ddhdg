@@ -19,6 +19,8 @@ namespace pyddhdg
       .value("v", Ddhdg::Component::V)
       .value("n", Ddhdg::Component::n)
       .value("p", Ddhdg::Component::p)
+      .value("phi_n", Ddhdg::Component::phi_n)
+      .value("phi_p", Ddhdg::Component::phi_p)
       .export_values();
 
     py::enum_<Ddhdg::Displacement>(m, "Displacement")

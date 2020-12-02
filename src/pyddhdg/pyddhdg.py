@@ -84,13 +84,15 @@ class ComponentsNamespace:
             'v': pyddhdg_common.Component.v,
             'n': pyddhdg_common.Component.n,
             'p': pyddhdg_common.Component.p,
+            'phi_n': pyddhdg_common.Component.phi_n,
+            'phi_p': pyddhdg_common.Component.phi_p
         }
 
     def __getattr__(self, attr):
         if attr in self._data:
             return self._data[attr]
         raise AttributeError(
-            '"{}" is not a valid constant'.format(attr)
+            '"{}" is not a valid component'.format(attr)
         )
 
     def __getitem__(self, item):
@@ -99,12 +101,14 @@ class ComponentsNamespace:
     def as_dict(self):
         return self._data.copy()
 
-    def __iter__(self):
+    def principal_components(self):
         v = self._data['v']
         n = self._data['n']
         p = self._data['p']
-        cmps = (v, n, p)
-        return cmps.__iter__()
+        return v, n, p
+
+    def __iter__(self):
+        return self.principal_components().__iter__()
 
 
 Components = ComponentsNamespace()
