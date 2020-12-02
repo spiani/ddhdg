@@ -422,7 +422,7 @@ namespace Ddhdg
             for (unsigned int q = 0; q < n_face_q_points; q++)
               scratch.evaluated_c_face[q] =
                 this->template compute_density<primal_c>(
-                  scratch.evaluated_c[q],
+                  scratch.evaluated_c_face[q],
                   scratch.V_values_face[q],
                   scratch.temperature_face[q]) /
                 scratch.c_rescale;
@@ -525,7 +525,6 @@ namespace Ddhdg
     constexpr Component primal_c =
       (c_is_primal) ? c :
                       ((c == Component::phi_n) ? Component::n : Component::p);
-
 
     const unsigned int c_index = get_component_index(primal_c);
 
