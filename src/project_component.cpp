@@ -48,13 +48,6 @@ namespace Ddhdg
 
       PCScratchData(const PCScratchData<dim> &pc_scratch_data);
 
-      inline void
-      save_data_for_quasi_fermi_potentials(
-        double,
-        double,
-        const dealii::FEValuesExtractors::Scalar &)
-      {}
-
       const std::shared_ptr<const dealii::Function<dim>> c_function;
 
       dealii::FEValues<dim>     fe_values;
@@ -217,9 +210,6 @@ namespace Ddhdg
         const dealii::QGauss<dim - 1> &              face_quadrature_formula,
         dealii::UpdateFlags                          fe_values_flags,
         dealii::UpdateFlags                          fe_face_values_flags);
-
-      // PCQuasiFermiPotentialScratchData(
-      //  const PCQuasiFermiPotentialScratchData<dim> &pc_qfp_scratch_data);
 
       inline void
       save_data_for_quasi_fermi_potentials(
@@ -546,7 +536,7 @@ namespace Ddhdg
     else
       c_function_rescaled = c_function;
 
-    ScratchData scratch((c_is_primal) ? c_function_rescaled : c_function,
+    ScratchData scratch(c_function_rescaled,
                         *(this->fe_cell),
                         c_index,
                         total_mask,
@@ -557,13 +547,16 @@ namespace Ddhdg
                         fe_values_flags,
                         fe_face_values_flags);
 
-    if (!c_is_primal)
-      scratch.save_data_for_quasi_fermi_potentials(
-        this->adimensionalizer
-          ->template get_component_rescaling_factor<Component::V>(),
-        this->adimensionalizer
-          ->template get_component_rescaling_factor<primal_c>(),
-        this->get_component_extractor(Component::V));
+    if constexpr (!c_is_primal)
+      {
+        const auto V_extractor = this->get_component_extractor(Component::V);
+        scratch.save_data_for_quasi_fermi_potentials(
+          this->adimensionalizer
+            ->template get_component_rescaling_factor<Component::V>(),
+          this->adimensionalizer
+            ->template get_component_rescaling_factor<primal_c>(),
+          V_extractor);
+      }
 
     CopyData copy_data(scratch.dofs_per_component +
                        scratch.dofs_per_displacement);
