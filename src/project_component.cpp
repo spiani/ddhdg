@@ -400,7 +400,7 @@ namespace Ddhdg
               scratch.face_quadrature_points, scratch.temperature_face);
             scratch.fe_face_values[scratch.V_extractor].get_function_values(
               this->current_solution_cell, scratch.V_values_face);
-            for (unsigned int q = 0; q < n_q_points; q++)
+            for (unsigned int q = 0; q < n_face_q_points; q++)
               scratch.V_values_face[q] *= scratch.V_rescale;
           }
 
