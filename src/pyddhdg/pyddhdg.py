@@ -37,7 +37,7 @@ except ModuleNotFoundError:
     warnings.warn("Module scipy not found! Some features will be disabled")
     LOGGER.debug("Error while importing scipy!", exc_info=True)
 
-# This constant are useful only if matplotlib is imported
+# These constants are useful only if matplotlib is imported
 if MATPLOTLIB_IMPORTED:
     CMAP = get_cmap('plasma')
 else:
@@ -113,7 +113,7 @@ class ComponentsNamespace:
 
 Components = ComponentsNamespace()
 
-# Export also the components and the others enum; in this way we avoid to
+# Export also the components and the others enums; in this way we avoid to
 # pollute the global namespace with the name of the single elements of the
 # enums (i.e. it will be necessary to write Displacement.E and not simply E)
 Displacements = pyddhdg_common.Displacement
@@ -180,8 +180,8 @@ class TemplateClass:
         return self._reference_class[dimension]
 
 
-# Before initialize the template class, we introduce the methods that will be binded to
-# some of them
+# Before initializing the template classes, we introduce the methods that will
+# be binded to some of them
 
 def _plot_solution(solver, component, plot_grid=False, ax=None, colors=None,
                    linewidth=1, grid_color=(.8, .8, .8)):
@@ -204,7 +204,7 @@ def _plot_solution(solver, component, plot_grid=False, ax=None, colors=None,
     if dim != 1:
         raise ValueError('No plot available in {}D'.format(dim))
 
-    plot_points = points if degree < 2 else max(1, 1000 // cells)
+    plot_points = 2 if degree < 2 else max(2, 1000 // cells)
 
     all_cell_vertices = solver.get_cell_vertices()
 
