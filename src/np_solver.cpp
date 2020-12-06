@@ -1663,12 +1663,58 @@ namespace Ddhdg
     dealii::Functions::FEFieldFunction<dim> fe_field_function(
       this->dof_handler_cell, this->current_solution_cell);
 
-    const unsigned int c_index          = get_component_index(c);
-    const unsigned int dealii_component = (dim + 1) * c_index + dim;
-    const double       rescaling_factor =
-      this->adimensionalizer->get_component_rescaling_factor(c);
+    if (c == Component::V || c == Component::n || c == Component::p)
+      {
+        const unsigned int c_index          = get_component_index(c);
+        const unsigned int dealii_component = (dim + 1) * c_index + dim;
+        const double       rescaling_factor =
+          this->adimensionalizer->get_component_rescaling_factor(c);
 
-    return fe_field_function.value(p, dealii_component) * rescaling_factor;
+        return fe_field_function.value(p, dealii_component) * rescaling_factor;
+      }
+
+    if (c == Component::phi_n || c == Component::phi_p)
+      {
+        const Component primal_c =
+          (c == Component::phi_n) ? Component::n : Component::p;
+        const unsigned int primal_c_index = get_component_index(primal_c);
+        const unsigned int primal_dealii_component =
+          (dim + 1) * primal_c_index + dim;
+        const double primal_rescaling_factor =
+          this->adimensionalizer->get_component_rescaling_factor(primal_c);
+
+        const unsigned int v_index = get_component_index(Component::V);
+        const unsigned int v_dealii_component = (dim + 1) * v_index + dim;
+        const double       v_rescaling_factor =
+          this->adimensionalizer->get_component_rescaling_factor(Component::V);
+
+        const unsigned int n_of_components = all_primary_components().size();
+
+        dealii::Vector<double> f_values((dim + 1) * n_of_components);
+
+        fe_field_function.vector_value(p, f_values);
+
+        const double primal_value =
+          f_values[primal_dealii_component] * primal_rescaling_factor;
+        const double v_value =
+          f_values[v_dealii_component] * v_rescaling_factor;
+
+        const double temperature = this->problem->temperature->value(p);
+
+        switch (primal_c)
+          {
+            case Component::n:
+              return this->template compute_quasi_fermi_potential<Component::n>(
+                primal_value, v_value, temperature);
+            case Component::p:
+              return this->template compute_quasi_fermi_potential<Component::p>(
+                primal_value, v_value, temperature);
+            default:
+              Assert(false, InvalidComponent());
+          }
+      }
+
+    AssertThrow(false, InvalidComponent());
   }
 
 
