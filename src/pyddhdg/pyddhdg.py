@@ -1,7 +1,6 @@
 import logging
 import warnings
 from importlib import import_module
-from types import MethodType
 
 import numpy as np
 import pyddhdg.pyddhdg_common
@@ -45,6 +44,7 @@ else:
 
 GRID_LINEWIDTH = 0.1
 GRID_LINESTYLE = "dotted"
+EPS = 0.01
 
 
 class InvalidDimensionException(ValueError):
@@ -180,9 +180,58 @@ class TemplateClass:
         return self._reference_class[dimension]
 
 
+def _get_points_to_evaluate(all_cell_vertices, degree, to_be_interp=True):
+    cells = all_cell_vertices.shape[0]
+    interpolation_points = degree + 1
+    plot_points = 2 if degree < 2 else max(2, 1000 // cells)
+
+    points = interpolation_points if to_be_interp else plot_points
+
+    cell_left_boundaries = all_cell_vertices[:, 0, :].flatten()
+    cell_order = np.argsort(cell_left_boundaries)
+
+    cell_mins = np.empty((cells,), dtype=np.float64)
+    cell_maxs = np.empty((cells,), dtype=np.float64)
+
+    evaluation_points = np.empty((cells * points,), dtype=np.float64)
+
+    if to_be_interp:
+        cheb_points = np.array(
+            [np.cos((2*k + 1) / (2 * points) * np.pi) for k in range(points)],
+            dtype=np.float64
+        )
+
+        # Rescale into [0, 1]
+        cheb_points = 0.5 + cheb_points / 2.
+
+    for cell in range(cells):
+        cell_vertices = all_cell_vertices[cell_order[cell]]
+        cell_x_min = np.min(cell_vertices)
+        cell_x_max = np.max(cell_vertices)
+
+        current_index = cell * points
+
+        # Interpolate a polynomial on the current cell
+        if to_be_interp:
+            cell_points = cell_x_min + cheb_points * (cell_x_max - cell_x_min)
+        else:
+            eps = (cell_x_max - cell_x_min) * EPS
+            cell_points = np.linspace(
+                cell_x_min + eps,
+                cell_x_max - eps,
+                points
+            )
+        evaluation_points[current_index : current_index + points] = \
+            cell_points[:]
+
+        cell_mins[cell] = cell_x_min
+        cell_maxs[cell] = cell_x_max
+
+    return points, cell_mins, cell_maxs, evaluation_points
+
+
 # Before initializing the template classes, we introduce the methods that will
 # be binded to some of them
-
 def _plot_solution(solver, component, plot_grid=False, ax=None, colors=None,
                    linewidth=1, grid_color=(.8, .8, .8)):
     if not MATPLOTLIB_IMPORTED:
@@ -190,19 +239,33 @@ def _plot_solution(solver, component, plot_grid=False, ax=None, colors=None,
     if not SCIPY_IMPORTED:
         raise ModuleNotFoundError('The method "plot_solution" requires scipy')
 
-    if ax is None:
-        ax = plt.gca()
-
-    if colors is None:
-        colors = CMAP
-
-    degree = solver.get_parameters().degree(component)
-    cells = solver.n_active_cells
-    points = degree + 1
-
     dim = solver.dimension
     if dim != 1:
         raise ValueError('No plot available in {}D'.format(dim))
+
+    if ax is None:
+        ax = plt.gca()
+    if colors is None:
+        colors = CMAP
+
+    # For phi_n and phi_p, the degree is the max degree between V (the
+    # potential) and n (or p, if we are using phi_p)
+    if component in Components.principal_components():
+        degree = solver.get_parameters().degree(component)
+    else:
+        if component == Components.phi_n:
+            prnc_component = Components.n
+        elif component == Components.phi_p:
+            prnc_component = Components.p
+        else:
+            raise ValueError('Invalid component: {}'.format(component))
+
+        v_degree = solver.get_parameters().degree(Components.v)
+        prnc_degree = solver.get_parameters().degree(prnc_component)
+        degree = max(v_degree, prnc_degree)
+
+    cells = solver.n_active_cells
+    points = degree + 1
 
     plot_points = 2 if degree < 2 else max(2, 1000 // cells)
 
@@ -240,20 +303,33 @@ def _plot_solution(solver, component, plot_grid=False, ax=None, colors=None,
     cell_left_boundaries = all_cell_vertices[:, 0, :].flatten()
     cell_order = np.argsort(cell_left_boundaries)
 
-    for cell in range(cells):
-        cell_vertices = all_cell_vertices[cell_order[cell]]
-        cell_x_min = np.min(cell_vertices)
-        cell_x_max = np.max(cell_vertices)
+    interpolate = component in Components.principal_components()
 
+    points_per_cell, cell_x_mins, cell_x_maxs, eval_points = \
+        _get_points_to_evaluate(
+            all_cell_vertices,
+            degree,
+            interpolate
+        )
+
+    for cell in range(cells):
         # Interpolate a polynomial on the current cell
-        x_points = np.linspace(cell_x_min, cell_x_max, points + 2)[1:-1]
+        p_start = cell * points_per_cell
+        p_end = (cell + 1) * points_per_cell
+        x_points = eval_points[p_start:p_end]
         y_points = np.empty_like(x_points)
-        for i in range(points):
+        for i in range(points_per_cell):
             p = pyddhdg.Point[dim](x_points[i])
             y_points[i] = solver.get_solution_on_a_point(p, component)
 
-        x_plot_points = np.linspace(cell_x_min, cell_x_max, plot_points)
-        y_plot_points = barycentric_interpolate(x_points, y_points, x_plot_points)
+        if interpolate:
+            cell_x_min = cell_x_mins[cell]
+            cell_x_max = cell_x_maxs[cell]
+            x_plot_points = np.linspace(cell_x_min, cell_x_max, plot_points)
+            y_plot_points = barycentric_interpolate(x_points, y_points, x_plot_points)
+        else:
+            x_plot_points = x_points
+            y_plot_points = y_points
 
         # Choose the color
         if isinstance(colors, Colormap):
