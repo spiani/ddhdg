@@ -3,6 +3,7 @@ set(_target tests)
 set(_test_files
         adimensionalizer.cpp
         copy_on_trace.cpp
+        current_equation.cpp
         disabling_components.cpp
         laplacians.cpp
         linear_potential.cpp

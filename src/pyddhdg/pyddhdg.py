@@ -1,9 +1,10 @@
-import logging
-import warnings
 from importlib import import_module
-
+import logging
 import numpy as np
+import warnings
+
 import pyddhdg.pyddhdg_common
+
 
 # We import the modules for the three dimensions and we put them
 # in a dictionary
