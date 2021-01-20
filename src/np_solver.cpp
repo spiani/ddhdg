@@ -1881,6 +1881,8 @@ namespace Ddhdg
     dealii::Vector<double> phi_n_data;
     dealii::Vector<double> phi_p_data;
 
+    dealii::Vector<double> recombination_data;
+
     dealii::Vector<double> doping_data(problem_const_dofs.n_dofs());
     dealii::Vector<double> temperature_data(problem_const_dofs.n_dofs());
 
@@ -1906,6 +1908,10 @@ namespace Ddhdg
     this->compute_qf_potential<Component::n>(phi_n_dofs, phi_n_data);
     this->compute_qf_potential<Component::p>(phi_p_dofs, phi_p_data);
 
+    this->compute_recombination_term(problem_const_dofs,
+                                     recombination_data,
+                                     redimensionalize_quantities);
+
     std::vector<DataComponentInterpretation::DataComponentInterpretation>
       J_component_interpretation(
         dim, DataComponentInterpretation::component_is_part_of_vector);
@@ -1923,6 +1929,10 @@ namespace Ddhdg
                              Jp_data,
                              std::vector<std::string>(dim, "hole_current"),
                              J_component_interpretation);
+
+    data_out.add_data_vector(problem_const_dofs,
+                             recombination_data,
+                             "recombination_generation_term");
 
     data_out.add_data_vector(phi_n_dofs,
                              phi_n_data,

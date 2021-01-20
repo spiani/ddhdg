@@ -459,6 +459,21 @@ namespace Ddhdg
 
   void
   Adimensionalizer::adimensionalize_recombination_term(
+    dealii::Vector<double> &r) const
+  {
+    const double recombination_rescaling_factor =
+      this->get_recombination_rescaling_factor();
+
+    const unsigned int n_of_elements = r.size();
+
+    for (unsigned int i = 0; i < n_of_elements; i++)
+      r[i] /= recombination_rescaling_factor;
+  }
+
+
+
+  void
+  Adimensionalizer::adimensionalize_recombination_term(
     std::vector<double> &r,
     std::vector<double> &dr_n,
     std::vector<double> &dr_p) const

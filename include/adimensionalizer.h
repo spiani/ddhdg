@@ -255,6 +255,9 @@ namespace Ddhdg
     }
 
     void
+    adimensionalize_recombination_term(dealii::Vector<double> &r) const;
+
+    void
     adimensionalize_recombination_term(std::vector<double> &r,
                                        std::vector<double> &dr_n,
                                        std::vector<double> &dr_p) const;

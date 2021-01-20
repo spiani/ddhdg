@@ -197,7 +197,7 @@ def _get_points_to_evaluate(all_cell_vertices, degree, to_be_interp=True):
 
     if to_be_interp:
         cheb_points = np.array(
-            [np.cos((2*k + 1) / (2 * points) * np.pi) for k in range(points)],
+            [np.cos((2 * k + 1) / (2 * points) * np.pi) for k in range(points)],
             dtype=np.float64
         )
 
@@ -221,7 +221,7 @@ def _get_points_to_evaluate(all_cell_vertices, degree, to_be_interp=True):
                 cell_x_max - eps,
                 points
             )
-        evaluation_points[current_index : current_index + points] = \
+        evaluation_points[current_index: current_index + points] = \
             cell_points[:]
 
         cell_mins[cell] = cell_x_min

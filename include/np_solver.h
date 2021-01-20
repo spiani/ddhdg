@@ -342,6 +342,11 @@ namespace Ddhdg
                          dealii::Vector<double> &       data) const;
 
     void
+    compute_recombination_term(const dealii::DoFHandler<dim> &dof,
+                               dealii::Vector<double> &       data,
+                               bool redimensionalize = true) const;
+
+    void
     output_results(const std::string &solution_filename,
                    bool               save_update,
                    bool redimensionalize_quantities) const override;
