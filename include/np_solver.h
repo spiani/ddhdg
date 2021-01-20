@@ -359,23 +359,23 @@ namespace Ddhdg
 
     void
     print_convergence_table(
-      std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
-      std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
-      std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
-      std::shared_ptr<const dealii::Function<dim>> expected_p_solution,
-      unsigned int                                 n_cycles,
+      std::shared_ptr<dealii::ParsedConvergenceTable> error_table,
+      std::shared_ptr<const dealii::Function<dim>>    expected_V_solution,
+      std::shared_ptr<const dealii::Function<dim>>    expected_n_solution,
+      std::shared_ptr<const dealii::Function<dim>>    expected_p_solution,
+      unsigned int                                    n_cycles,
       unsigned int initial_refinements) override;
 
     void
     print_convergence_table(
-      std::shared_ptr<Ddhdg::ConvergenceTable>     error_table,
-      std::shared_ptr<const dealii::Function<dim>> expected_V_solution,
-      std::shared_ptr<const dealii::Function<dim>> expected_n_solution,
-      std::shared_ptr<const dealii::Function<dim>> expected_p_solution,
-      std::shared_ptr<const dealii::Function<dim>> initial_V_function,
-      std::shared_ptr<const dealii::Function<dim>> initial_n_function,
-      std::shared_ptr<const dealii::Function<dim>> initial_p_function,
-      unsigned int                                 n_cycles,
+      std::shared_ptr<dealii::ParsedConvergenceTable> error_table,
+      std::shared_ptr<const dealii::Function<dim>>    expected_V_solution,
+      std::shared_ptr<const dealii::Function<dim>>    expected_n_solution,
+      std::shared_ptr<const dealii::Function<dim>>    expected_p_solution,
+      std::shared_ptr<const dealii::Function<dim>>    initial_V_function,
+      std::shared_ptr<const dealii::Function<dim>>    initial_n_function,
+      std::shared_ptr<const dealii::Function<dim>>    initial_p_function,
+      unsigned int                                    n_cycles,
       unsigned int initial_refinements) override;
 
   protected:

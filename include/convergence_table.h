@@ -20,7 +20,6 @@ namespace Ddhdg
            {dealii::VectorTools::H1_norm, dealii::VectorTools::L2_norm}})
     {}
 
-  private:
     static std::vector<std::string>
     generate_components(const unsigned int dim)
     {
