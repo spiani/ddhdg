@@ -2112,6 +2112,23 @@ namespace Ddhdg
     components.insert({dim, expected_V_solution_rescaled});
     components.insert({2 * dim + 1, expected_n_solution_rescaled});
     components.insert({3 * dim + 2, expected_p_solution_rescaled});
+
+    for (unsigned int i = 0; i < dim; i++)
+      {
+        components.insert(
+          {i,
+           std::make_shared<Opposite<dim>>(
+             get_partial_derivative<dim>(expected_V_solution_rescaled, i))});
+        components.insert(
+          {dim + 1 + i,
+           std::make_shared<Opposite<dim>>(
+             get_partial_derivative<dim>(expected_n_solution_rescaled, i))});
+        components.insert(
+          {2 * dim + 2 + i,
+           std::make_shared<Opposite<dim>>(
+             get_partial_derivative<dim>(expected_p_solution_rescaled, i))});
+      }
+
     FunctionByComponents expected_solution(3 * (dim + 1), components);
 
     bool         converged;

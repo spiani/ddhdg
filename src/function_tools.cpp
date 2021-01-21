@@ -3,6 +3,53 @@
 
 namespace Ddhdg
 {
+  template <>
+  std::shared_ptr<dealii::Function<1>>
+  get_partial_derivative(const std::shared_ptr<const dealii::Function<1>> f,
+                         unsigned int direction)
+  {
+    Assert(direction < 1,
+           dealii::ExcMessage("Invalid direction for current dimension"));
+
+    (void)direction;
+
+    const dealii::Point<1> p0{1};
+    return std::make_shared<dealii::FunctionDerivative<1>>(*f, p0);
+  }
+
+  template <>
+  std::shared_ptr<dealii::Function<2>>
+  get_partial_derivative(const std::shared_ptr<const dealii::Function<2>> f,
+                         unsigned int direction)
+  {
+    Assert(direction < 2,
+           dealii::ExcMessage("Invalid direction for current dimension"));
+
+    if (direction == 0)
+      {
+        const dealii::Point<2> p0{1, 0};
+        return std::make_shared<dealii::FunctionDerivative<2>>(*f, p0);
+      }
+    const dealii::Point<2> p1{0, 1};
+    return std::make_shared<dealii::FunctionDerivative<2>>(*f, p1);
+  }
+
+  template <>
+  std::shared_ptr<dealii::Function<3>>
+  get_partial_derivative(const std::shared_ptr<const dealii::Function<3>> f,
+                         unsigned int direction)
+  {
+    Assert(direction < 3,
+           dealii::ExcMessage("Invalid direction for current dimension"));
+
+    const dealii::Point<3> p{(direction == 0) ? 1. : 0.,
+                             (direction == 1) ? 1. : 0.,
+                             (direction == 2) ? 1. : 0.};
+    return std::make_shared<dealii::FunctionDerivative<3>>(*f, p);
+  }
+
+
+
   template <int dim>
   FunctionByComponents<dim>::FunctionByComponents(
     int n_of_components,
@@ -255,50 +302,8 @@ namespace Ddhdg
   {
     std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>
       partial_derivatives;
-    switch (dim)
-      {
-          case 1: {
-            const dealii::Point<dim> p0{1};
-            partial_derivatives.insert(
-              {0,
-               std::make_shared<dealii::FunctionDerivative<dim>>(*function,
-                                                                 p0)});
-            break;
-          }
-          case 2: {
-            const dealii::Point<dim> p0{1, 0};
-            const dealii::Point<dim> p1{0, 1};
-            partial_derivatives.insert(
-              {0,
-               std::make_shared<dealii::FunctionDerivative<dim>>(*function,
-                                                                 p0)});
-            partial_derivatives.insert(
-              {1,
-               std::make_shared<dealii::FunctionDerivative<dim>>(*function,
-                                                                 p1)});
-            break;
-          }
-          case 3: {
-            const dealii::Point<dim> p0{1, 0, 0};
-            const dealii::Point<dim> p1{0, 1, 0};
-            const dealii::Point<dim> p2{0, 0, 1};
-            partial_derivatives.insert(
-              {0,
-               std::make_shared<dealii::FunctionDerivative<dim>>(*function,
-                                                                 p0)});
-            partial_derivatives.insert(
-              {1,
-               std::make_shared<dealii::FunctionDerivative<dim>>(*function,
-                                                                 p1)});
-            partial_derivatives.insert(
-              {2,
-               std::make_shared<dealii::FunctionDerivative<dim>>(*function,
-                                                                 p2)});
-            break;
-          }
-        default:
-          break;
-      }
+    for (unsigned int i = 0; i < dim; i++)
+      partial_derivatives.insert({i, get_partial_derivative(function, i)});
     return partial_derivatives;
   }
 

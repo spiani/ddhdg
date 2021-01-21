@@ -19,6 +19,11 @@ namespace Ddhdg
     std::map<unsigned int, const std::shared_ptr<const dealii::Function<dim>>>;
 
   template <int dim>
+  std::shared_ptr<dealii::Function<dim>>
+  get_partial_derivative(const std::shared_ptr<const dealii::Function<dim>> f,
+                         unsigned int direction);
+
+  template <int dim>
   class FunctionByComponents : public dealii::Function<dim>
   {
   public:
