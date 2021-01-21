@@ -578,14 +578,14 @@ namespace pyddhdg
                    bool               save_update                 = false,
                    bool               redimensionalize_quantities = true) const;
 
-    void
+    std::string
     print_convergence_table(DealIIFunction<dim> expected_V_solution,
                             DealIIFunction<dim> expected_n_solution,
                             DealIIFunction<dim> expected_p_solution,
                             unsigned int        n_cycles,
                             unsigned int        initial_refinements = 0);
 
-    void
+    std::string
     print_convergence_table(DealIIFunction<dim> expected_V_solution,
                             DealIIFunction<dim> expected_n_solution,
                             DealIIFunction<dim> expected_p_solution,
@@ -595,14 +595,14 @@ namespace pyddhdg
                             unsigned int        n_cycles,
                             unsigned int        initial_refinements = 0);
 
-    void
+    std::string
     print_convergence_table(const std::string &expected_V_solution,
                             const std::string &expected_n_solution,
                             const std::string &expected_p_solution,
                             unsigned int       n_cycles,
                             unsigned int       initial_refinements = 0);
 
-    void
+    std::string
     print_convergence_table(const std::string &expected_V_solution,
                             const std::string &expected_n_solution,
                             const std::string &expected_p_solution,

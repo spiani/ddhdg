@@ -364,7 +364,8 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Function<dim>>    expected_n_solution,
       std::shared_ptr<const dealii::Function<dim>>    expected_p_solution,
       unsigned int                                    n_cycles,
-      unsigned int initial_refinements) override;
+      unsigned int                                    initial_refinements,
+      std::ostream &                                  out) override;
 
     void
     print_convergence_table(
@@ -376,7 +377,8 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Function<dim>>    initial_n_function,
       std::shared_ptr<const dealii::Function<dim>>    initial_p_function,
       unsigned int                                    n_cycles,
-      unsigned int initial_refinements) override;
+      unsigned int                                    initial_refinements,
+      std::ostream &                                  out) override;
 
   protected:
     static std::unique_ptr<dealii::Triangulation<dim>>

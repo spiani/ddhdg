@@ -2060,7 +2060,8 @@ namespace Ddhdg
     std::shared_ptr<const dealii::Function<dim>>    expected_n_solution,
     std::shared_ptr<const dealii::Function<dim>>    expected_p_solution,
     unsigned int                                    n_cycles,
-    unsigned int                                    initial_refinements)
+    unsigned int                                    initial_refinements,
+    std::ostream &                                  out)
   {
     const std::shared_ptr<const dealii::Function<dim>> initial_V_function =
       std::make_shared<const dealii::Functions::ZeroFunction<dim>>();
@@ -2077,7 +2078,8 @@ namespace Ddhdg
                                   initial_n_function,
                                   initial_p_function,
                                   n_cycles,
-                                  initial_refinements);
+                                  initial_refinements,
+                                  out);
   }
 
 
@@ -2093,7 +2095,8 @@ namespace Ddhdg
     std::shared_ptr<const dealii::Function<dim>>    initial_n_function,
     std::shared_ptr<const dealii::Function<dim>>    initial_p_function,
     unsigned int                                    n_cycles,
-    unsigned int                                    initial_refinements)
+    unsigned int                                    initial_refinements,
+    std::ostream &                                  out)
   {
     this->refine_grid(initial_refinements, false);
 
@@ -2168,7 +2171,7 @@ namespace Ddhdg
         if (cycle != n_cycles - 1)
           this->refine_grid_once(false);
       }
-    error_table->output_table(std::cout);
+    error_table->output_table(out);
   }
 
 

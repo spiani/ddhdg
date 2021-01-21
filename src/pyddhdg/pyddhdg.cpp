@@ -1671,7 +1671,7 @@ namespace pyddhdg
 
 
   template <int dim>
-  void
+  std::string
   NPSolver<dim>::print_convergence_table(
     DealIIFunction<dim> expected_V_solution,
     DealIIFunction<dim> expected_n_solution,
@@ -1679,19 +1679,22 @@ namespace pyddhdg
     const unsigned int  n_cycles,
     const unsigned int  initial_refinements)
   {
+    std::ostringstream stream;
     this->ddhdg_solver->print_convergence_table(
       std::make_shared<Ddhdg::ConvergenceTable>(dim),
       expected_V_solution.get_dealii_function(),
       expected_n_solution.get_dealii_function(),
       expected_p_solution.get_dealii_function(),
       n_cycles,
-      initial_refinements);
+      initial_refinements,
+      stream);
+    return stream.str();
   }
 
 
 
   template <int dim>
-  void
+  std::string
   NPSolver<dim>::print_convergence_table(
     DealIIFunction<dim> expected_V_solution,
     DealIIFunction<dim> expected_n_solution,
@@ -1702,6 +1705,7 @@ namespace pyddhdg
     const unsigned int  n_cycles,
     const unsigned int  initial_refinements)
   {
+    std::ostringstream stream;
     this->ddhdg_solver->print_convergence_table(
       std::make_shared<Ddhdg::ConvergenceTable>(dim),
       expected_V_solution.get_dealii_function(),
@@ -1711,13 +1715,15 @@ namespace pyddhdg
       initial_n_function.get_dealii_function(),
       initial_p_function.get_dealii_function(),
       n_cycles,
-      initial_refinements);
+      initial_refinements,
+      stream);
+    return stream.str();
   }
 
 
 
   template <int dim>
-  void
+  std::string
   NPSolver<dim>::print_convergence_table(const std::string &expected_V_solution,
                                          const std::string &expected_n_solution,
                                          const std::string &expected_p_solution,
@@ -1742,19 +1748,23 @@ namespace pyddhdg
       dealii::FunctionParser<dim>::default_variable_names(),
       expected_p_solution,
       Ddhdg::Constants::constants);
+
+    std::ostringstream stream;
     this->ddhdg_solver->print_convergence_table(
       std::make_shared<Ddhdg::ConvergenceTable>(dim),
       expected_V_solution_f,
       expected_n_solution_f,
       expected_p_solution_f,
       n_cycles,
-      initial_refinements);
+      initial_refinements,
+      stream);
+    return stream.str();
   }
 
 
 
   template <int dim>
-  void
+  std::string
   NPSolver<dim>::print_convergence_table(const std::string &expected_V_solution,
                                          const std::string &expected_n_solution,
                                          const std::string &expected_p_solution,
@@ -1800,6 +1810,8 @@ namespace pyddhdg
       dealii::FunctionParser<dim>::default_variable_names(),
       initial_p_function,
       Ddhdg::Constants::constants);
+
+    std::ostringstream stream;
     this->ddhdg_solver->print_convergence_table(
       std::make_shared<Ddhdg::ConvergenceTable>(dim),
       expected_V_solution_f,
@@ -1809,7 +1821,9 @@ namespace pyddhdg
       initial_n_function_f,
       initial_p_function_f,
       n_cycles,
-      initial_refinements);
+      initial_refinements,
+      stream);
+    return stream.str();
   }
 
 
