@@ -496,7 +496,8 @@ main(int argc, char **argv)
                                  prm.n_starting_point,
                                  prm.p_starting_point,
                                  prm.n_cycles,
-                                 prm.initial_refinements);
+                                 prm.initial_refinements,
+                                 std::cout);
 
   return 0;
 }
