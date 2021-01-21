@@ -527,6 +527,36 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("redimensionalize_quantities") = true)
 #  endif
   .def("print_convergence_table",
+       py::overload_cast<const DealIIFunction<DIM>,
+                         const DealIIFunction<DIM>,
+                         const DealIIFunction<DIM>,
+                         const unsigned int,
+                         const unsigned int>(
+         &NPSolver<DIM>::print_convergence_table),
+       py::arg("expected_v_solution"),
+       py::arg("expected_n_solution"),
+       py::arg("expected_p_solution"),
+       py::arg("n_cycles"),
+       py::arg("initial_refinements") = 0)
+  .def("print_convergence_table",
+       py::overload_cast<const DealIIFunction<DIM>,
+                         const DealIIFunction<DIM>,
+                         const DealIIFunction<DIM>,
+                         const DealIIFunction<DIM>,
+                         const DealIIFunction<DIM>,
+                         const DealIIFunction<DIM>,
+                         const unsigned int,
+                         const unsigned int>(
+         &NPSolver<DIM>::print_convergence_table),
+       py::arg("expected_v_solution"),
+       py::arg("expected_n_solution"),
+       py::arg("expected_p_solution"),
+       py::arg("initial_v_function"),
+       py::arg("initial_n_function"),
+       py::arg("initial_p_function"),
+       py::arg("n_cycles"),
+       py::arg("initial_refinements") = 0)
+  .def("print_convergence_table",
        py::overload_cast<const std::string &,
                          const std::string &,
                          const std::string &,

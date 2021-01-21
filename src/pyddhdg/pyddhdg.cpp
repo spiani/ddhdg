@@ -1672,6 +1672,52 @@ namespace pyddhdg
 
   template <int dim>
   void
+  NPSolver<dim>::print_convergence_table(
+    DealIIFunction<dim> expected_V_solution,
+    DealIIFunction<dim> expected_n_solution,
+    DealIIFunction<dim> expected_p_solution,
+    const unsigned int  n_cycles,
+    const unsigned int  initial_refinements)
+  {
+    this->ddhdg_solver->print_convergence_table(
+      std::make_shared<Ddhdg::ConvergenceTable>(dim),
+      expected_V_solution.get_dealii_function(),
+      expected_n_solution.get_dealii_function(),
+      expected_p_solution.get_dealii_function(),
+      n_cycles,
+      initial_refinements);
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::print_convergence_table(
+    DealIIFunction<dim> expected_V_solution,
+    DealIIFunction<dim> expected_n_solution,
+    DealIIFunction<dim> expected_p_solution,
+    DealIIFunction<dim> initial_V_function,
+    DealIIFunction<dim> initial_n_function,
+    DealIIFunction<dim> initial_p_function,
+    const unsigned int  n_cycles,
+    const unsigned int  initial_refinements)
+  {
+    this->ddhdg_solver->print_convergence_table(
+      std::make_shared<Ddhdg::ConvergenceTable>(dim),
+      expected_V_solution.get_dealii_function(),
+      expected_n_solution.get_dealii_function(),
+      expected_p_solution.get_dealii_function(),
+      initial_V_function.get_dealii_function(),
+      initial_n_function.get_dealii_function(),
+      initial_p_function.get_dealii_function(),
+      n_cycles,
+      initial_refinements);
+  }
+
+
+
+  template <int dim>
+  void
   NPSolver<dim>::print_convergence_table(const std::string &expected_V_solution,
                                          const std::string &expected_n_solution,
                                          const std::string &expected_p_solution,

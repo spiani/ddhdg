@@ -579,6 +579,23 @@ namespace pyddhdg
                    bool               redimensionalize_quantities = true) const;
 
     void
+    print_convergence_table(DealIIFunction<dim> expected_V_solution,
+                            DealIIFunction<dim> expected_n_solution,
+                            DealIIFunction<dim> expected_p_solution,
+                            unsigned int        n_cycles,
+                            unsigned int        initial_refinements = 0);
+
+    void
+    print_convergence_table(DealIIFunction<dim> expected_V_solution,
+                            DealIIFunction<dim> expected_n_solution,
+                            DealIIFunction<dim> expected_p_solution,
+                            DealIIFunction<dim> initial_V_function,
+                            DealIIFunction<dim> initial_n_function,
+                            DealIIFunction<dim> initial_p_function,
+                            unsigned int        n_cycles,
+                            unsigned int        initial_refinements = 0);
+
+    void
     print_convergence_table(const std::string &expected_V_solution,
                             const std::string &expected_n_solution,
                             const std::string &expected_p_solution,
