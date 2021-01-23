@@ -16,7 +16,8 @@ namespace Ddhdg
 
     // The number of the Dirichlet constraints will increase as soon as we found
     // them on the cells; for this reason, right now must be 0
-    this->n_dirichlet_constraints = 0;
+    if (!trace_reconstruct)
+      this->n_dirichlet_constraints = 0;
 
     const QGauss<dim> quadrature_formula(
       this->get_number_of_quadrature_points());
