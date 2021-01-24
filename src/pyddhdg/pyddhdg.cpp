@@ -1175,15 +1175,15 @@ namespace pyddhdg
     double abs_tol =
       (absolute_tol.has_value()) ?
         absolute_tol.value() :
-        this->get_parameters().nonlinear_solver_absolute_tolerance;
+        this->get_parameters().nonlinear_parameters->absolute_tolerance;
     double rel_tol =
       (relative_tol.has_value()) ?
         relative_tol.value() :
-        this->get_parameters().nonlinear_solver_relative_tolerance;
+        this->get_parameters().nonlinear_parameters->relative_tolerance;
     int iterations =
       (max_number_of_iterations.has_value()) ?
         max_number_of_iterations.value() :
-        this->get_parameters().nonlinear_solver_max_number_of_iterations;
+        this->get_parameters().nonlinear_parameters->max_number_of_iterations;
 
     return this->ddhdg_solver->run(abs_tol, rel_tol, iterations);
   }

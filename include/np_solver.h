@@ -40,30 +40,45 @@ namespace Ddhdg
 
   DeclExceptionMsg(InvalidStrategy, "Invalid strategy for trace projection");
 
+  struct NonlinearSolverParameters
+  {
+    explicit NonlinearSolverParameters(double absolute_tolerance       = 1e-10,
+                                       double relative_tolerance       = 1e-10,
+                                       int    max_number_of_iterations = 100,
+                                       double alpha                    = 1.)
+      : absolute_tolerance(absolute_tolerance)
+      , relative_tolerance(relative_tolerance)
+      , max_number_of_iterations(max_number_of_iterations)
+      , alpha(alpha)
+    {}
+
+    double absolute_tolerance;
+    double relative_tolerance;
+    int    max_number_of_iterations;
+    double alpha;
+  };
+
   struct NPSolverParameters
   {
     explicit NPSolverParameters(
-      unsigned int V_degree                                  = 2,
-      unsigned int n_degree                                  = 2,
-      unsigned int p_degree                                  = 2,
-      double       nonlinear_solver_absolute_tolerance       = 1e-10,
-      double       nonlinear_solver_relative_tolerance       = 1e-10,
-      int          nonlinear_solver_max_number_of_iterations = 100,
-      double       V_tau                                     = 1.,
-      double       n_tau                                     = 1.,
-      double       p_tau                                     = 1.,
-      bool         iterative_linear_solver                   = false,
-      bool         multithreading                            = true,
-      DDFluxType   dd_flux_type                              = use_cell,
-      bool         phi_linearize                             = false);
+      unsigned int                               V_degree = 1,
+      unsigned int                               n_degree = 1,
+      unsigned int                               p_degree = 1,
+      std::shared_ptr<NonlinearSolverParameters> nonlinear_parameters =
+        std::make_shared<NonlinearSolverParameters>(),
+      double     V_tau                   = 1.,
+      double     n_tau                   = 1.,
+      double     p_tau                   = 1.,
+      bool       iterative_linear_solver = false,
+      bool       multithreading          = true,
+      DDFluxType dd_flux_type            = use_cell,
+      bool       phi_linearize           = false);
 
     NPSolverParameters(const NPSolverParameters &solver) = default;
 
     const std::map<Component, unsigned int> degree;
 
-    const double nonlinear_solver_absolute_tolerance;
-    const double nonlinear_solver_relative_tolerance;
-    const int    nonlinear_solver_max_number_of_iterations;
+    const std::shared_ptr<NonlinearSolverParameters> nonlinear_parameters;
 
     const std::map<Component, double> tau;
     const bool                        iterative_linear_solver;

@@ -457,14 +457,19 @@ main(int argc, char **argv)
       prm.valence_band_edge_energy);
 
   // Choose the parameters for the solver
+  std::shared_ptr<Ddhdg::NonlinearSolverParameters>
+    nonlinear_solver_parameters =
+      std::make_shared<Ddhdg::NonlinearSolverParameters>(
+        prm.nonlinear_solver_absolute_tolerance,
+        prm.nonlinear_solver_relative_tolerance,
+        prm.nonlinear_solver_max_number_of_iterations);
+
   std::shared_ptr<const Ddhdg::NPSolverParameters> parameters =
     std::make_shared<const Ddhdg::NPSolverParameters>(
       prm.V_degree,
       prm.n_degree,
       prm.p_degree,
-      prm.nonlinear_solver_absolute_tolerance,
-      prm.nonlinear_solver_relative_tolerance,
-      prm.nonlinear_solver_max_number_of_iterations,
+      nonlinear_solver_parameters,
       prm.V_tau,
       prm.n_tau,
       prm.p_tau,

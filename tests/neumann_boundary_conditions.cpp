@@ -12,7 +12,8 @@ class NeumannBCLinearTest
 public:
   NeumannBCLinearTest()
     : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>(
-        get_problem())
+        get_problem(),
+        std::make_shared<Ddhdg::NPSolverParameters>(2, 2, 2))
   {
     this->log_standard_level = Ddhdg::Logging::severity_level::debug;
   };
@@ -203,7 +204,9 @@ class NeumannBCTrigonometricTest
 {
 public:
   NeumannBCTrigonometricTest()
-    : Ddhdg::NPSolver<2, Ddhdg::HomogeneousProblem<2>>(get_problem())
+    : Ddhdg::NPSolver<2, Ddhdg::HomogeneousProblem<2>>(
+        get_problem(),
+        std::make_shared<Ddhdg::NPSolverParameters>(2, 2, 0))
   {
     this->log_standard_level = Ddhdg::Logging::severity_level::debug;
   };

@@ -11,7 +11,8 @@ class LinearPotentialTest
 public:
   LinearPotentialTest()
     : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>(
-        get_problem())
+        get_problem(),
+        std::make_shared<Ddhdg::NPSolverParameters>(2, 2, 2))
   {
     this->log_standard_level = Ddhdg::Logging::severity_level::debug;
   };

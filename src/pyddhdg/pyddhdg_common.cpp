@@ -65,13 +65,28 @@ namespace pyddhdg
           free_when_done); // numpy array references this parent
       });
 
+    py::class_<Ddhdg::NonlinearSolverParameters,
+               std::shared_ptr<Ddhdg::NonlinearSolverParameters>>(
+      m, "NonlinearSolverParameters")
+      .def(py::init<const double, const double, const int, const double>(),
+           py::arg("abs_tolerance")            = 1e-9,
+           py::arg("rel_tolerance")            = 1e-9,
+           py::arg("max_number_of_iterations") = 100,
+           py::arg("alpha")                    = 1.)
+      .def_readwrite("abs_tolerance",
+                     &Ddhdg::NonlinearSolverParameters::absolute_tolerance)
+      .def_readwrite("rel_tolerance",
+                     &Ddhdg::NonlinearSolverParameters::relative_tolerance)
+      .def_readwrite(
+        "max_number_of_iterations",
+        &Ddhdg::NonlinearSolverParameters::max_number_of_iterations)
+      .def_readwrite("alpha", &Ddhdg::NonlinearSolverParameters::alpha);
+
     py::class_<Ddhdg::NPSolverParameters>(m, "NPSolverParameters")
       .def(py::init<const unsigned int,
                     const unsigned int,
                     const unsigned int,
-                    const double,
-                    const double,
-                    const int,
+                    const std::shared_ptr<Ddhdg::NonlinearSolverParameters>,
                     const double,
                     const double,
                     const double,
@@ -79,32 +94,24 @@ namespace pyddhdg
                     const bool,
                     const Ddhdg::DDFluxType,
                     const bool>(),
-           py::arg("v_degree")                 = 1,
-           py::arg("n_degree")                 = 1,
-           py::arg("p_degree")                 = 1,
-           py::arg("abs_tolerance")            = 1e-9,
-           py::arg("rel_tolerance")            = 1e-9,
-           py::arg("max_number_of_iterations") = 100,
-           py::arg("v_tau")                    = 1.,
-           py::arg("n_tau")                    = 1.,
-           py::arg("p_tau")                    = 1.,
-           py::arg("iterative_linear_solver")  = false,
-           py::arg("multithreading")           = true,
-           py::arg("dd_flux_type")             = Ddhdg::DDFluxType::use_cell,
-           py::arg("linearize_on_phi")         = false)
+           py::arg("v_degree") = 1,
+           py::arg("n_degree") = 1,
+           py::arg("p_degree") = 1,
+           py::arg("nonlinear_parameters") =
+             std::make_shared<Ddhdg::NonlinearSolverParameters>(),
+           py::arg("v_tau")                   = 1.,
+           py::arg("n_tau")                   = 1.,
+           py::arg("p_tau")                   = 1.,
+           py::arg("iterative_linear_solver") = false,
+           py::arg("multithreading")          = true,
+           py::arg("dd_flux_type")            = Ddhdg::DDFluxType::use_cell,
+           py::arg("linearize_on_phi")        = false)
       .def("degree",
            [](const Ddhdg::NPSolverParameters &a, const Ddhdg::Component c) {
              return a.degree.at(c);
            })
-      .def_readonly(
-        "abs_tolerance",
-        &Ddhdg::NPSolverParameters::nonlinear_solver_absolute_tolerance)
-      .def_readonly(
-        "rel_tolerance",
-        &Ddhdg::NPSolverParameters::nonlinear_solver_relative_tolerance)
-      .def_readonly(
-        "max_number_of_iterations",
-        &Ddhdg::NPSolverParameters::nonlinear_solver_max_number_of_iterations)
+      .def_readonly("nonlinear_parameters",
+                    &Ddhdg::NPSolverParameters::nonlinear_parameters)
       .def_readonly("iterative_linear_solver",
                     &Ddhdg::NPSolverParameters::iterative_linear_solver)
       .def_readonly("multithreading",

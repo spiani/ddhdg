@@ -412,9 +412,9 @@ namespace Ddhdg
     bool generate_first_guess)
   {
     return this->compute_thermodynamic_equilibrium(
-      this->parameters->nonlinear_solver_absolute_tolerance,
-      this->parameters->nonlinear_solver_relative_tolerance,
-      this->parameters->nonlinear_solver_max_number_of_iterations,
+      this->parameters->nonlinear_parameters->absolute_tolerance,
+      this->parameters->nonlinear_parameters->relative_tolerance,
+      this->parameters->nonlinear_parameters->max_number_of_iterations,
       generate_first_guess);
   }
 

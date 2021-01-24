@@ -29,26 +29,21 @@
 namespace Ddhdg
 {
   NPSolverParameters::NPSolverParameters(
-    const unsigned int V_degree,
-    const unsigned int n_degree,
-    const unsigned int p_degree,
-    const double       nonlinear_solver_absolute_tolerance,
-    const double       nonlinear_solver_relative_tolerance,
-    const int          nonlinear_solver_max_number_of_iterations,
-    const double       V_tau,
-    const double       n_tau,
-    const double       p_tau,
-    const bool         iterative_linear_solver,
-    const bool         multithreading,
-    const DDFluxType   dd_flux_type,
-    const bool         phi_linearize)
+    const unsigned int                               V_degree,
+    const unsigned int                               n_degree,
+    const unsigned int                               p_degree,
+    const std::shared_ptr<NonlinearSolverParameters> nonlinear_parameters,
+    const double                                     V_tau,
+    const double                                     n_tau,
+    const double                                     p_tau,
+    const bool                                       iterative_linear_solver,
+    const bool                                       multithreading,
+    const DDFluxType                                 dd_flux_type,
+    const bool                                       phi_linearize)
     : degree{{Component::V, V_degree},
              {Component::n, n_degree},
              {Component::p, p_degree}}
-    , nonlinear_solver_absolute_tolerance(nonlinear_solver_absolute_tolerance)
-    , nonlinear_solver_relative_tolerance(nonlinear_solver_relative_tolerance)
-    , nonlinear_solver_max_number_of_iterations(
-        nonlinear_solver_max_number_of_iterations)
+    , nonlinear_parameters(nonlinear_parameters)
     , tau{{Component::V, V_tau}, {Component::n, n_tau}, {Component::p, p_tau}}
     , iterative_linear_solver(iterative_linear_solver)
     , multithreading(multithreading)
@@ -1556,8 +1551,8 @@ namespace Ddhdg
           "Difference in linfty norm compared to the previous step: %s",
           update_norm);
 
-        this->update_trace *= 1.;
-        this->update_cell *= 1.;
+        this->update_trace *= this->parameters->nonlinear_parameters->alpha;
+        this->update_cell *= this->parameters->nonlinear_parameters->alpha;
 
         this->current_solution_trace += this->update_trace;
         this->current_solution_cell += this->update_cell;
@@ -1606,9 +1601,9 @@ namespace Ddhdg
   NPSolver<dim, ProblemType>::run()
   {
     return this->run(
-      this->parameters->nonlinear_solver_absolute_tolerance,
-      this->parameters->nonlinear_solver_relative_tolerance,
-      this->parameters->nonlinear_solver_max_number_of_iterations);
+      this->parameters->nonlinear_parameters->absolute_tolerance,
+      this->parameters->nonlinear_parameters->relative_tolerance,
+      this->parameters->nonlinear_parameters->max_number_of_iterations);
   }
 
 
