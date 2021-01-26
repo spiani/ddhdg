@@ -553,7 +553,8 @@ namespace Ddhdg
     dealii::Vector<float> &      error,
     const dealii::ComponentMask &cmp_mask) const
   {
-    auto quadrature = QGauss<dim - 1>(this->get_number_of_quadrature_points());
+    auto quadrature =
+      QGauss<dim - 1>(2 * this->get_number_of_quadrature_points() + 1);
 
     std::map<dealii::types::boundary_id, const Function<dim> *> neumann_bc;
 
