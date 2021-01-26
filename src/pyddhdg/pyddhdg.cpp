@@ -1250,6 +1250,18 @@ namespace pyddhdg
 
   template <int dim>
   ErrorPerCell
+  NPSolver<dim>::estimate_error_per_cell(const Ddhdg::Displacement d) const
+  {
+    ErrorPerCell error_per_cell(this->get_n_active_cells());
+    this->ddhdg_solver->estimate_error_per_cell(d,
+                                                *(error_per_cell.data_vector));
+    return error_per_cell;
+  }
+
+
+
+  template <int dim>
+  ErrorPerCell
   NPSolver<dim>::estimate_l2_error_per_cell(
     const DealIIFunction<dim> expected_solution,
     const Ddhdg::Component    c) const

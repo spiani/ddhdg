@@ -350,6 +350,11 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
          &NPSolver<DIM>::estimate_error_per_cell,
          py::const_),
        py::arg("component"))
+  .def("estimate_error_per_cell",
+       py::overload_cast<const Ddhdg::Displacement>(
+         &NPSolver<DIM>::estimate_error_per_cell,
+         py::const_),
+       py::arg("displacement"))
   .def("estimate_l2_error_per_cell",
        py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_l2_error_per_cell,

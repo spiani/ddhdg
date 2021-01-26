@@ -466,6 +466,9 @@ namespace pyddhdg
     estimate_error_per_cell(Ddhdg::Component c) const;
 
     [[nodiscard]] ErrorPerCell
+    estimate_error_per_cell(Ddhdg::Displacement d) const;
+
+    [[nodiscard]] ErrorPerCell
     estimate_l2_error_per_cell(DealIIFunction<dim> expected_solution,
                                Ddhdg::Component    c) const;
 
