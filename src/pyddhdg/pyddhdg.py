@@ -123,6 +123,7 @@ DDFluxType = pyddhdg_common.DDFluxType
 
 # Now, we also import the common classes from the pyddhdg_common module
 ErrorPerCell = pyddhdg_common.ErrorPerCell
+NonlinearSolverParameters = pyddhdg_common.NonlinearSolverParameters
 NPSolverParameters = pyddhdg_common.NPSolverParameters
 Adimensionalizer = pyddhdg_common.Adimensionalizer
 NonlinearIterationResults = pyddhdg_common.NonlinearIterationResults
@@ -232,7 +233,7 @@ def _get_points_to_evaluate(all_cell_vertices, degree, to_be_interp=True):
 
 
 # Before initializing the template classes, we introduce the methods that will
-# be binded to some of them
+# be bound to some of them
 def _plot_solution(solver, component, plot_grid=False, ax=None, colors=None,
                    linewidth=1, grid_color=(.8, .8, .8)):
     if not MATPLOTLIB_IMPORTED:
@@ -359,6 +360,114 @@ def _plot_solution(solver, component, plot_grid=False, ax=None, colors=None,
             y_previous_cell = y_plot_points[-1]
 
 
+# Before initializing the template classes, we introduce the methods that will
+# be bound to some of them
+def _plot_value_per_cell(solver, value_per_cell, ax=None, colors=None,
+                         linewidth=1):
+    if not MATPLOTLIB_IMPORTED:
+        raise ModuleNotFoundError('This method requires matplotlib')
+
+    dim = solver.dimension
+    if dim != 1:
+        raise ValueError('No plot available in {}D'.format(dim))
+
+    if ax is None:
+        ax = plt.gca()
+    if colors is None:
+        colors = CMAP
+
+    cells = solver.n_active_cells
+    all_cell_vertices = solver.get_cell_vertices()
+
+    domain_x_min = np.min(all_cell_vertices)
+    domain_x_max = np.max(all_cell_vertices)
+    domain_range = domain_x_max - domain_x_min
+
+    cell_left_boundaries = all_cell_vertices[:, 0, :].flatten()
+    cell_order = np.argsort(cell_left_boundaries)
+
+    for cell in range(cells):
+        cell_vertices = all_cell_vertices[cell_order[cell]]
+        cell_x_min = np.min(cell_vertices)
+        cell_x_max = np.max(cell_vertices)
+        v = value_per_cell[cell_order[cell]]
+
+        # Choose the color
+        if isinstance(colors, Colormap):
+            if cells == 1:
+                color = CMAP(0.5)
+            else:
+                cell_mean = (cell_x_max + cell_x_min) * 0.5
+                color = CMAP((cell_mean - domain_x_min) / domain_range)
+        elif isinstance(colors, list) or isinstance(colors, tuple):
+            color = colors[cell % len(colors)]
+        else:
+            color = colors
+
+        ax.plot(
+            (cell_x_min, cell_x_max),
+            (v, v),
+            color=color,
+            linewidth=linewidth
+        )
+
+
+def _plot_error_per_cell(solver, component, ax=None, colors=None, linewidth=1):
+    v_per_cell = solver.estimate_error_per_cell(component).as_numpy_array()
+    return _plot_value_per_cell(
+        solver,
+        v_per_cell,
+        ax=ax,
+        colors=colors,
+        linewidth=linewidth
+    )
+
+
+def _plot_l2_error_per_cell(solver, expected_solution, component, ax=None,
+                            colors=None, linewidth=1):
+    v_per_cell = solver.estimate_l2_error_per_cell(
+        expected_solution,
+        component
+    )
+    return _plot_value_per_cell(
+        solver,
+        v_per_cell.as_numpy_array(),
+        ax=ax,
+        colors=colors,
+        linewidth=linewidth
+    )
+
+
+def _plot_h1_error_per_cell(solver, expected_solution, component, ax=None,
+                            colors=None, linewidth=1):
+    v_per_cell = solver.estimate_h1_error_per_cell(
+        expected_solution,
+        component
+    )
+    return _plot_value_per_cell(
+        solver,
+        v_per_cell.as_numpy_array(),
+        ax=ax,
+        colors=colors,
+        linewidth=linewidth
+    )
+
+
+def _plot_linfty_error_per_cell(solver, expected_solution, component, ax=None,
+                                colors=None, linewidth=1):
+    v_per_cell = solver.estimate_linfty_error_per_cell(
+        expected_solution,
+        component
+    )
+    return _plot_value_per_cell(
+        solver,
+        v_per_cell.as_numpy_array(),
+        ax=ax,
+        colors=colors,
+        linewidth=linewidth
+    )
+
+
 # These are the classes that are templatized over dimension
 HomogeneousPermittivity = TemplateClass('HomogeneousPermittivity')
 HomogeneousElectronMobility = TemplateClass('HomogeneousElectronMobility')
@@ -374,4 +483,12 @@ SuperimposedRecombinationTerm = TemplateClass('SuperimposedRecombinationTerm')
 BoundaryConditionHandler = TemplateClass('BoundaryConditionHandler')
 Point = TemplateClass('Point')
 Problem = TemplateClass('Problem')
-NPSolver = TemplateClass('NPSolver', (_plot_solution,))
+NPSolver = TemplateClass(
+    'NPSolver', (
+        _plot_solution,
+        _plot_error_per_cell,
+        _plot_l2_error_per_cell,
+        _plot_linfty_error_per_cell,
+        _plot_h1_error_per_cell
+    )
+)
