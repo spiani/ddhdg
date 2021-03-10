@@ -8,8 +8,9 @@ internal_tests/*
 */*/__pycache__/*
 clean_results.sh
 load_environment.sh
-doc/hdg_formulation/formulation.aux
-doc/hdg_formulation/formulation.log
-doc/hdg_formulation/formulation.tex.backup
+doc/*/*.aux
+doc/*/*.log
+doc/*/*.pdf
+doc/*/*.tex.backup
 .idea
 *.vtk

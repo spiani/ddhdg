@@ -1,0 +1,399 @@
+\documentclass[a4paper,11pt, draft]{article}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+
+\usepackage{mathtools}
+
+%opening
+\title{A paper}
+\author{Some authors}
+
+\setlength{\marginparwidth}{2.5cm}
+\usepackage{todonotes}
+
+
+\newtheorem{prop}{Proposition}
+\newtheorem{lemma}{Lemma}[prop]
+
+\newcommand{\diver}[1]{\ensuremath{\nabla \cdot #1}}
+\newcommand{\closure}[1]{\ensuremath{\overline{#1}}}
+\newcommand{\interior}[1]{\ensuremath{{\kern0pt#1}^{\mathrm{o}}}}
+\newcommand{\Lspace}[1]{\ensuremath{L^{#1}}}
+\newcommand{\Def}{\stackrel{\mathrm{def}}{=}}
+\newcommand{\dualt}{\ensuremath{\mathcal{T}^d}}
+
+% Enable \reallywidehat command
+\usepackage{scalerel,stackengine}
+\stackMath
+\newcommand\reallywidehat[1]{%
+\savestack{\tmpbox}{\stretchto{%
+  \scaleto{%
+    \scalerel*[\widthof{\ensuremath{#1}}]{\kern-.6pt\bigwedge\kern-.6pt}%
+    {\rule[-\textheight/2]{1ex}{\textheight}}%WIDTH-LIMITED BIG WEDGE
+  }{\textheight}%
+}{0.5ex}}%
+\stackon[1pt]{#1}{\tmpbox}%
+}
+\parskip 1ex
+%
+
+\begin{document}
+
+\section{Description of the problem}
+
+
+Let $\Omega \subset \mathbb{R}^n$ be a open bounded Lipschitz domain. Let $E \in 
+[L^{\infty}(\Omega)]^n$ and $D \in L^{\infty}(\Omega)$ such that exists a constant
+$D_0 < 0 $ such that for every $x \in \Omega$, $D(x) \leq D_0$. Let also $f \in H^1(\Omega)$.
+
+We want to solve the following problem: find a function $n$ such that
+\[
+ \begin{cases}
+  \nabla \cdot \left(n E + D \nabla n \right) = f & \textrm{on } \Omega\\
+  n = n_0 & \textrm{on } \partial \Omega
+ \end{cases}
+\]
+
+
+\section{HDG method}
+We propose two different weak formulations of the previous problem. In the first one, we define
+\[ W \Def - \nabla n \]
+and, therefore, the previous problem becomes
+\begin{equation} \label{eq:problem1_strong}
+ \begin{cases}
+  W + \nabla n = 0 & \textrm{on } \Omega \\
+  \nabla \cdot \left(n E - D W \right) = f & \textrm{on } \Omega\\
+  n = n_0 & \textrm{on } \partial \Omega
+ \end{cases}
+\end{equation}
+
+In the second one, instead, we define
+\[ J \Def n E + D \nabla n \]
+obtaining the following problem
+\begin{equation}\label{eq:problem2_strong}
+ \begin{cases}
+  J - n E - D \nabla n = 0 & \textrm{on } \Omega \\
+  \nabla \cdot J = f & \textrm{on } \Omega\\
+  n = n_0 & \textrm{on } \partial \Omega
+ \end{cases}
+\end{equation}
+
+The problem~\ref{eq:problem1_strong} can be rewritten in a weak form as: find a function $n \in
+H^1(\Omega)$ and a function $W \in [H^1(\Omega)]^n$ such that for every function $z \in 
+H^1_0(\Omega)$ and for every function $Q \in [H^1(\Omega)]^n$
+\begin{equation} \label{eq:problem1_weak}
+ \begin{cases}
+  (W, Q) - (n, \nabla \cdot Q) + \left<n, Q \cdot \nu \right>_{\partial \Omega} = 0 \\
+  - (n E, \nabla z) + \left<n E \cdot \nu, z \right> + (D W, \nabla z) - \left<D W \cdot \nu, 
+z\right> = (f, z) \\
+  n|_{\partial \Omega} = n_0 |_{\partial \Omega}
+ \end{cases}
+\end{equation}
+
+In the very same way, the problem~\ref{eq:problem2_strong} can be rewritten as: find a function $n 
+\in H^1(\Omega)$ and a function $J \in [H^1(\Omega)]^n$ such that for every function \mbox{$z \in 
+H^1_0(\Omega)$} and for every function $Q \in [H^1(\Omega)]^n$
+\begin{equation} \label{eq:problem2_weak}
+\begin{cases}
+ (J, Q) - (n E, Q) + (n, \nabla \cdot (D Q)) - \left<n, DQ \cdot \nu \right> = 0 \\
+ - (J, \nabla z) + \left<J \cdot \nu, z \right> = (f, z) \\
+   n|_{\partial \Omega} = n_0 |_{\partial \Omega}
+\end{cases}
+\end{equation}
+
+
+Let $\mathcal{T}$ be a triangulation of $\Omega$ and let $\Xi$ be the skeleton of the triangulation 
+$\mathcal{T}$, obtained by the union of the boundary of the cells of $\mathcal{T}$. We will also 
+define the set $\Xi_0$ as
+\[ \Xi_0 \Def \Xi \setminus \partial \Omega \]
+In order of 
+apply the HDG method to the previous problems, we define an auxiliary function 
+\[
+  \widehat{n} \colon \Xi \longrightarrow \mathbb{R}
+\]
+and we apply the weak formulation on the broken space obtained from the disjoint union of the cells.
+Therefore, for the first formulation, we get the following problem: find $n \in H^1(\mathcal{T})$, 
+$W \in [H^1(\mathcal{T})]^n$ and $\widehat{n} \in L^2(\Xi)$ such that for every function $z \in 
+H^1(\mathcal{T})$, $Q \in [H^1(\mathcal{T})]^n$ and $\mu \in L^2(\Xi_0)$
+\begin{equation}\label{eq:problem1_hdg}
+ \begin{cases}
+   (W, Q) - (n, \nabla \cdot Q) + \left<\widehat{n}, Q \cdot \nu \right> = 0 \\
+  - (n E, \nabla z) + (D W, \nabla z) + \left<(n E - D W) \cdot \nu, z\right>^{\wedge} = (f, z) \\
+  \left<(n E - D W) \cdot \nu, \mu \right>^{\wedge} = 0 \\
+  \widehat{n}|_{\partial \Omega} = n_0 |_{\partial \Omega}
+ \end{cases}
+\end{equation}
+where the third equation enforces the (weak) continuity of the normal fluxes. The term
+\[ \left<(n E - D W) \cdot \nu, z\right>^{\wedge} \]
+represents the numerical flux and is defined as
+\[ \left<(n E - D W) \cdot \nu, z\right>^{\wedge} \Def \left<nE \cdot \nu , z\right> - \left< 
+D W \cdot \nu, z\right> - \tau \left< n - \widehat{n}, z\right> \]
+
+For what concerns the formulation~\ref{eq:problem2_weak}, with the same technique we obtain that 
+the system of equations we need to solve are
+\begin{equation}\label{eq:problem2_hdg}
+\begin{cases}
+ (J, Q) - (n E, Q) + (n, \nabla \cdot (D Q)) - \left<\widehat{n}, DQ \cdot \nu \right> = 0 \\
+ - (J, \nabla z) + \left<J \cdot \nu, z \right>^{\wedge} = (f, z) \\
+   \left<J \cdot \nu, \mu \right>^{\wedge} = 0 \\
+   \widehat{n}|_{\partial \Omega} = n_0 |_{\partial \Omega}
+\end{cases} 
+\end{equation}
+where we define
+\[
+  \left<J \cdot \nu, z \right>^{\wedge} \Def \left<J \cdot \nu, z \right> + \tau \left<n - 
+\widehat{n}, z\right>
+\]
+
+\section{A simplified case}
+In this section, we will assume the hypothesis that $n = 1$ and that, therefore, $\Omega$ is a 
+segment of $\mathbb{R}$.
+$T_i$ will be the $i$--th element of the triangulation $\mathcal{T}$ of $\Omega$. The length of 
+the element $T_i$ will be indicated with $h_i$.
+
+Finally, We will also suppose that $D$, $E$ and $f$ are constant functions.
+
+
+\begin{prop}
+If we approximate the space of the functions of the problem~\ref{eq:problem1_hdg} and of the 
+problem~\ref{eq:problem2_hdg} with the space of the functions that are constant on each element 
+(i.e. we use polynomials of degree 0), the two formulations are equivalent.
+\end{prop}
+
+\begin{proof}
+ Let us suppose that $\mathcal{T}$ is made of $n$ elements, $T_1, \ldots, T_n$. We will use $n_k$ 
+to define the value that the unknown function $n$ assumes on the element $T_k$, and, in the same 
+way, we also define $W_k$ and $J_k$.
+
+Moreover, we will use $F_k$ to refer to the face (the point, in this case) on the left of the 
+element $T_i$, while $F_{k+1}$ is the face to the right. Finally, $\widehat{n}_k$ is the value of 
+the function $\widehat{n}$ on the face $F_k$.
+
+Therefore, the first equation of system~\ref{eq:problem1_hdg} becomes
+\[ h_k W_k - \widehat{n}_k + \widehat{n}_{k + 1} = 0 \]
+for every $k$ in $\{1, \ldots, n\}$. For the second equation, all the terms on the left hand side 
+disappear beside the one that are multiplied by $\tau$ (because the gradient of a constant is 0 and 
+because of the fact that multiply by the normal vector changes the signs). Then we have
+\[ - \tau (2 n_k - \widehat{n}_{k+1} - \widehat{n}_k) = h_k f \]
+Finally, the last equation becomes
+\[
+  E n_{k} - E n_{k - 1} - D W_{k} + D W_{k - 1} - \tau (n_k + n_{k - 1} - 2\widehat{n}_k) = 0
+\]
+for every $k$ in $\{2, \ldots, n \}$, while $\widehat{n}_1 = n_0(0)$ and $\widehat{n}_{k + 1} = 
+n_0(1)$ because of the boundary conditions.
+
+Putting everything together, we obtain
+\begin{equation}\label{eq:problem1_system}
+ \begin{cases}
+  \displaystyle h_k W_k - \widehat{n}_k + \widehat{n}_{k + 1} = 0  & \forall k \in \{1, 
+\ldots, n\} \\
+  \displaystyle -\tau (2 n_k - \widehat{n}_{k+1} - \widehat{n}_k) = h_k f & \forall k \in 
+\{1, \ldots, n\} \\
+  E (n_{k} \! - \! n_{k - 1}) - D (W_{k} \! - \! W_{k - 1}) - \tau (n_k \! +\! n_{k - 1} \! - \! 
+2\widehat{n}_k) = 0 & \forall k \in \{2, \ldots, n\} \\
+ \widehat{n}_1 = n_0(0) \\
+ \widehat{n}_{k+1} = n_0(1)
+ \end{cases}
+\end{equation}
+
+In the very same way, we can do the same for the the equations of the system~\ref{eq:problem2_hdg}, 
+obtaining
+\begin{equation}\label{eq:problem2_system}
+ \begin{cases}
+  h_k J_k - E h_k n_k - D \widehat{n}_{k + 1} + D \widehat{n}_{k} = 0 & \forall k \in \{1,\ldots, 
+n\} \\
+  \tau (2 n_k - \widehat{n}_{k + 1} - \widehat{n}_{k}) = h_k f & \forall k \in \{1,\ldots, n\} \\
+  J_k - J_{k - 1} + \tau (n_k  + n_{k - 1} - 2\widehat{n}_k ) = 0 & \forall k \in \{2,\ldots, n\} \\
+ \widehat{n}_1 = n_0(0) \\
+ \widehat{n}_{k+1} = n_0(1)
+ \end{cases}
+\end{equation}
+
+As a first step we want to prove that the system~\ref{eq:problem1_system} and 
+\ref{eq:problem2_system} have the same solution for what concerns the value of $\widehat{n}$. To to 
+that, it is enough to replace the values of the first and second equation into the third one, 
+obtaining for the system~\ref{eq:problem1_system}
+
+\begin{equation}\label{eq:hdg_condensed_system}
+\begin{multlined}[b][.80\textwidth]
+ \left(\frac{E \! - \! \tau}{2} - \frac{D}{h_{k - 1}}\right)\widehat{n}_{k - 1} + \left(\tau + 
+\frac{D}{h_{k}} + \frac{D}{h_{k - 1}}\right) \widehat{n}_{k} + \left(\frac{-\!E \! - \! 
+\tau}{2} - \frac{D}{h_{k}} \right) \widehat{n}_{k + 1} = \\[10pt]
+ \frac{Ef}{2\tau}(h_{k} - h_{k - 1}) - \frac{h_{k} + h_{k-1}}{2}f
+\end{multlined}
+\end{equation}
+
+If we perform the analogous operation for the system\ref{eq:problem2_system}, we get the same 
+equation (beside the sign) and, therefore, the values obtained for $\widehat{n}$ are the same. 
+\todo{For some strange reason, I get the opposite sign for the right hand side, but this can not
+be true. I need to double check this!}
+
+Finally, the values for $n$ are also the same, because the second equation of 
+system~\ref{eq:problem1_system} completely defines the values of $n_k$ once $\widehat{n}_{j}$ is 
+known for every $j$.
+\end{proof}
+
+\section{The finite volume method}
+Another possibility to solve our problem is given by the standard volume method. In this case, we 
+consider a vertex centered grid so that the centers of the cells of this new triangulation 
+\dualt are the faces of the triangulation $\mathcal{T}$.
+
+This also means that the distance between the centers of the cell $S_k$ of \dualt and of the cell 
+$S_{k+1}$ is $h_{k}$.
+
+We will call $u_k$ the approximation values of the function $n$ that the 
+finite volume method provides for each cell $S_k$ (to avoid confusion with $n_k$, the values 
+generated by the HDG methods on the cell $T_k$).
+
+In the classical version of the method, we approximate the flux between two cells (let's say 
+from $S_k$ to $S_{k+1}$) with
+\[ \mathcal{F}_{k} \Def  D \frac{u_{k + 1} - u_k}{h_k} + E \left( \frac{1}{2} u_{k+1} + \frac{1}{2} 
+u_k \right) \]
+Of course, if you want to consider the flux from $S_{k+1}$ to $S_k$, you will need to change the 
+sign.
+
+This generates a system of equations like the following
+\begin{equation}\label{eq:standard_fvm}
+  \left(\frac{D}{h_{k - 1}} - \frac{E}{2} \right) {u_{k - 1}} 
+    - {\left(\frac{D}{h_{k - 1}} + \frac{D}{h_{k}}\right)} u_{k}
+    + \left(\frac{D}{h_{k}} + \frac{E}{2} \right) u_{k + 1}
+    = \frac{h_{k - 1} + h_{k}}{2} f 
+\end{equation}
+
+\begin{prop} \label{hdg_vs_fvm}
+ If the elements of the triangulation $\mathcal{T}$ have the same length, then the values that 
+the HDG method returns if $\tau = 0$ for the $\widehat{n}$ function on the faces of $\mathcal{T}$ 
+are the same that the finite volume method returns on the cells of \dualt.
+\end{prop}
+
+\begin{proof}
+ Let us suppose that 
+ \[ h_1 = h_2 = \cdots = h_k = h \]
+ Then the equations of the system of the finite volume methods become
+ \[
+  \left(\frac{D}{h} - \frac{E}{2} \right) {u_{k - 1}} 
+    - \frac{2D}{h} u_{k}
+    + \left(\frac{D}{h} + \frac{E}{2} \right) u_{k + 1}
+    = h f 
+ \]
+ In the same way, if we take equation~\ref{eq:hdg_condensed_system} and we perform substitute $h_j$ 
+with $h$ (for every $j$) and $\tau$ with 0, we get the same equation (with an opposite sign); this 
+concludes the proof.
+\end{proof}
+
+\section{The Scharfetter--Gummel scheme}
+The Scharfetter--Gummel scheme offers a way to stabilize the previous finite volume method. Indeed, 
+it modifies the fluxes so that
+\[ \widetilde{\mathcal{F}_{k}} \Def \frac{D}{h_k} \left(\! B\left(\frac{E h_k}{D}\right) u_{k+1} - 
+B\left(-\frac{E h_k}{D}\right) u_k \right)  \]
+where $B(x)$ is the Bernulli function defined as
+\[ B(x) \Def \frac{x}{\mathrm{e}^x - 1} \]
+Applying this flux, we get a system made of the following equations
+%\[
+%\begin{multlined}[b]
+%  \frac{E}{\mathrm{e}^{\left(\frac{E h_{k - 1}}{D}\right)} \! - \! 1} u_{k - 1}
+% \! + \! \! \left( \frac{E}{\mathrm{e}^{\left(\frac{- E h_{k - 1}}{D}\right)} \! -\! 1}
+%    \! - \! \frac{E}{\mathrm{e}^{\left(\frac{E h_{k}}{D}\right)}\! -\! 1} \right)\! u_k
+% \! - \! \frac{E}{\mathrm{e}^{\left(\frac{- E h_{k}}{D}\right)} \!-\! 1} u_{k + 1} = \\
+% \frac{h_{k - 1} + h_{k}}{2} f 
+%\end{multlined}
+%\]
+%
+\begin{equation}\label{eq:sg_system}
+\begin{multlined}[.98\displaywidth]
+ \frac{D}{h_{k - 1}} B\!\left(\! \frac{E h_{k-1}}{D} \!\right) u_{k-1} - \left[ \! \frac{D}{h_{k - 
+1}} B\!\left(\! \frac{- E h_{k-1}}{D} \!\right) + \frac{D}{h_k} 
+B\!\left(\! \frac{E h_k}{D} \!\right) \! \right] u_k \\[10pt] + \frac{D}{h_k} B\!\left(\! \frac{- E 
+h_k}{D} \!\right) u_{k + 1} = \frac{h_{k - 1} + h_{k}}{2} f
+\end{multlined}
+\end{equation}
+
+
+Before going on, we want to show two basic properties of the Bernulli function that we will use 
+later
+
+\begin{lemma} \label{bernulli_inverse}
+ For every $x \in \mathbb{R}$,
+ \[ B(x) - B(-x) = x \]
+\end{lemma}
+\begin{proof}
+ Indeed
+ \[
+  \begin{split}
+   B(x) - B(-x) & = \frac{x}{\mathrm{e}^x - 1} - \frac{x}{1 - \mathrm{e}^{-x}} \\
+                & = \frac{x - x \mathrm{e}^{x}}{\mathrm{e}^x - 1} \\
+                & = -x
+  \end{split}
+ \]
+\end{proof}
+
+.
+\begin{lemma}\label{bernulli_even}
+ The function
+ \[ f(x) \Def 2 B(x) + x \]
+ is an even function.
+\end{lemma}
+
+\begin{proof}
+Applying the lemma~\ref{bernulli_inverse}, we have
+\[ f(x) = 2B(x) - B(x) + B(-x) = B(x) + B(-x)\]
+and now the thesis is trivial.
+\end{proof}
+
+As we have seen in the proposition~\ref{hdg_vs_fvm}, choosing wisely the value of $\tau$, we can 
+obtain this method using the HDG formulation (at least, in 1D and for uniform grids). 
+\begin{prop}\label{hdg_vs_sg}
+If the elements of the triangulation $\mathcal{T}$ have the same length $h$, then there exists 
+a particular value of $\tau$
+\[ \tau_0 \Def \frac{D}{h}\left[2B\left(\!\frac{Eh}{D}\!\right) + \frac{Eh}{D} - 2 \right] \]
+such that the values that the HDG method returns if $\tau = \tau_0$ for the 
+$\widehat{n}$ function on the faces of $\mathcal{T}$ are the same that the finite volume method 
+ with the Scharfetter--Gummel scheme returns on the cells of \dualt.
+
+\end{prop}
+
+\begin{proof}
+ Let us consider the equation~\ref{eq:hdg_condensed_system} and, in particular, the coefficient of 
+$\widehat{n}_{k-1}$ that, when $h_j = h$ for every $j$, becomes
+\[ \frac{E \! - \! \tau}{2} - \frac{D}{h} \]
+If we replace $\tau$ with $\tau_0$, we obtain
+\[ \frac{E}{2} - \frac{D}{h} B\left(\! \frac{Eh}{D}\!\right) + \frac{E}{2} + \frac{D}{h} - 
+\frac{D}{h} = - \frac{D}{h} B\left(\! \frac{Eh}{D}\!\right) \]
+which is, beside the sign, the coefficient of $u_{k-1}$ in the equation~\ref{eq:sg_system}.
+In the very same way, the coefficient of $\widehat{n}_k$
+\[ - \left( \tau + \frac{2D}{h} \right)\]
+becomes
+\begin{equation}\label{eq:hdg_coeff} \frac{D}{h}\left[2B\left(\!\frac{Eh}{D}\!\right) + 
+\frac{Eh}{D} \right] \end{equation}
+The coefficient of $u_k$ in the equation~\ref{eq:sg_system} instead is
+\[ - \frac{D}{h}\left[B\left(\!\frac{-Eh}{D} \!\right) + B\left(\!\frac{Eh}{D} \!\right) \right]\]
+which is equal to the coefficient~\ref{eq:hdg_coeff} (beside the sign) because of the 
+lemma~\ref{bernulli_inverse}.
+
+Finally, the last coefficient of the left hand side of the equation~\ref{eq:hdg_condensed_system} is
+\[ \left(\frac{E - \tau}{2} - \frac{D}{h} \right)\]
+that becomes
+\[  -E - \frac{D}{h}B\left(\! \frac{Eh}{D}\!\right)\]
+and that can be rewritten as
+\[ - \frac{D}{h} \left[ \frac{Eh}{D} + B\left(\! \frac{Eh}{D} \! \right)\right]\]
+applying the lemma~\ref{bernulli_inverse} we obtain the opposite of the coefficient of $u_{k + 1}$ 
+in the equation~\ref{eq:sg_system}.
+
+Finally, the right hand side of both the equations does not depend on $\tau$ when the elements have 
+the same length. Therefore, it is easy to check that they are opposite of each other.
+\end{proof}
+
+\begin{prop}
+The value of $\tau_0$ is an even function respect to $E$.
+\end{prop}
+\begin{proof}
+ The proof follows directly from lemma~\ref{bernulli_even}.
+\end{proof}
+
+
+
+
+
+\end{document}
