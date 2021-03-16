@@ -4,6 +4,7 @@
 
 #include <deal.II/grid/grid_generator.h>
 
+#include <dealii-python-bindings/triangulation_wrapper.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
@@ -326,6 +327,19 @@ namespace pyddhdg
             double                            conduction_band_edge_energy,
             double                            valence_band_edge_energy);
 
+    Problem(const dealii::python::TriangulationWrapper &triangulation,
+            HomogeneousPermittivity<dim> &              permittivity,
+            HomogeneousElectronMobility<dim> &          n_electron_mobility,
+            HomogeneousElectronMobility<dim> &          p_electron_mobility,
+            RecombinationTerm<dim> &                    recombination_term,
+            DealIIFunction<dim> &                       temperature,
+            DealIIFunction<dim> &                       doping,
+            BoundaryConditionHandler<dim> &             bc_handler,
+            double                                      conduction_band_density,
+            double                                      valence_band_density,
+            double conduction_band_edge_energy,
+            double valence_band_edge_energy);
+
     Problem(const Problem<dim> &problem);
 
     std::shared_ptr<const Ddhdg::HomogeneousProblem<dim>>
@@ -334,6 +348,10 @@ namespace pyddhdg
   private:
     static std::shared_ptr<dealii::Triangulation<dim>>
     generate_triangulation(double left = 0., double right = 1.);
+
+    static std::shared_ptr<dealii::Triangulation<dim>>
+    copy_triangulation(
+      const dealii::python::TriangulationWrapper &triangulation);
 
     const std::shared_ptr<const Ddhdg::HomogeneousProblem<dim>> ddhdg_problem;
   };

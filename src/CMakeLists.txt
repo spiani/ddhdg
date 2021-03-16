@@ -21,6 +21,8 @@ add_library(DDHDG SHARED
 target_link_libraries(DDHDG ${Boost_LOG_LIBRARY} ${Boost_LOG_SETUP_LIBRARY})
 
 if (WITH_PYTHON_INTERFACE)
+    add_compile_definitions(USE_PYBIND11)
+    add_subdirectory(dealii-python-bindings)
     add_subdirectory(pyddhdg)
 endif ()
 

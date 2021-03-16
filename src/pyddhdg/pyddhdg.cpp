@@ -547,6 +547,36 @@ namespace pyddhdg
   {}
 
 
+  template <int dim>
+  Problem<dim>::Problem(
+    const dealii::python::TriangulationWrapper &triangulation,
+    HomogeneousPermittivity<dim> &              permittivity,
+    HomogeneousElectronMobility<dim> &          n_electron_mobility,
+    HomogeneousElectronMobility<dim> &          p_electron_mobility,
+    RecombinationTerm<dim> &                    recombination_term,
+    DealIIFunction<dim> &                       temperature,
+    DealIIFunction<dim> &                       doping,
+    BoundaryConditionHandler<dim> &             bc_handler,
+    const double                                conduction_band_density,
+    const double                                valence_band_density,
+    const double                                conduction_band_edge_energy,
+    const double                                valence_band_edge_energy)
+    : ddhdg_problem(std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
+        copy_triangulation(triangulation),
+        permittivity.generate_ddhdg_permittivity(),
+        n_electron_mobility.generate_ddhdg_electron_mobility(),
+        p_electron_mobility.generate_ddhdg_electron_mobility(),
+        recombination_term.generate_ddhdg_recombination_term(),
+        temperature.get_dealii_function(),
+        doping.get_dealii_function(),
+        bc_handler.get_ddhdg_boundary_condition_handler(),
+        conduction_band_density,
+        valence_band_density,
+        conduction_band_edge_energy,
+        valence_band_edge_energy))
+  {}
+
+
 
   template <int dim>
   Problem<dim>::Problem(const Problem<dim> &problem)
@@ -584,6 +614,34 @@ namespace pyddhdg
       *triangulation, subdivisions, p1, p2, true);
 
     return triangulation;
+  }
+
+
+
+  template <int dim>
+  std::shared_ptr<dealii::Triangulation<dim>>
+  Problem<dim>::copy_triangulation(
+    const dealii::python::TriangulationWrapper &triangulation)
+  {
+    auto problem_triangulation = std::make_shared<dealii::Triangulation<dim>>();
+    const int triang_dim       = triangulation.get_dim();
+    const int triang_spacedim  = triangulation.get_spacedim();
+    AssertThrow(triang_dim == dim,
+                dealii::ExcMessage(
+                  "The dimension of the triangulation is different from the "
+                  "dimension of the problem"));
+    AssertThrow(
+      triang_spacedim == dim,
+      dealii::ExcMessage(
+        "The dimension of the space of the triangulation is different from the "
+        "dimension of the problem"));
+
+    const auto triang_raw_pointer = static_cast<dealii::Triangulation<dim> *>(
+      triangulation.get_triangulation());
+
+    problem_triangulation->copy_triangulation(*triang_raw_pointer);
+
+    return problem_triangulation;
   }
 
 

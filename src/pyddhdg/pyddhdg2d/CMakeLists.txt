@@ -10,6 +10,8 @@ ELSE ()
     TARGET_INCLUDE_DIRECTORIES(pyddhdg2d SYSTEM PRIVATE ${DEAL_II_INCLUDE_DIRS})
 ENDIF ()
 
+add_dependencies(pyddhdg2d dealii-python-bindings pyddhdg_common)
+
 target_link_libraries(pyddhdg2d PRIVATE pybind11::module)
 target_link_libraries(pyddhdg2d PRIVATE DDHDG)
 target_link_libraries(pyddhdg2d PRIVATE pyddhdg)
