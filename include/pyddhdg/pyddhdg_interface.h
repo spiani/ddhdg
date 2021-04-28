@@ -252,10 +252,8 @@ py::class_<Problem<DIM>>(m, "Problem")
        py::arg("valence_band_density"),
        py::arg("conduction_band_edge_energy") = 0,
        py::arg("valence_band_edge_energy")    = 0)
-  .def_property_readonly("dimension",
-                         [](const Problem<DIM> &) { return DIM; })
-  .def_property_readonly("dim",
-                         [](const Problem<DIM> &) { return DIM; });
+  .def_property_readonly("dimension", [](const Problem<DIM> &) { return DIM; })
+  .def_property_readonly("dim", [](const Problem<DIM> &) { return DIM; });
 
 py::class_<NPSolver<DIM>>(m, "NPSolver")
   .def(py::init<const Problem<DIM> &,

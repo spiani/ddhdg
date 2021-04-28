@@ -110,7 +110,16 @@ TEST(AdimensionalizerTest, scale_length)
       1e3, Ddhdg::Constants::Q / Ddhdg::Constants::KB, 1);
 
   std::shared_ptr<Ddhdg::NPSolverParameters> parameters =
-    std::make_shared<Ddhdg::NPSolverParameters>();
+    std::make_shared<Ddhdg::NPSolverParameters>(
+      1,
+      1,
+      1,
+      std::make_shared<Ddhdg::NonlinearSolverParameters>(),
+      Ddhdg::Constants::EPSILON0,
+      1,
+      1,
+      false,
+      false);
 
   Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>> solver_m(
     problem_in_m, parameters, adimensionalizer_for_m, false);

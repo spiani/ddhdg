@@ -111,19 +111,19 @@ namespace Ddhdg
 
   template <int dim, typename ProblemType>
   NPSolver<dim, ProblemType>::ScratchData::ScratchData(
-    const FiniteElement<dim> & fe_trace_restricted,
-    const FiniteElement<dim> & fe_trace,
-    const FiniteElement<dim> & fe_cell,
-    const QGauss<dim> &        quadrature_formula,
-    const QGauss<dim - 1> &    face_quadrature_formula,
-    const UpdateFlags          cell_flags,
-    const UpdateFlags          cell_face_flags,
-    const UpdateFlags          trace_flags,
-    const UpdateFlags          trace_restricted_flags,
-    const Permittivity &       permittivity,
-    const NMobility &          n_mobility,
-    const PMobility &          p_mobility,
-    const std::set<Component> &enabled_components,
+    const FiniteElement<dim> &                         fe_trace_restricted,
+    const FiniteElement<dim> &                         fe_trace,
+    const FiniteElement<dim> &                         fe_cell,
+    const QGauss<dim> &                                quadrature_formula,
+    const QGauss<dim - 1> &                            face_quadrature_formula,
+    const UpdateFlags                                  cell_flags,
+    const UpdateFlags                                  cell_face_flags,
+    const UpdateFlags                                  trace_flags,
+    const UpdateFlags                                  trace_restricted_flags,
+    const typename Permittivity::PermittivityComputer &permittivity,
+    const NMobility &                                  n_mobility,
+    const PMobility &                                  p_mobility,
+    const std::set<Component> &                        enabled_components,
     const std::map<Component, const dealii::FiniteElement<dim> &> &fe_map)
     : fe_values_cell(fe_cell, quadrature_formula, cell_flags)
     , fe_face_values_cell(fe_cell, face_quadrature_formula, cell_face_flags)

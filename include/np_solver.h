@@ -835,7 +835,7 @@ namespace Ddhdg
     Vector<double>                                   cc_rhs;
     Vector<double>                                   tmp_rhs;
     Vector<double>                                   restricted_tmp_rhs;
-    Permittivity                                     permittivity;
+    typename Permittivity::PermittivityComputer      permittivity;
     NMobility                                        n_mobility;
     PMobility                                        p_mobility;
     std::vector<Point<dim>>                          cell_quadrature_points;
@@ -886,19 +886,19 @@ namespace Ddhdg
       const FiniteElement<dim> &fe_trace_restricted);
 
     ScratchData(
-      const FiniteElement<dim> & fe_trace_restricted,
-      const FiniteElement<dim> & fe_trace,
-      const FiniteElement<dim> & fe_cell,
-      const QGauss<dim> &        quadrature_formula,
-      const QGauss<dim - 1> &    face_quadrature_formula,
-      UpdateFlags                cell_flags,
-      UpdateFlags                cell_face_flags,
-      UpdateFlags                trace_flags,
-      UpdateFlags                trace_restricted_flags,
-      const Permittivity &       permittivity,
-      const NMobility &          n_mobility,
-      const PMobility &          p_mobility,
-      const std::set<Component> &enabled_components,
+      const FiniteElement<dim> &fe_trace_restricted,
+      const FiniteElement<dim> &fe_trace,
+      const FiniteElement<dim> &fe_cell,
+      const QGauss<dim> &       quadrature_formula,
+      const QGauss<dim - 1> &   face_quadrature_formula,
+      UpdateFlags               cell_flags,
+      UpdateFlags               cell_face_flags,
+      UpdateFlags               trace_flags,
+      UpdateFlags               trace_restricted_flags,
+      const typename Permittivity::PermittivityComputer &permittivity,
+      const NMobility &                                  n_mobility,
+      const PMobility &                                  p_mobility,
+      const std::set<Component> &                        enabled_components,
       const std::map<Component, const dealii::FiniteElement<dim> &> &fe_map);
 
     ScratchData(const ScratchData &sd);
@@ -956,10 +956,6 @@ namespace Ddhdg
   {
     switch (cmp)
       {
-        case Component::V:
-          return scratch.permittivity.compute_stabilized_v_tau(q,
-                                                               c_tau,
-                                                               normal);
           case Component::n: {
             dealii::Tensor<1, dim> temp;
             this
@@ -996,11 +992,6 @@ namespace Ddhdg
   {
     switch (c)
       {
-        case Component::V:
-          return this->compute_stabilized_tau<Component::V>(scratch,
-                                                            c_tau,
-                                                            normal,
-                                                            q);
         case Component::n:
           return this->compute_stabilized_tau<Component::n>(scratch,
                                                             c_tau,

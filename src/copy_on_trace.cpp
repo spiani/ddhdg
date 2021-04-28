@@ -33,9 +33,10 @@ namespace Ddhdg
     template <int dim, typename ProblemType>
     struct CTScratchData
     {
-      using Permittivity = typename ProblemType::PermittivityClass;
-      using NMobility    = typename ProblemType::NMobilityClass;
-      using PMobility    = typename ProblemType::PMobilityClass;
+      using Permittivity =
+        typename ProblemType::PermittivityClass::PermittivityComputer;
+      using NMobility = typename ProblemType::NMobilityClass;
+      using PMobility = typename ProblemType::PMobilityClass;
 
       static std::map<Component, std::vector<std::vector<unsigned int>>>
       check_dofs_on_faces(
@@ -411,9 +412,7 @@ namespace Ddhdg
           this->fe_face_values_cell.quadrature_point(q);
 
       // Compute the permittivity
-      this->permittivity.initialize_on_face(
-        this->quadrature_points,
-        adimensionalizer.get_permittivity_rescaling_factor());
+      this->permittivity.initialize_on_face(this->quadrature_points);
 
       // Prepare the data of V and E on the cells
       const auto V_extractor = this->cell_extractors.at(Component::V).first;
@@ -490,9 +489,7 @@ namespace Ddhdg
           this->fe_subface_values_cell.quadrature_point(q);
 
       // Compute the permittivity
-      this->permittivity.initialize_on_face(
-        this->quadrature_points,
-        adimensionalizer.get_permittivity_rescaling_factor());
+      this->permittivity.initialize_on_face(this->quadrature_points);
 
       // Prepare the data of V and E on the cells
       const auto V_extractor = this->cell_extractors.at(Component::V).first;
@@ -637,13 +634,17 @@ namespace Ddhdg
         const unsigned int n_q_points =
           scratch.fe_face_values_cell.get_quadrature().size();
 
-        for (unsigned int q = 0; q < n_q_points; q++)
-          stb_tau[q] = this->template compute_stabilized_tau(
-            scratch,
-            tau_rescaled,
-            scratch.fe_face_values_cell.normal_vector(q),
-            q,
-            c);
+        if (c == Component::V)
+          for (unsigned int q = 0; q < n_q_points; q++)
+            stb_tau[q] = tau_rescaled;
+        else
+          for (unsigned int q = 0; q < n_q_points; q++)
+            stb_tau[q] = this->template compute_stabilized_tau(
+              scratch,
+              tau_rescaled,
+              scratch.fe_face_values_cell.normal_vector(q),
+              q,
+              c);
       }
   }
 
@@ -1259,7 +1260,7 @@ namespace Ddhdg
       face_quadrature_formula,
       flags_cell,
       flags_trace,
-      *(this->problem->permittivity),
+      this->problem->permittivity->get_computer(*(this->adimensionalizer)),
       *(this->problem->n_mobility),
       *(this->problem->p_mobility));
 

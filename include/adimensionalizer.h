@@ -266,7 +266,25 @@ namespace Ddhdg
     [[nodiscard]] inline double
     adimensionalize_tau(const double tau) const
     {
-      return tau * this->scale_length;
+      switch (c)
+        {
+            case (Component::V): {
+              const double q  = Constants::Q;
+              const double kB = Constants::KB;
+              const double T  = this->temperature_magnitude;
+              const double D  = this->get_current_equation_constant();
+              const double k  = this->doping_magnitude;
+              return (tau * T * D * kB) / (q * q * k);
+            }
+          case (Component::n):
+            return tau * this->scale_length;
+          case (Component::p):
+            return tau * this->scale_length;
+            default: {
+              Assert(false, InvalidComponent());
+              return tau;
+            }
+        }
     }
 
     [[nodiscard]] double

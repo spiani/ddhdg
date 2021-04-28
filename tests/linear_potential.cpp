@@ -12,7 +12,14 @@ public:
   LinearPotentialTest()
     : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>(
         get_problem(),
-        std::make_shared<Ddhdg::NPSolverParameters>(2, 2, 2))
+        std::make_shared<Ddhdg::NPSolverParameters>(
+          2,
+          2,
+          2,
+          std::make_shared<Ddhdg::NonlinearSolverParameters>(1e-10, 1e-10, 1),
+          1,
+          1,
+          1))
   {
     this->log_standard_level = Ddhdg::Logging::severity_level::debug;
   };
