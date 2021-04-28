@@ -342,6 +342,29 @@ Applying the lemma~\ref{bernulli_inverse}, we have
 and now the thesis is trivial.
 \end{proof}
 
+\begin{lemma}\label{tau_positive}
+ The function
+ \[ f(x) \Def 2B(x) + x - 2 \]
+ is positive for every $x \neq 0$.
+\end{lemma}
+
+\begin{proof}
+ Because of lemma~\ref{bernulli_even}, it is enough to prove this for $x > 0$. Moreover, taking
+into account that $f(x) = 0$, we can simply prove that $f'(x) > 0$ for every positive $x$. We have
+that
+\[
+  f'(x) = \frac{\mathrm{e}^{2  x} - 2 x \mathrm{e}^{x} - 1}{(\mathrm{e}^{x} - 1)^2}
+\]
+which means that we need to prove that
+\[ \mathrm{e}^{2x} > 2x \mathrm{e}^x + 1\]
+Because both the left hand side and the right hand side are 0 when $x$ is 0, we can differentiate
+again the two terms, obtaining
+\[ 2\mathrm{e}^{2x} > 2(1 + x)\mathrm{e}^x \]
+which is clearly true after some trivial simplifications.
+\end{proof}
+
+
+
 As we have seen in the proposition~\ref{hdg_vs_fvm}, choosing wisely the value of $\tau$, we can 
 obtain this method using the HDG formulation (at least, in 1D and for uniform grids). 
 \begin{prop}\label{hdg_vs_sg}
