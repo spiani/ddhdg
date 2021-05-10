@@ -1,0 +1,313 @@
+\documentclass[a4paper,12pt, draft]{article}
+
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage[%
+    activate={true,nocompatibility},%
+    final,%
+    tracking=true,%
+    kerning=true,%
+    spacing=true,%
+    factor=1100,%
+    stretch=20,%
+    shrink=20]{microtype}
+\usepackage{nicefrac}
+\usepackage{array}   % for \newcolumntype macro
+\usepackage{tabularx}
+\usepackage{framed}
+
+\microtypecontext{spacing=nonfrench}
+\setlength{\parindent}{0pt}
+
+
+\newcolumntype{L}{>{$\displaystyle}X<{$}}
+
+
+\newcommand{\Def}{\stackrel{\mathrm{def}}{=}}
+\newcommand{\efield}{\ensuremath{\mathbf{E}}}
+\newcommand{\displ}{\ensuremath{\mathbf{W}}}
+\newcommand{\qtest}{\ensuremath{\mathbf{Q}}}
+\newcommand{\ttest}{\ensuremath{\xi}}
+
+\newcommand{\cmagn}{\ensuremath{K}}
+\newcommand{\muref}{\ensuremath{\delta}}
+\newcommand{\adim}[1]{\ensuremath{\underline{#1}}}
+
+
+\begin{document}
+Let us start with the equation that describes the electric potential:
+\begin{equation*}
+ \nabla\cdot\left( \varepsilon \nabla V\right) = q \left( c - n + p \right)
+\end{equation*}
+
+that we have rewritten as: find $V$, $E$ and $\widehat{V}$ such that
+\begin{equation} \label{eq:poissonwithdim}
+ \begin{cases}
+  \left(\efield, \qtest \right) - \left(V,\nabla \cdot \qtest\right) +
+    \left<\widehat{V}, \qtest \cdot \nu \right>     = 0 \\
+  - \left(\varepsilon \efield, \nabla z\right) - q \left(c -n + p,z\right) +
+    \left<\varepsilon \efield \cdot \nu, z\right> + \tau_{V} \big<V - \widehat{V}, z \big> = 0 \\
+  \left<\varepsilon \efield \cdot \nu, \ttest \right> + \tau_{V} \big<V - \widehat{V}, \ttest \big> 
+=0
+ \end{cases}
+\end{equation}
+
+We define a value $K$ that represent the magnitude of the doping
+\begin{equation*}
+  \cmagn \Def \operatorname{supess}_\Omega \left| c \right|
+\end{equation*}
+and, therefore, we define the following dimensionless quantities
+\begin{align*}
+  \adim{c} & \Def \frac{c}{\cmagn} \\
+  \adim{n} & \Def \frac{n}{\cmagn} \\
+  \adim{p} & \Def \frac{p}{\cmagn}
+\end{align*}
+
+Moreover, we define the quantity $T_{V}$ as the maximum value reached by the thermal voltage
+\[
+ T_{V} \Def \frac{\mathrm{k}_{\mathrm{B}}}{q} \operatorname{sup}_{\Omega}T
+\]
+and the diameter of the domain $L$ so that we can define the dimensionless quantities
+\begin{align*}
+ \adim{V} & \Def \frac{V}{T_{V}} \\
+ \adim{\efield} & \Def \frac{L}{T_{V}}\efield \\
+ \adim{\widehat{V}} & \Def \frac{\widehat{V}}{T_{V}} \\
+\end{align*}
+We define also
+\begin{equation}\label{eq:adimx} \adim{x} \Def \frac{x}{L} \end{equation}
+
+In the following equations, we will indicate the gradient with the symbol $\nabla_{x}$ to specify 
+that the derivation involves the spacial variable $x$. Instead, we will use the symbol 
+$\nabla_{\adim{x}}$ if the derivation involves the dimensionless variable $\adim{x}$. Because of 
+the equation~\ref{eq:adimx}, we have that
+\[ \nabla_{\adim{x}}f = L \nabla_{x} f \]
+Finally, we must also define
+\[ \adim{\nu} \Def L \nu \]
+so that also the normal vector is independent from the spacial dimension of our problem.
+
+With the previous definitions, the first equation of system~\ref{eq:poissonwithdim} becomes
+\[
+  \frac{T_{V}}{L} \left(\adim{\efield}, \qtest \right) 
+    - \frac{T_{V}}{L} \left(\adim{V},\nabla_{\adim{x}} \cdot \qtest\right) 
+    + \frac{T_{V}}{L}\left<\adim{\widehat{V}}, \qtest \cdot \adim{\nu} \right>  = 0
+\]
+that can be simplified as
+\[
+  \left(\adim{\efield}, \qtest \right) - \left(\adim{V},\nabla_{\adim{x}} \cdot \qtest\right) 
+    + \left<\adim{\widehat{V}}, \qtest \cdot \adim{\nu} \right>  = 0
+\]
+For what concerns the second equation, instead, we obtain
+\[
+ - \frac{T_{V}}{L^2} \left(
+     \varepsilon \adim{\efield}, \nabla_{\adim{x}} z
+   \right) - q \cmagn \left(\adim{c} -\adim{n} + \adim{p}, z\right) +
+   \frac{T_{V}}{L^2}  \left<\varepsilon \adim{\efield} \cdot \adim{\nu}, z\right> +
+   T_{V} \tau_{V} \big<\adim{V} - \adim{\widehat{V}}, z \big> = 0
+\]
+If we divide by $q \cmagn$, 
+we obtain
+\[
+ - \frac{T_{V}}{q \cmagn L^2} \left(
+     \varepsilon \adim{\efield}, \nabla_{\adim{x}} z
+   \right) - \left(\adim{c} \! - \! \adim{n} \! + \! \adim{p}, z\right) +
+   \frac{T_{V}}{q \cmagn L^2}  \left<\varepsilon \adim{\efield} \cdot \adim{\nu}, z\right> +
+   \frac{T_{V}}{q \cmagn} \tau_{V} \big<\adim{V} - \adim{\widehat{V}}, z \big> = 0
+\]
+Defining
+\begin{align*}
+ \adim{\varepsilon} & \Def \frac{T_{V}}{q \cmagn L^2} \varepsilon \\
+ \adim{\tau_{V}} & \Def \frac{T_{V}}{q \cmagn} \tau_{V}
+\end{align*}
+the equation becomes
+\[
+ - \left(\adim{\varepsilon} \adim{\efield}, \nabla_{\adim{x}} z \right) 
+   - \left(\adim{c} - \adim{n} + \adim{p}, z\right)
+   + \left<\adim{\varepsilon} \adim{\efield} \cdot \adim{\nu}, z\right>
+   + \adim{\tau_{V}} \big<\adim{V} - \adim{\widehat{V}}, z \big> = 0
+\]
+
+Finally, using the same substitution, the third equation of system~\ref{eq:poissonwithdim} becomes
+\[ 
+  \frac{T_{V}}{L^2} \left<\adim{\varepsilon} \adim{\efield} \cdot \adim{\nu}, \ttest \right> 
+    + \frac{T_{V}}{L^2} \adim{\tau_{V}} \big<\adim{V} - \adim{\widehat{V}}, \ttest \big> = 0
+\]
+which can be of course divided by $\frac{T_{V}}{L^2}$.
+
+Now we are able to rewrite the system~\ref{eq:poissonwithdim} using only dimensionless quantities, 
+and we obtain
+\[ \label{eq:poissonadim}
+  \begin{cases}
+  \left(\adim{\efield}, \qtest \right) - \left(\adim{V},\nabla_{\adim{x}} \cdot \qtest\right) +
+    \left<\adim{\widehat{V}}, \qtest \cdot \adim{\nu} \right>     = 0 \\
+  - \left(\adim{\varepsilon} \adim{\efield}, \nabla_{\adim{x}} z\right)
+    - \left(\adim{c} - \adim{n} + \adim{p}, z\right)
+    + \left<\adim{\varepsilon} \adim{\efield} \cdot \adim{\nu}, z\right>
+    + \adim{\tau_{V}} \big<\adim{V} - \adim{\widehat{V}}, z \big> = 0 \\
+  \left<\adim{\varepsilon} \adim{\efield} \cdot \adim{\nu}, \ttest \right>
+    + \adim{\tau_{V}} \big<\adim{V} - \adim{\widehat{V}}, \ttest \big> =0
+ \end{cases}
+\]
+
+Let us now take into account the following equation, that imposes the conservation of the charge
+\[ \nabla \cdot \left( \mu \efield n + D \nabla n \right) = R \]
+Like we did in the previous case, we rewrite the equation in a form that is suitable for the HDG 
+methods:
+\begin{equation} \label{eq:chargeconswithdim}
+ \begin{cases}
+  \left(\displ, \qtest \right) - \left(n,\nabla \cdot \qtest\right) +
+    \left<\widehat{n}, \qtest \cdot \nu \right> = 0 \\
+  - \! \left(\mu \efield n,\! \nabla z\right) \! + \! \left(D \displ, \nabla z \right)
+    \! + \! \left<\mu \efield n \! \cdot \! \nu, z\right>
+    \! - \! \left<D \displ \! \cdot \! \nu, z \right> 
+    \! - \! \tau_{n} \big<n \! - \! \widehat{n}, z \big> \! = \! (R, z) \\
+  \left<\mu \efield n \cdot \nu, \ttest \right> - \left<D \displ \cdot \nu, \ttest \right> 
+    - \tau_{n} \big<n - \widehat{n}, \ttest \big> = 0
+ \end{cases}
+\end{equation}
+
+The first equation of this system is totally analogous to the first equation of the
+system~\ref{eq:poissonwithdim}. Therefore, we proceed in the same way: we define
+\[ \adim{\displ} \Def \frac{L}{\cmagn}\displ \]
+and we multiply the first equation by $\frac{\cmagn}{L}$ to obtain
+\[
+  \left(\adim{\displ}, \qtest \right) - \left(\adim{n},\nabla_{\adim{x}} \cdot \qtest\right) +
+    \left<\adim{\widehat{n}}, \qtest \cdot \adim{\nu} \right> = 0
+\]
+
+For the second equation, we define a reference value $\muref$ for the electron mobility 
+(and we will use the same value also for the hole mobility) to obtain
+
+\[ \adim{\mu} \Def \frac{\mu}{\muref} \]
+
+Therefore, our previous equation becomes
+\[
+  \begin{multlined}
+  -  \frac{\muref T_{V} \cmagn}{L^2} \left(
+      \adim{\mu} \adim{\efield} \adim{n}, \nabla_{\adim{x}} z
+    \right)
+    +  \frac{\cmagn}{L^2}\left(D \adim{\displ}, \nabla_{\adim{x}} z \right)
+    + \frac{\muref T_{V} \cmagn}{L^2}\left<
+        \adim{\mu} \adim{\efield} \adim{n} \cdot \adim{\nu}, z
+      \right> \\
+    - \frac{\cmagn}{L^2}\left<D \adim{\displ} \cdot \adim{\nu}, z \right> 
+    - \cmagn \tau_{n} \big<\adim{n} - \adim{\widehat{n}}, z \big> = \left( R, z \right)
+  \end{multlined}
+\]
+
+If we multiply it by the inverse of the coefficient
+\[ \frac{\muref T_{V} \cmagn}{L^2} \]
+we get
+\[
+  \begin{multlined}
+  -  \left(
+      \adim{\mu} \adim{\efield} \adim{n}, \nabla_{\adim{x}} z
+    \right)
+    +  \frac{1}{\muref T_{V}}\left(D \adim{\displ}, \nabla_{\adim{x}} z \right)
+    + \left<
+        \adim{\mu} \adim{\efield} \adim{n} \cdot \adim{\nu}, z
+      \right> \\
+    - \frac{1}{\muref T_{V}}\left<D \adim{\displ} \cdot \adim{\nu}, z \right> 
+    - \frac{L^2}{\muref T_{V}} \tau_{n} \big<\adim{n} - \adim{\widehat{n}}, z \big>
+    = \frac{L^2}{\muref T_{V} \cmagn} \left( R, z \right)
+  \end{multlined}
+\]
+
+We furthermore define
+\begin{align*}
+  \adim{D} & \Def \frac{D}{\muref T_{V}} \\
+  \adim{\tau_n} & \Def \frac{L^2}{\muref T_{V}} \tau_n \\
+  \adim{R} & \Def \frac{L^2}{\muref T_{V} \cmagn} R
+\end{align*}
+we can rewrite the previous equation in a simpler form as
+\[
+  \begin{multlined}
+  -  \left(
+      \adim{\mu} \adim{\efield} \adim{n}, \nabla_{\adim{x}} z
+    \right)
+    +  \left(\adim{D} \adim{\displ}, \nabla_{\adim{x}} z \right)
+    + \left<
+        \adim{\mu} \adim{\efield} \adim{n} \cdot \adim{\nu}, z
+      \right> \\[5pt]
+    - \left< \adim{D} \adim{\displ} \cdot \adim{\nu}, z \right> 
+    - \adim{\tau_{n}} \big<\adim{n} - \adim{\widehat{n}}, z \big>
+    = \left( \adim{R}, z \right)
+  \end{multlined}
+\]
+
+Finally, let us consider the third equation of system~\ref{eq:chargeconswithdim}. In this case, we 
+have
+\[
+  \frac{\muref T_{V} \cmagn}{L^2}\left<\adim{\mu}\adim{\efield}\adim{n}\cdot\adim{\nu},\ttest\right>
+    - \frac{\muref T_{V} \cmagn}{L^2}\left<\adim{D} \adim{\displ} \cdot \adim{\nu}, \ttest \right> 
+    - \frac{\muref T_{V} \cmagn}{L^2} \adim{\tau_{n}} \big<
+        \adim{n} - \adim{\widehat{n}}, \ttest 
+       \big> = 0
+\]
+which, of course, can be simplified multiplying by
+\[ \frac{L^2}{\muref T_{V} \cmagn} \]
+
+Like we did before for the system~\ref{eq:poissonwithdim}, we can now rewrite the 
+system~\ref{eq:chargeconswithdim} using only dimensionless quantities:
+
+\[ \label{eq:chargeconadim}
+  \begin{dcases}
+  \left(\adim{\displ}, \qtest \right) - \left(\adim{n},\nabla_{\adim{x}} \cdot \qtest\right)
+    + \left<\adim{\widehat{n}}, \qtest \cdot \adim{\nu} \right> = 0 \\[10pt]
+  \begin{multlined}[b][11cm]
+  -  \left(
+      \adim{\mu} \adim{\efield} \adim{n}, \nabla_{\adim{x}} z
+    \right)
+    +  \left(\adim{D} \adim{\displ}, \nabla_{\adim{x}} z \right)
+    + \left<
+        \adim{\mu} \adim{\efield} \adim{n} \cdot \adim{\nu}, z
+      \right> \\
+    - \left< \adim{D} \adim{\displ} \cdot \adim{\nu}, z \right> 
+    - \adim{\tau_{n}} \big<\adim{n} - \adim{\widehat{n}}, z \big>
+    = \left( \adim{R}, z \right)
+  \end{multlined}\\[10pt]
+  \left< \adim{\mu} \adim{\efield} \adim{n} \cdot \adim{\nu}, \ttest \right>
+    - \left< \adim{D} \adim{\displ} \cdot \adim{\nu}, \ttest \right> 
+    - \adim{\tau_{n}} \big<\adim{n} - \adim{\widehat{n}}, \ttest \big> = 0
+ \end{dcases}
+\]
+
+As a final remark, we want to report all the definitions of the dimensionless quantities in a table.
+
+
+\begin{framed}
+\begin{center}
+\begin{tabularx}{.8\textwidth}{L L}
+\cmagn \Def \operatorname{supess}_\Omega \left| c \right| &  
+  T_{V} \Def \frac{\mathrm{k}_{\mathrm{B}}}{q} \operatorname{sup}_{\Omega}T
+\end{tabularx}
+\end{center}
+\end{framed}
+
+\setlength{\extrarowheight}{20pt}
+\begin{framed}
+\begin{center}
+\begin{tabularx}{\textwidth}{L L L}
+ \adim{V} \Def \frac{V}{T_{V}}  
+   & \adim{n} \Def \frac{n}{\cmagn}
+   & \adim{p} \Def \frac{p}{\cmagn} \\
+ \adim{\efield} \Def \frac{L}{T_{V}}\efield
+   & \adim{\displ_{n}} \Def \frac{L}{\cmagn} \displ_{n}
+   & \adim{\displ_{p}} \Def \frac{L}{\cmagn} \displ_{p} \\
+ \adim{\widehat{V}} \Def \frac{\widehat{V}}{T_{V}}
+   & \adim{\widehat{n}} \Def \frac{\widehat{n}}{\cmagn}
+   & \adim{\widehat{p}} \Def \frac{\widehat{p}}{\cmagn}\\
+ \adim{\tau_{V}} \Def \frac{T_{V}}{q \cmagn} \tau_{V}
+   & \adim{\tau_n} \Def \frac{L^2}{\muref T_{V}} \tau_n
+   & \adim{\tau_p} \Def \frac{L^2}{\muref T_{V}} \tau_p\\
+ \adim{\varepsilon} \Def \frac{T_{V}}{q \cmagn L^2} \varepsilon
+   &  \adim{\mu_n} \Def \frac{\mu_n}{\muref}
+   &  \adim{\mu_p} \Def \frac{\mu_p}{\muref} \\
+ \adim{R} \Def \frac{L^2}{\muref T_{V} \cmagn} R
+   & \adim{D_n} \Def \frac{D_n}{\muref T_{V}}
+   & \adim{D_p} \Def \frac{D_p}{\muref T_{V}}
+\end{tabularx}
+\end{center}
+\end{framed}
+
+\end{document}
