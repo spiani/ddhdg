@@ -81,7 +81,7 @@ protected:
   get_recombination_term()
   {
     std::string recombination_constant_term =
-      "(2*pi^2*x*sin(pi*x) - pi*cos(pi*x))*sin(pi*y)";
+      "(2*pi^2*x*sin(pi*x) - pi*cos(pi*x))*sin(pi*y) / q";
 
     std::shared_ptr<Ddhdg::LinearRecombinationTerm<dim>> recombination_term =
       std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(

@@ -634,17 +634,8 @@ namespace Ddhdg
         const unsigned int n_q_points =
           scratch.fe_face_values_cell.get_quadrature().size();
 
-        if (c == Component::V)
-          for (unsigned int q = 0; q < n_q_points; q++)
-            stb_tau[q] = tau_rescaled;
-        else
-          for (unsigned int q = 0; q < n_q_points; q++)
-            stb_tau[q] = this->template compute_stabilized_tau(
-              scratch,
-              tau_rescaled,
-              scratch.fe_face_values_cell.normal_vector(q),
-              q,
-              c);
+        for (unsigned int q = 0; q < n_q_points; q++)
+          stb_tau[q] = tau_rescaled;
       }
   }
 

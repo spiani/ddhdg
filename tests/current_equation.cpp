@@ -194,7 +194,7 @@ protected:
       "x - (0.5 + k/2)",
       f_constants);
 
-    std::string r0_string = "-105/4 * q *(32*x^5 - k^4 - 16*(k^2 - 5)*x^3 - "
+    std::string r0_string = "-105/4 * (32*x^5 - k^4 - 16*(k^2 - 5)*x^3 - "
                             "80*x^4 + 8*(3*k^2 - 5)*x^2 + 2*k^2 + "
                             "2*(k^4 - 6*k^2 + 5)*x - 1)/k^7";
 

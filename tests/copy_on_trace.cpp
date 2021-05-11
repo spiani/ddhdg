@@ -120,7 +120,7 @@ protected:
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(
-          "-6*x^4*y - 9*x^2*y^3", "0", "0"),
+          "-(6*x^4*y - 9*x^2*y^3) / q", "0", "0"),
         get_temperature(),
         get_doping(),
         get_boundary_conditions(),
@@ -197,7 +197,7 @@ TYPED_TEST(CopyTrace, project_trace_reconstruct_solution) // NOLINT
   if (TypeParam::value == 1)
     return;
 
-  constexpr double   TOLERANCE = 1e-6;
+  constexpr double   TOLERANCE = 5e-6;
   const unsigned int dim       = TypeParam::value;
 
   this->set_multithreading(false);

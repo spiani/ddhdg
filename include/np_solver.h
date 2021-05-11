@@ -549,21 +549,6 @@ namespace Ddhdg
                                          const dealii::Tensor<1, dim> &v,
                                          dealii::Tensor<1, dim> &      w) const;
 
-    template <Component cmp, class ScratchDataClass = ScratchData>
-    inline double
-    compute_stabilized_tau(const ScratchDataClass &scratch,
-                           double                  c_tau,
-                           const Tensor<1, dim> &  normal,
-                           unsigned int            q) const;
-
-    template <class ScratchDataClass = ScratchData>
-    inline double
-    compute_stabilized_tau(const ScratchDataClass &scratch,
-                           double                  c_tau,
-                           const Tensor<1, dim> &  normal,
-                           unsigned int            q,
-                           Component               c) const;
-
     void
     prepare_data_on_cell_quadrature_points(ScratchData &scratch);
 
@@ -945,66 +930,4 @@ namespace Ddhdg
       }
   }
 
-  template <int dim, typename ProblemType>
-  template <Component cmp, class ScratchDataClass>
-  double
-  NPSolver<dim, ProblemType>::compute_stabilized_tau(
-    const ScratchDataClass &scratch,
-    const double            c_tau,
-    const Tensor<1, dim> &  normal,
-    const unsigned int      q) const
-  {
-    switch (cmp)
-      {
-          case Component::n: {
-            dealii::Tensor<1, dim> temp;
-            this
-              ->template apply_einstein_diffusion_coefficient<Component::n,
-                                                              true,
-                                                              ScratchDataClass>(
-                scratch, q, normal, temp);
-            return temp * normal * c_tau;
-          }
-          case Component::p: {
-            dealii::Tensor<1, dim> temp;
-            this
-              ->template apply_einstein_diffusion_coefficient<Component::p,
-                                                              true,
-                                                              ScratchDataClass>(
-                scratch, q, normal, temp);
-            return temp * normal * c_tau;
-          }
-        default:
-          Assert(false, InvalidComponent());
-          return 1.;
-      }
-  }
-
-  template <int dim, typename ProblemType>
-  template <class ScratchDataClass>
-  double
-  NPSolver<dim, ProblemType>::compute_stabilized_tau(
-    const ScratchDataClass &scratch,
-    const double            c_tau,
-    const Tensor<1, dim> &  normal,
-    const unsigned int      q,
-    const Component         c) const
-  {
-    switch (c)
-      {
-        case Component::n:
-          return this->compute_stabilized_tau<Component::n>(scratch,
-                                                            c_tau,
-                                                            normal,
-                                                            q);
-        case Component::p:
-          return this->compute_stabilized_tau<Component::p>(scratch,
-                                                            c_tau,
-                                                            normal,
-                                                            q);
-        default:
-          Assert(false, InvalidComponent());
-          return 1.;
-      }
-  }
 } // namespace Ddhdg

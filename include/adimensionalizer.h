@@ -57,24 +57,6 @@ namespace Ddhdg
     [[nodiscard]] double
     get_displacement_rescaling_factor(Displacement d) const;
 
-    [[nodiscard]] constexpr double
-    get_poisson_equation_density_constant() const
-    {
-      // Using Constants::Q, you do not rescale the Poisson equation
-      // return Constants::Q;
-      return 1.;
-    }
-
-    [[nodiscard]] constexpr double
-    get_current_equation_constant() const
-    {
-      // Using this value, you do not rescale the drift-diffusion equations
-      // return Constants::KB * this->temperature_magnitude *
-      //        this->electron_mobility_magnitude * this->doping_magnitude /
-      //        (this->scale_length * Constants::Q) * 1000;
-      return 1.;
-    }
-
     template <Component c>
     [[nodiscard]] constexpr double
     get_neumann_boundary_condition_rescaling_factor() const
@@ -82,21 +64,19 @@ namespace Ddhdg
       switch (c)
         {
           case Component::V:
-            return Constants::Q / this->get_poisson_equation_density_constant();
+            return Constants::Q;
             case Component::n: {
               const double num = Constants::KB * this->doping_magnitude *
                                  this->temperature_magnitude *
                                  this->electron_mobility_magnitude;
-              const double den =
-                this->scale_length * this->get_current_equation_constant();
+              const double den = this->scale_length * this->scale_length;
               return num / den;
             }
             case Component::p: {
               const double num = Constants::KB * this->doping_magnitude *
                                  this->temperature_magnitude *
                                  this->electron_mobility_magnitude;
-              const double den =
-                this->scale_length * this->get_current_equation_constant();
+              const double den = this->scale_length * this->scale_length;
               return num / den;
             }
           default:
@@ -198,8 +178,7 @@ namespace Ddhdg
     [[nodiscard]] inline double
     get_permittivity_rescaling_factor() const
     {
-      const double den = this->temperature_magnitude * Constants::KB *
-                         this->get_poisson_equation_density_constant();
+      const double den = this->temperature_magnitude * Constants::KB;
       const double num = this->scale_length * this->scale_length *
                          Constants::Q * Constants::Q * this->doping_magnitude;
 
@@ -215,8 +194,7 @@ namespace Ddhdg
     [[nodiscard]] inline double
     get_mobility_rescaling_factor() const
     {
-      return this->electron_mobility_magnitude /
-             this->get_current_equation_constant();
+      return this->electron_mobility_magnitude;
     }
 
     template <int dim>
@@ -249,8 +227,7 @@ namespace Ddhdg
       const double num = Constants::KB * this->doping_magnitude *
                          this->temperature_magnitude *
                          this->electron_mobility_magnitude;
-      const double den =
-        this->scale_length * this->get_current_equation_constant();
+      const double den = this->scale_length * this->scale_length * Constants::Q;
       return num / den;
     }
 
@@ -266,20 +243,18 @@ namespace Ddhdg
     [[nodiscard]] inline double
     adimensionalize_tau(const double tau) const
     {
+      double Tv = this->temperature_magnitude * Constants::KB / Constants::Q;
+      const double k = this->doping_magnitude;
       switch (c)
         {
-            case (Component::V): {
-              const double q  = Constants::Q;
-              const double kB = Constants::KB;
-              const double T  = this->temperature_magnitude;
-              const double D  = this->get_current_equation_constant();
-              const double k  = this->doping_magnitude;
-              return (tau * T * D * kB) / (q * q * k);
-            }
+          case (Component::V):
+            return (tau * Tv) / (Constants::Q * k);
           case (Component::n):
-            return tau * this->scale_length;
+            return tau * this->scale_length * this->scale_length /
+                   (Tv * this->electron_mobility_magnitude);
           case (Component::p):
-            return tau * this->scale_length;
+            return tau * this->scale_length * this->scale_length /
+                   (Tv * this->electron_mobility_magnitude);
             default: {
               Assert(false, InvalidComponent());
               return tau;

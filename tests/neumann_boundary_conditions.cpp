@@ -20,20 +20,6 @@ public:
 
 protected:
   static std::shared_ptr<dealii::FunctionParser<D::value>>
-  get_zero_function()
-  {
-    const unsigned int dim = D::value;
-
-    std::shared_ptr<dealii::FunctionParser<dim>> zero_function =
-      std::make_shared<dealii::FunctionParser<dim>>();
-    zero_function->initialize(
-      dealii::FunctionParser<dim>::default_variable_names(),
-      "0",
-      Ddhdg::Constants::constants);
-    return zero_function;
-  }
-
-  static std::shared_ptr<dealii::FunctionParser<D::value>>
   get_expected_solution()
   {
     const unsigned int dim = D::value;
@@ -104,14 +90,16 @@ protected:
     // Boundary conditions for n and p: 0 everywhere (Dirichlet)
     for (unsigned int i = 0; i < 6; i++)
       {
-        boundary_handler->add_boundary_condition(i,
-                                                 Ddhdg::dirichlet,
-                                                 Ddhdg::n,
-                                                 get_zero_function());
-        boundary_handler->add_boundary_condition(i,
-                                                 Ddhdg::dirichlet,
-                                                 Ddhdg::p,
-                                                 get_zero_function());
+        boundary_handler->add_boundary_condition(
+          i,
+          Ddhdg::dirichlet,
+          Ddhdg::n,
+          std::make_shared<dealii::Functions::ZeroFunction<dim>>());
+        boundary_handler->add_boundary_condition(
+          i,
+          Ddhdg::dirichlet,
+          Ddhdg::p,
+          std::make_shared<dealii::Functions::ZeroFunction<dim>>());
       }
 
     // Boundary conditions for V
@@ -125,10 +113,11 @@ protected:
                                              minus_one_function);
     for (unsigned int i = 2; i < 6; i++)
       {
-        boundary_handler->add_boundary_condition(i,
-                                                 Ddhdg::neumann,
-                                                 Ddhdg::V,
-                                                 get_zero_function());
+        boundary_handler->add_boundary_condition(
+          i,
+          Ddhdg::neumann,
+          Ddhdg::V,
+          std::make_shared<dealii::Functions::ZeroFunction<dim>>());
       }
 
 
@@ -169,8 +158,8 @@ TYPED_TEST_SUITE(NeumannBCLinearTest, dimensions, );
 TYPED_TEST(NeumannBCLinearTest, NeumannBCLinearTest) // NOLINT
 {
   const unsigned int dim = TypeParam::value;
-
-  const auto zero_function     = TestFixture::get_zero_function();
+  const auto         zero_function =
+    std::make_shared<dealii::Functions::ZeroFunction<dim>>();
   const auto expected_solution = TestFixture::get_expected_solution();
 
   this->set_multithreading(false);
@@ -300,7 +289,7 @@ protected:
 
     std::shared_ptr<Ddhdg::LinearRecombinationTerm<dim>> recombination_term =
       std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(
-        "(4*pi^2*cos(pi*x)*cos(pi*y)*sin(pi*x)*sin(pi*y) - 2*pi^2*cos(pi*x)*cos(pi*y))*q",
+        "(4*pi^2*cos(pi*x)*cos(pi*y)*sin(pi*x)*sin(pi*y) - 2*pi^2*cos(pi*x)*cos(pi*y))",
         "0",
         "0");
     return recombination_term;
@@ -332,9 +321,9 @@ protected:
                                              get_function("pi*sin(pi*x)"));
 
     boundary_handler->add_boundary_condition(
-      0, Ddhdg::neumann, Ddhdg::n, get_function("pi*cos(pi*y)*sin(pi*y)*q"));
+      0, Ddhdg::neumann, Ddhdg::n, get_function("pi*cos(pi*y)*sin(pi*y) * q"));
     boundary_handler->add_boundary_condition(
-      1, Ddhdg::neumann, Ddhdg::n, get_function("-pi*cos(pi*y)*sin(pi*y)*q"));
+      1, Ddhdg::neumann, Ddhdg::n, get_function("-pi*cos(pi*y)*sin(pi*y) * q"));
     boundary_handler->add_boundary_condition(2,
                                              Ddhdg::dirichlet,
                                              Ddhdg::n,

@@ -155,9 +155,9 @@ protected:
     const unsigned int dim = TestParameters::D;
     const unsigned int s   = TestParameters::S;
 
-    std::string r0_string = (s == 0) ? "(7 * x - x^3) * q" :
-                            (s == 1) ? "(7 * y - y^3) * q" :
-                                       "(7 * z - z^3) * q";
+    std::string r0_string = (s == 0) ? "(7 * x - x^3)" :
+                            (s == 1) ? "(7 * y - y^3)" :
+                                       "(7 * z - z^3)";
 
     std::shared_ptr<Ddhdg::HomogeneousProblem<dim>> problem =
       std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
@@ -167,7 +167,7 @@ protected:
         std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(r0_string,
                                                               "0",
-                                                              "q"),
+                                                              "1"),
         get_temperature(),
         get_doping(),
         get_boundary_conditions(),
