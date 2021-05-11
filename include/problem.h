@@ -4,7 +4,7 @@
 #include <deal.II/grid/tria.h>
 
 #include "boundary_conditions.h"
-#include "electron_mobility.h"
+#include "mobility.h"
 #include "permittivity.h"
 #include "recombination_term.h"
 
