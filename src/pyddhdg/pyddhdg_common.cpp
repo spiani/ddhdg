@@ -140,7 +140,7 @@ namespace pyddhdg
       .def_readonly("doping_magnitude",
                     &Ddhdg::Adimensionalizer::doping_magnitude)
       .def_readonly("electron_mobility_magnitude",
-                    &Ddhdg::Adimensionalizer::electron_mobility_magnitude);
+                    &Ddhdg::Adimensionalizer::mobility_magnitude);
 
     py::class_<Ddhdg::NonlinearIterationResults>(m, "NonlinearIterationResults")
       .def(py::init<const bool, const unsigned int, const double>())

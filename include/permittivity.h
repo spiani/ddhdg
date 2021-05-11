@@ -26,6 +26,12 @@ namespace Ddhdg
       return PermittivityComputer(*this, adimensionalizer);
     }
 
+    PermittivityComputer
+    get_computer(const double rescaling_factor) const
+    {
+      return PermittivityComputer(*this, rescaling_factor);
+    }
+
     const double epsilon;
   };
 
@@ -39,6 +45,14 @@ namespace Ddhdg
       const Adimensionalizer &            adimensionalizer)
       : epsilon(permittivity.epsilon)
       , rescaling_factor(adimensionalizer.get_permittivity_rescaling_factor())
+      , rescaled_epsilon(epsilon / rescaling_factor)
+    {}
+
+    HomogeneousPermittivityComputer(
+      const HomogeneousPermittivity<dim> &permittivity,
+      const double                        rescaling_factor)
+      : epsilon(permittivity.epsilon)
+      , rescaling_factor(rescaling_factor)
       , rescaled_epsilon(epsilon / rescaling_factor)
     {}
 

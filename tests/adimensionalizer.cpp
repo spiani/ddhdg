@@ -15,8 +15,12 @@ public:
         get_triangulation(grid_size),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(
           Ddhdg::Constants::Q),
-        std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
-        std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
+        std::make_shared<const Ddhdg::HomogeneousMobility<dim>>(
+          1.,
+          Ddhdg::Component::n),
+        std::make_shared<const Ddhdg::HomogeneousMobility<dim>>(
+          1.,
+          Ddhdg::Component::p),
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>("0", "0", "0"),
         std::make_shared<dealii::Functions::ConstantFunction<dim>>(
           Ddhdg::Constants::Q / Ddhdg::Constants::KB),

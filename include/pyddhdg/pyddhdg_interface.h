@@ -2,8 +2,8 @@
 py::class_<HomogeneousPermittivity<DIM>>(m, "HomogeneousPermittivity")
   .def(py::init<const double &>());
 
-py::class_<HomogeneousElectronMobility<DIM>>(m, "HomogeneousElectronMobility")
-  .def(py::init<const double &>());
+py::class_<HomogeneousMobility<DIM>>(m, "HomogeneousMobility")
+  .def(py::init<const double &, const Ddhdg::Component>());
 
 py::class_<DealIIFunction<DIM>>(m, "DealIIFunction").def(py::init<double>());
 
@@ -205,8 +205,8 @@ py::class_<Problem<DIM>>(m, "Problem")
   .def(py::init<double,
                 double,
                 HomogeneousPermittivity<DIM> &,
-                HomogeneousElectronMobility<DIM> &,
-                HomogeneousElectronMobility<DIM> &,
+                HomogeneousMobility<DIM> &,
+                HomogeneousMobility<DIM> &,
                 RecombinationTerm<DIM> &,
                 DealIIFunction<DIM> &,
                 DealIIFunction<DIM> &,
@@ -218,8 +218,8 @@ py::class_<Problem<DIM>>(m, "Problem")
        py::arg("left"),
        py::arg("right"),
        py::arg("permittivity"),
-       py::arg("n_electron_mobility"),
-       py::arg("p_electron_mobility"),
+       py::arg("electron_mobility"),
+       py::arg("hole_mobility"),
        py::arg("recombination_term"),
        py::arg("temperature"),
        py::arg("doping"),
@@ -230,8 +230,8 @@ py::class_<Problem<DIM>>(m, "Problem")
        py::arg("valence_band_edge_energy")    = 0)
   .def(py::init<dealii::python::TriangulationWrapper &,
                 HomogeneousPermittivity<DIM> &,
-                HomogeneousElectronMobility<DIM> &,
-                HomogeneousElectronMobility<DIM> &,
+                HomogeneousMobility<DIM> &,
+                HomogeneousMobility<DIM> &,
                 RecombinationTerm<DIM> &,
                 DealIIFunction<DIM> &,
                 DealIIFunction<DIM> &,
@@ -242,8 +242,8 @@ py::class_<Problem<DIM>>(m, "Problem")
                 double>(),
        py::arg("triangulation"),
        py::arg("permittivity"),
-       py::arg("n_electron_mobility"),
-       py::arg("p_electron_mobility"),
+       py::arg("electron_mobility"),
+       py::arg("hole_mobility"),
        py::arg("recombination_term"),
        py::arg("temperature"),
        py::arg("doping"),

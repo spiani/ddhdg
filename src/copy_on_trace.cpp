@@ -35,8 +35,8 @@ namespace Ddhdg
     {
       using Permittivity =
         typename ProblemType::PermittivityClass::PermittivityComputer;
-      using NMobility = typename ProblemType::NMobilityClass;
-      using PMobility = typename ProblemType::PMobilityClass;
+      using NMobility = typename ProblemType::NMobilityClass::MobilityComputer;
+      using PMobility = typename ProblemType::PMobilityClass::MobilityComputer;
 
       static std::map<Component, std::vector<std::vector<unsigned int>>>
       check_dofs_on_faces(
@@ -426,9 +426,7 @@ namespace Ddhdg
           this->active_components.end())
         {
           // Prepare the values of mu_n
-          this->n_mobility.initialize_on_face(
-            this->quadrature_points,
-            adimensionalizer.get_mobility_rescaling_factor());
+          this->n_mobility.initialize_on_face(this->quadrature_points);
 
           // Prepare the values of n and Wn
           const auto n_extractor = this->cell_extractors.at(Component::n).first;
@@ -443,9 +441,7 @@ namespace Ddhdg
       if (this->active_components.find(Component::p) !=
           this->active_components.end())
         {
-          this->p_mobility.initialize_on_face(
-            this->quadrature_points,
-            adimensionalizer.get_mobility_rescaling_factor());
+          this->p_mobility.initialize_on_face(this->quadrature_points);
 
 
           // Prepare the values of p and Wp
@@ -503,9 +499,7 @@ namespace Ddhdg
           this->active_components.end())
         {
           // Prepare the values of mu_n
-          this->n_mobility.initialize_on_face(
-            this->quadrature_points,
-            adimensionalizer.get_mobility_rescaling_factor());
+          this->n_mobility.initialize_on_face(this->quadrature_points);
 
           // Prepare the values of n and Wn
           const auto n_extractor = this->cell_extractors.at(Component::n).first;
@@ -520,9 +514,7 @@ namespace Ddhdg
       if (this->active_components.find(Component::p) !=
           this->active_components.end())
         {
-          this->p_mobility.initialize_on_face(
-            this->quadrature_points,
-            adimensionalizer.get_mobility_rescaling_factor());
+          this->p_mobility.initialize_on_face(this->quadrature_points);
 
           // Prepare the values of p and Wp
           const auto p_extractor = this->cell_extractors.at(Component::p).first;
@@ -1252,8 +1244,8 @@ namespace Ddhdg
       flags_cell,
       flags_trace,
       this->problem->permittivity->get_computer(*(this->adimensionalizer)),
-      *(this->problem->n_mobility),
-      *(this->problem->p_mobility));
+      this->problem->n_mobility->get_computer(*(this->adimensionalizer)),
+      this->problem->p_mobility->get_computer(*(this->adimensionalizer)));
 
     CopyTraceInternalTools::CTCopyData<dim> copy_data(
       scratch.total_dofs_per_face());

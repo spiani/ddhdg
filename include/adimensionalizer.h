@@ -13,14 +13,14 @@ namespace Ddhdg
   {
   public:
     explicit constexpr Adimensionalizer(
-      double scale_length                = 1,
-      double temperature_magnitude       = Constants::Q / Constants::KB,
-      double doping_magnitude            = 1,
-      double electron_mobility_magnitude = 1)
+      double scale_length          = 1,
+      double temperature_magnitude = Constants::Q / Constants::KB,
+      double doping_magnitude      = 1,
+      double mobility_magnitude    = 1)
       : scale_length(scale_length)
       , temperature_magnitude(temperature_magnitude)
       , doping_magnitude(doping_magnitude)
-      , electron_mobility_magnitude(electron_mobility_magnitude)
+      , mobility_magnitude(mobility_magnitude)
     {}
 
     constexpr Adimensionalizer(const Adimensionalizer &adm) = default;
@@ -68,14 +68,14 @@ namespace Ddhdg
             case Component::n: {
               const double num = Constants::KB * this->doping_magnitude *
                                  this->temperature_magnitude *
-                                 this->electron_mobility_magnitude;
+                                 this->mobility_magnitude;
               const double den = this->scale_length * this->scale_length;
               return num / den;
             }
             case Component::p: {
               const double num = Constants::KB * this->doping_magnitude *
                                  this->temperature_magnitude *
-                                 this->electron_mobility_magnitude;
+                                 this->mobility_magnitude;
               const double den = this->scale_length * this->scale_length;
               return num / den;
             }
@@ -194,7 +194,7 @@ namespace Ddhdg
     [[nodiscard]] inline double
     get_mobility_rescaling_factor() const
     {
-      return this->electron_mobility_magnitude;
+      return this->mobility_magnitude;
     }
 
     template <int dim>
@@ -225,8 +225,7 @@ namespace Ddhdg
     get_recombination_rescaling_factor() const
     {
       const double num = Constants::KB * this->doping_magnitude *
-                         this->temperature_magnitude *
-                         this->electron_mobility_magnitude;
+                         this->temperature_magnitude * this->mobility_magnitude;
       const double den = this->scale_length * this->scale_length * Constants::Q;
       return num / den;
     }
@@ -251,10 +250,10 @@ namespace Ddhdg
             return (tau * Tv) / (Constants::Q * k);
           case (Component::n):
             return tau * this->scale_length * this->scale_length /
-                   (Tv * this->electron_mobility_magnitude);
+                   (Tv * this->mobility_magnitude);
           case (Component::p):
             return tau * this->scale_length * this->scale_length /
-                   (Tv * this->electron_mobility_magnitude);
+                   (Tv * this->mobility_magnitude);
             default: {
               Assert(false, InvalidComponent());
               return tau;
@@ -268,7 +267,7 @@ namespace Ddhdg
     const double scale_length;
     const double temperature_magnitude;
     const double doping_magnitude;
-    const double electron_mobility_magnitude;
+    const double mobility_magnitude;
   };
 
 } // namespace Ddhdg

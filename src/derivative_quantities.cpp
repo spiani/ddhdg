@@ -556,14 +556,16 @@ namespace Ddhdg
       static std::vector<std::vector<unsigned int>>
       generate_dof_dimension_map(const dealii::FiniteElement<dim> &fe);
 
-      DQScratchData(const dealii::FiniteElement<dim> &fe_quantity,
-                    const dealii::FiniteElement<dim> &fe_cell,
-                    const dealii::QGauss<dim> &       quadrature_formula,
-                    dealii::UpdateFlags               fe_values_flags,
-                    dealii::UpdateFlags               fe_values_cell_flags,
-                    const typename Problem::PermittivityClass &permittivity,
-                    const typename Problem::NMobilityClass &   n_mobility,
-                    const typename Problem::PMobilityClass &   p_mobility);
+      DQScratchData(
+        const dealii::FiniteElement<dim> &fe_quantity,
+        const dealii::FiniteElement<dim> &fe_cell,
+        const dealii::QGauss<dim> &       quadrature_formula,
+        dealii::UpdateFlags               fe_values_flags,
+        dealii::UpdateFlags               fe_values_cell_flags,
+        const typename Problem::PermittivityClass::PermittivityComputer
+          &                                                       permittivity,
+        const typename Problem::NMobilityClass::MobilityComputer &n_mobility,
+        const typename Problem::PMobilityClass::MobilityComputer &p_mobility);
 
       DQScratchData(
         const DQScratchData<dim, quantity, Problem> &dq_scratch_data);
@@ -602,9 +604,9 @@ namespace Ddhdg
 
       std::vector<double> base_functions;
 
-      typename Problem::PermittivityClass permittivity;
-      typename Problem::NMobilityClass    n_mobility;
-      typename Problem::PMobilityClass    p_mobility;
+      typename Problem::PermittivityClass::PermittivityComputer permittivity;
+      typename Problem::NMobilityClass::MobilityComputer        n_mobility;
+      typename Problem::PMobilityClass::MobilityComputer        p_mobility;
 
       const std::vector<std::vector<unsigned int>> dof_dimension_map;
     };
@@ -635,14 +637,15 @@ namespace Ddhdg
 
     template <int dim, typename quantity, typename Problem>
     DQScratchData<dim, quantity, Problem>::DQScratchData(
-      const dealii::FiniteElement<dim> &         fe_quantity,
-      const dealii::FiniteElement<dim> &         fe_cell,
-      const dealii::QGauss<dim> &                quadrature_formula,
-      const dealii::UpdateFlags                  fe_values_flags,
-      const dealii::UpdateFlags                  fe_values_cell_flags,
-      const typename Problem::PermittivityClass &permittivity,
-      const typename Problem::NMobilityClass &   n_mobility,
-      const typename Problem::PMobilityClass &   p_mobility)
+      const dealii::FiniteElement<dim> &fe_quantity,
+      const dealii::FiniteElement<dim> &fe_cell,
+      const dealii::QGauss<dim> &       quadrature_formula,
+      const dealii::UpdateFlags         fe_values_flags,
+      const dealii::UpdateFlags         fe_values_cell_flags,
+      const typename Problem::PermittivityClass::PermittivityComputer
+        &                                                       permittivity,
+      const typename Problem::NMobilityClass::MobilityComputer &n_mobility,
+      const typename Problem::PMobilityClass::MobilityComputer &p_mobility)
       : fe_values_quantity(fe_quantity, quadrature_formula, fe_values_flags)
       , fe_values_cell(fe_cell, quadrature_formula, fe_values_cell_flags)
       , dofs_per_dimension((quantity::is_a_vector) ?
@@ -821,11 +824,8 @@ namespace Ddhdg
       }
     if constexpr (quantity::needs_epsilon)
       {
-        scratch.permittivity.initialize_on_cell(
-          scratch.cell_quadrature_points,
-          (quantity::redimensionalize) ?
-            1. :
-            this->adimensionalizer->get_permittivity_rescaling_factor());
+        scratch.permittivity.initialize_on_cell(scratch.cell_quadrature_points);
+
         dealii::Tensor<1, dim> epsilon_input;
         for (unsigned int q = 0; q < n_q_points; q++)
           {
@@ -835,21 +835,10 @@ namespace Ddhdg
           }
       }
     if constexpr (quantity::needs_mu_n || quantity::needs_D_n)
-      {
-        scratch.n_mobility.initialize_on_cell(
-          scratch.cell_quadrature_points,
-          (quantity::redimensionalize) ?
-            1. :
-            this->adimensionalizer->get_mobility_rescaling_factor());
-      }
+      scratch.n_mobility.initialize_on_cell(scratch.cell_quadrature_points);
     if constexpr (quantity::needs_mu_p || quantity::needs_D_p)
-      {
-        scratch.p_mobility.initialize_on_cell(
-          scratch.cell_quadrature_points,
-          (quantity::redimensionalize) ?
-            1. :
-            this->adimensionalizer->get_mobility_rescaling_factor());
-      }
+      scratch.p_mobility.initialize_on_cell(scratch.cell_quadrature_points);
+
     if constexpr (quantity::needs_T || quantity::needs_D_n ||
                   quantity::needs_D_p)
       {
@@ -1056,14 +1045,24 @@ namespace Ddhdg
                             update_quadrature_points);
     const UpdateFlags flags_cell(update_values | update_JxW_values);
 
-    ScratchData scratch(dof.get_fe(),
-                        *(this->fe_cell),
-                        quadrature_formula,
-                        flags,
-                        flags_cell,
-                        *(this->problem->permittivity),
-                        *(this->problem->n_mobility),
-                        *(this->problem->p_mobility));
+    ScratchData scratch(
+      dof.get_fe(),
+      *(this->fe_cell),
+      quadrature_formula,
+      flags,
+      flags_cell,
+      this->problem->permittivity->get_computer(
+        quantity::redimensionalize ?
+          1. :
+          this->adimensionalizer->get_permittivity_rescaling_factor()),
+      this->problem->n_mobility->get_computer(
+        quantity::redimensionalize ?
+          1. :
+          this->adimensionalizer->get_mobility_rescaling_factor()),
+      this->problem->p_mobility->get_computer(
+        quantity::redimensionalize ?
+          1. :
+          this->adimensionalizer->get_mobility_rescaling_factor()));
 
     CopyData copy_data(dof.get_fe().dofs_per_cell);
 

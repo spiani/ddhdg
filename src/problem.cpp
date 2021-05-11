@@ -32,14 +32,14 @@ namespace Ddhdg
 
   template struct Ddhdg::Problem<1,
                                  Ddhdg::HomogeneousPermittivity<1>,
-                                 Ddhdg::HomogeneousElectronMobility<1>,
-                                 Ddhdg::HomogeneousElectronMobility<1>>;
+                                 Ddhdg::HomogeneousMobility<1>,
+                                 Ddhdg::HomogeneousMobility<1>>;
   template struct Ddhdg::Problem<2,
                                  Ddhdg::HomogeneousPermittivity<2>,
-                                 Ddhdg::HomogeneousElectronMobility<2>,
-                                 Ddhdg::HomogeneousElectronMobility<2>>;
+                                 Ddhdg::HomogeneousMobility<2>,
+                                 Ddhdg::HomogeneousMobility<2>>;
   template struct Ddhdg::Problem<3,
                                  Ddhdg::HomogeneousPermittivity<3>,
-                                 Ddhdg::HomogeneousElectronMobility<3>,
-                                 Ddhdg::HomogeneousElectronMobility<3>>;
+                                 Ddhdg::HomogeneousMobility<3>,
+                                 Ddhdg::HomogeneousMobility<3>>;
 } // namespace Ddhdg

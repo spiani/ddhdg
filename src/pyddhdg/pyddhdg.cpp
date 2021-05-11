@@ -23,17 +23,20 @@ namespace pyddhdg
 
 
   template <int dim>
-  HomogeneousElectronMobility<dim>::HomogeneousElectronMobility(const double mu)
+  HomogeneousMobility<dim>::HomogeneousMobility(const double           mu,
+                                                const Ddhdg::Component c)
     : mu(mu)
+    , cmp(c)
   {}
 
 
 
   template <int dim>
-  std::shared_ptr<Ddhdg::HomogeneousElectronMobility<dim>>
-  HomogeneousElectronMobility<dim>::generate_ddhdg_electron_mobility()
+  std::shared_ptr<Ddhdg::HomogeneousMobility<dim>>
+  HomogeneousMobility<dim>::generate_ddhdg_mobility()
   {
-    return std::make_shared<Ddhdg::HomogeneousElectronMobility<dim>>(this->mu);
+    return std::make_shared<Ddhdg::HomogeneousMobility<dim>>(this->mu,
+                                                             this->cmp);
   }
 
 
@@ -518,24 +521,24 @@ namespace pyddhdg
 
 
   template <int dim>
-  Problem<dim>::Problem(const double                      left,
-                        const double                      right,
-                        HomogeneousPermittivity<dim> &    permittivity,
-                        HomogeneousElectronMobility<dim> &n_electron_mobility,
-                        HomogeneousElectronMobility<dim> &p_electron_mobility,
-                        RecombinationTerm<dim> &          recombination_term,
-                        DealIIFunction<dim> &             temperature,
-                        DealIIFunction<dim> &             doping,
-                        BoundaryConditionHandler<dim> &   bc_handler,
-                        const double conduction_band_density,
-                        const double valence_band_density,
+  Problem<dim>::Problem(const double                   left,
+                        const double                   right,
+                        HomogeneousPermittivity<dim> & permittivity,
+                        HomogeneousMobility<dim> &     electron_mobility,
+                        HomogeneousMobility<dim> &     hole_mobility,
+                        RecombinationTerm<dim> &       recombination_term,
+                        DealIIFunction<dim> &          temperature,
+                        DealIIFunction<dim> &          doping,
+                        BoundaryConditionHandler<dim> &bc_handler,
+                        const double                   conduction_band_density,
+                        const double                   valence_band_density,
                         const double conduction_band_edge_energy,
                         const double valence_band_edge_energy)
     : ddhdg_problem(std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
         generate_triangulation(left, right),
         permittivity.generate_ddhdg_permittivity(),
-        n_electron_mobility.generate_ddhdg_electron_mobility(),
-        p_electron_mobility.generate_ddhdg_electron_mobility(),
+        electron_mobility.generate_ddhdg_mobility(),
+        hole_mobility.generate_ddhdg_mobility(),
         recombination_term.generate_ddhdg_recombination_term(),
         temperature.get_dealii_function(),
         doping.get_dealii_function(),
@@ -551,8 +554,8 @@ namespace pyddhdg
   Problem<dim>::Problem(
     const dealii::python::TriangulationWrapper &triangulation,
     HomogeneousPermittivity<dim> &              permittivity,
-    HomogeneousElectronMobility<dim> &          n_electron_mobility,
-    HomogeneousElectronMobility<dim> &          p_electron_mobility,
+    HomogeneousMobility<dim> &                  electron_mobility,
+    HomogeneousMobility<dim> &                  hole_mobility,
     RecombinationTerm<dim> &                    recombination_term,
     DealIIFunction<dim> &                       temperature,
     DealIIFunction<dim> &                       doping,
@@ -564,8 +567,8 @@ namespace pyddhdg
     : ddhdg_problem(std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
         copy_triangulation(triangulation),
         permittivity.generate_ddhdg_permittivity(),
-        n_electron_mobility.generate_ddhdg_electron_mobility(),
-        p_electron_mobility.generate_ddhdg_electron_mobility(),
+        electron_mobility.generate_ddhdg_mobility(),
+        hole_mobility.generate_ddhdg_mobility(),
         recombination_term.generate_ddhdg_recombination_term(),
         temperature.get_dealii_function(),
         doping.get_dealii_function(),
@@ -1955,9 +1958,9 @@ namespace pyddhdg
   template class HomogeneousPermittivity<2>;
   template class HomogeneousPermittivity<3>;
 
-  template class HomogeneousElectronMobility<1>;
-  template class HomogeneousElectronMobility<2>;
-  template class HomogeneousElectronMobility<3>;
+  template class HomogeneousMobility<1>;
+  template class HomogeneousMobility<2>;
+  template class HomogeneousMobility<3>;
 
   template class DealIIFunction<1>;
   template class DealIIFunction<2>;

@@ -428,9 +428,9 @@ main(int argc, char **argv)
       std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.);
 
   // The same for the electron mobility
-  const std::shared_ptr<const Ddhdg::HomogeneousElectronMobility<dim>>
-    electron_mobility =
-      std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.);
+  const std::shared_ptr<const Ddhdg::HomogeneousMobility<dim>>
+    electron_mobility = std::make_shared<const Ddhdg::HomogeneousMobility<dim>>(
+      1., Ddhdg::Component::n);
 
   // Set the recombination terms
   const std::shared_ptr<const Ddhdg::RecombinationTerm<dim>>

@@ -821,8 +821,8 @@ namespace Ddhdg
     Vector<double>                                   tmp_rhs;
     Vector<double>                                   restricted_tmp_rhs;
     typename Permittivity::PermittivityComputer      permittivity;
-    NMobility                                        n_mobility;
-    PMobility                                        p_mobility;
+    typename NMobility::MobilityComputer             n_mobility;
+    typename PMobility::MobilityComputer             p_mobility;
     std::vector<Point<dim>>                          cell_quadrature_points;
     std::vector<Point<dim>>                          face_quadrature_points;
     std::vector<double>                              T_cell;
@@ -881,8 +881,8 @@ namespace Ddhdg
       UpdateFlags               trace_flags,
       UpdateFlags               trace_restricted_flags,
       const typename Permittivity::PermittivityComputer &permittivity,
-      const NMobility &                                  n_mobility,
-      const PMobility &                                  p_mobility,
+      const typename NMobility::MobilityComputer &       n_mobility,
+      const typename PMobility::MobilityComputer &       p_mobility,
       const std::set<Component> &                        enabled_components,
       const std::map<Component, const dealii::FiniteElement<dim> &> &fe_map);
 

@@ -28,15 +28,16 @@ namespace pyddhdg
   };
 
   template <int dim>
-  class HomogeneousElectronMobility
+  class HomogeneousMobility
   {
   public:
-    explicit HomogeneousElectronMobility(double mu);
+    explicit HomogeneousMobility(double mu, Ddhdg::Component cmp);
 
-    std::shared_ptr<Ddhdg::HomogeneousElectronMobility<dim>>
-    generate_ddhdg_electron_mobility();
+    std::shared_ptr<Ddhdg::HomogeneousMobility<dim>>
+    generate_ddhdg_mobility();
 
-    const double mu;
+    const double           mu;
+    const Ddhdg::Component cmp;
   };
 
   template <int dim>
@@ -313,24 +314,24 @@ namespace pyddhdg
   class Problem
   {
   public:
-    Problem(double                            left,
-            double                            right,
-            HomogeneousPermittivity<dim> &    permittivity,
-            HomogeneousElectronMobility<dim> &n_electron_mobility,
-            HomogeneousElectronMobility<dim> &p_electron_mobility,
-            RecombinationTerm<dim> &          recombination_term,
-            DealIIFunction<dim> &             temperature,
-            DealIIFunction<dim> &             doping,
-            BoundaryConditionHandler<dim> &   bc_handler,
-            double                            conduction_band_density,
-            double                            valence_band_density,
-            double                            conduction_band_edge_energy,
-            double                            valence_band_edge_energy);
+    Problem(double                         left,
+            double                         right,
+            HomogeneousPermittivity<dim> & permittivity,
+            HomogeneousMobility<dim> &     electron_mobility,
+            HomogeneousMobility<dim> &     hole_mobility,
+            RecombinationTerm<dim> &       recombination_term,
+            DealIIFunction<dim> &          temperature,
+            DealIIFunction<dim> &          doping,
+            BoundaryConditionHandler<dim> &bc_handler,
+            double                         conduction_band_density,
+            double                         valence_band_density,
+            double                         conduction_band_edge_energy,
+            double                         valence_band_edge_energy);
 
     Problem(const dealii::python::TriangulationWrapper &triangulation,
             HomogeneousPermittivity<dim> &              permittivity,
-            HomogeneousElectronMobility<dim> &          n_electron_mobility,
-            HomogeneousElectronMobility<dim> &          p_electron_mobility,
+            HomogeneousMobility<dim> &                  electron_mobility,
+            HomogeneousMobility<dim> &                  hole_mobility,
             RecombinationTerm<dim> &                    recombination_term,
             DealIIFunction<dim> &                       temperature,
             DealIIFunction<dim> &                       doping,

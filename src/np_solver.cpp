@@ -121,8 +121,8 @@ namespace Ddhdg
     const UpdateFlags                                  trace_flags,
     const UpdateFlags                                  trace_restricted_flags,
     const typename Permittivity::PermittivityComputer &permittivity,
-    const NMobility &                                  n_mobility,
-    const PMobility &                                  p_mobility,
+    const typename NMobility::MobilityComputer &       n_mobility,
+    const typename PMobility::MobilityComputer &       p_mobility,
     const std::set<Component> &                        enabled_components,
     const std::map<Component, const dealii::FiniteElement<dim> &> &fe_map)
     : fe_values_cell(fe_cell, quadrature_formula, cell_flags)
@@ -1951,8 +1951,8 @@ namespace Ddhdg
   NPSolver<1,
            Problem<1,
                    HomogeneousPermittivity<1>,
-                   HomogeneousElectronMobility<1>,
-                   HomogeneousElectronMobility<1>>>::
+                   HomogeneousMobility<1>,
+                   HomogeneousMobility<1>>>::
     output_results(const std::string &solution_filename,
                    const std::string &trace_filename,
                    const bool         save_update,

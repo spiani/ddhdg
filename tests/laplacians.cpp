@@ -163,8 +163,10 @@ protected:
       std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
         get_triangulation(),
         std::make_shared<const Ddhdg::HomogeneousPermittivity<dim>>(1.),
-        std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
-        std::make_shared<const Ddhdg::HomogeneousElectronMobility<dim>>(1.),
+        std::make_shared<const Ddhdg::HomogeneousMobility<dim>>(
+          1., Ddhdg::Component::n),
+        std::make_shared<const Ddhdg::HomogeneousMobility<dim>>(
+          1., Ddhdg::Component::p),
         std::make_shared<Ddhdg::LinearRecombinationTerm<dim>>(r0_string,
                                                               "0",
                                                               "1"),

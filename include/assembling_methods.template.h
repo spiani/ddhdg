@@ -45,21 +45,21 @@ namespace Ddhdg
 
     PerTaskData task_data(this->fe_trace_restricted->dofs_per_cell,
                           trace_reconstruct);
-    ScratchData scratch(*(this->fe_trace_restricted),
-                        *(this->fe_trace),
-                        *(this->fe_cell),
-                        quadrature_formula,
-                        face_quadrature_formula,
-                        flags_cell,
-                        face_flags_cell,
-                        flags_trace,
-                        flags_trace_restricted,
-                        this->problem->permittivity->get_computer(
-                          *(this->adimensionalizer)),
-                        *(this->problem->n_mobility),
-                        *(this->problem->p_mobility),
-                        this->enabled_components,
-                        component_to_fe);
+    ScratchData scratch(
+      *(this->fe_trace_restricted),
+      *(this->fe_trace),
+      *(this->fe_cell),
+      quadrature_formula,
+      face_quadrature_formula,
+      flags_cell,
+      face_flags_cell,
+      flags_trace,
+      flags_trace_restricted,
+      this->problem->permittivity->get_computer(*(this->adimensionalizer)),
+      this->problem->n_mobility->get_computer(*(this->adimensionalizer)),
+      this->problem->p_mobility->get_computer(*(this->adimensionalizer)),
+      this->enabled_components,
+      component_to_fe);
 
     if constexpr (multithreading)
       {
@@ -162,18 +162,9 @@ namespace Ddhdg
 
     // Compute the value of mu
     if (this->is_enabled(Component::n))
-      {
-        scratch.n_mobility.initialize_on_cell(
-          scratch.cell_quadrature_points,
-          this->adimensionalizer->get_mobility_rescaling_factor());
-      }
-
+      scratch.n_mobility.initialize_on_cell(scratch.cell_quadrature_points);
     if (this->is_enabled(Component::p))
-      {
-        scratch.p_mobility.initialize_on_cell(
-          scratch.cell_quadrature_points,
-          this->adimensionalizer->get_mobility_rescaling_factor());
-      }
+      scratch.p_mobility.initialize_on_cell(scratch.cell_quadrature_points);
 
     // Compute the value of T
     this->problem->temperature->value_list(scratch.cell_quadrature_points,
@@ -799,14 +790,9 @@ namespace Ddhdg
     scratch.permittivity.initialize_on_face(scratch.face_quadrature_points);
 
     if (this->is_enabled(Component::n))
-      scratch.n_mobility.initialize_on_face(
-        scratch.face_quadrature_points,
-        this->adimensionalizer->get_mobility_rescaling_factor());
-
+      scratch.n_mobility.initialize_on_face(scratch.face_quadrature_points);
     if (this->is_enabled(Component::p))
-      scratch.p_mobility.initialize_on_face(
-        scratch.face_quadrature_points,
-        this->adimensionalizer->get_mobility_rescaling_factor());
+      scratch.p_mobility.initialize_on_face(scratch.face_quadrature_points);
 
     this->problem->temperature->value_list(scratch.face_quadrature_points,
                                            scratch.T_face);

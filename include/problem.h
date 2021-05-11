@@ -48,7 +48,7 @@ namespace Ddhdg
   template <int dim>
   using HomogeneousProblem = Problem<dim,
                                      HomogeneousPermittivity<dim>,
-                                     HomogeneousElectronMobility<dim>,
-                                     HomogeneousElectronMobility<dim>>;
+                                     HomogeneousMobility<dim>,
+                                     HomogeneousMobility<dim>>;
 
 } // namespace Ddhdg
