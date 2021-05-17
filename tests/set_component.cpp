@@ -13,7 +13,7 @@ public:
   SetComponentMethod()
     : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>(
         get_problem(),
-        std::make_shared<Ddhdg::NPSolverParameters>(0, 1, 2))
+        std::make_shared<Ddhdg::FixedTauNPSolverParameters>(0, 1, 2))
   {
     this->log_standard_level = Ddhdg::Logging::severity_level::debug;
   };

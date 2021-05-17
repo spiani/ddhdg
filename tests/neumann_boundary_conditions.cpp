@@ -13,7 +13,7 @@ public:
   NeumannBCLinearTest()
     : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>(
         get_problem(),
-        std::make_shared<Ddhdg::NPSolverParameters>(2, 2, 2))
+        std::make_shared<Ddhdg::FixedTauNPSolverParameters>(2, 2, 2))
   {
     this->log_standard_level = Ddhdg::Logging::severity_level::debug;
   };
@@ -197,7 +197,7 @@ public:
   NeumannBCTrigonometricTest()
     : Ddhdg::NPSolver<2, Ddhdg::HomogeneousProblem<2>>(
         get_problem(),
-        std::make_shared<Ddhdg::NPSolverParameters>(2, 2, 0))
+        std::make_shared<Ddhdg::FixedTauNPSolverParameters>(2, 2, 0))
   {
     this->log_standard_level = Ddhdg::Logging::severity_level::debug;
   };

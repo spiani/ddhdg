@@ -10,6 +10,7 @@ add_library(DDHDG SHARED
         function_tools.cpp
         local_condenser.cpp
         nonlinear_iteration_results.cpp
+        np_solver_parameters.cpp
         np_solver.cpp
         problem.cpp
         project_component.cpp

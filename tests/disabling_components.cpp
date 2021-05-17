@@ -11,7 +11,7 @@ public:
   DisablingComponentsTest()
     : Ddhdg::NPSolver<2, Ddhdg::HomogeneousProblem<2>>(
         get_problem(),
-        std::make_shared<Ddhdg::NPSolverParameters>(1, 2, 3),
+        std::make_shared<Ddhdg::FixedTauNPSolverParameters>(1, 2, 3),
         std::make_shared<Ddhdg::Adimensionalizer>(1,
                                                   Ddhdg::Constants::Q /
                                                     Ddhdg::Constants::KB,

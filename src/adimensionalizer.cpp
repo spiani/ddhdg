@@ -499,16 +499,16 @@ namespace Ddhdg
 
 
   double
-  Adimensionalizer::adimensionalize_tau(const double tau, Component c) const
+  Adimensionalizer::get_tau_rescaling_factor(Component c) const
   {
     switch (c)
       {
         case Component::V:
-          return this->adimensionalize_tau<Component::V>(tau);
+          return this->get_tau_rescaling_factor<Component::V>();
         case Component::n:
-          return this->adimensionalize_tau<Component::n>(tau);
+          return this->get_tau_rescaling_factor<Component::n>();
         case Component::p:
-          return this->adimensionalize_tau<Component::p>(tau);
+          return this->get_tau_rescaling_factor<Component::p>();
         default:
           Assert(false, InvalidComponent());
       }

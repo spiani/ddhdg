@@ -30,7 +30,7 @@ namespace Ddhdg
                    std::vector<double>(n_of_dofs))
     {}
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     struct CTScratchData
     {
       using Permittivity =
@@ -74,9 +74,11 @@ namespace Ddhdg
         dealii::UpdateFlags            trace_flags,
         const Permittivity &           permittivity,
         const NMobility &              n_mobility,
-        const PMobility &              p_mobility);
+        const PMobility &              p_mobility,
+        const TauComputerClass &       tau_computer);
 
-      CTScratchData(const CTScratchData<dim, ProblemType> &ct_scratch_data);
+      CTScratchData(const CTScratchData<dim, ProblemType, TauComputerClass>
+                      &ct_scratch_data);
 
       unsigned int
       total_dofs_per_face();
@@ -148,9 +150,10 @@ namespace Ddhdg
       Permittivity                                     permittivity;
       NMobility                                        n_mobility;
       PMobility                                        p_mobility;
+      TauComputerClass                                 tau_computer;
       std::vector<unsigned int>                        trace_global_dofs;
       std::vector<Point<dim>>                          quadrature_points;
-      std::map<Component, std::vector<double>>         stabilized_tau;
+      std::map<Component, std::vector<double>>         tau;
       std::vector<double>                              T;
       std::vector<double>                              U_T;
       std::map<Component, std::vector<double>>         c;
@@ -167,9 +170,9 @@ namespace Ddhdg
       std::vector<double> &U_T_cell;
     };
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     std::map<Component, std::vector<std::vector<unsigned int>>>
-    CTScratchData<dim, ProblemType>::check_dofs_on_faces(
+    CTScratchData<dim, ProblemType, TauComputerClass>::check_dofs_on_faces(
       const FiniteElement<dim> & fe,
       const std::set<Component> &components)
     {
@@ -196,9 +199,9 @@ namespace Ddhdg
       return fe_support_on_face;
     }
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     std::map<Component, unsigned int>
-    CTScratchData<dim, ProblemType>::count_dofs_per_component(
+    CTScratchData<dim, ProblemType, TauComputerClass>::count_dofs_per_component(
       const std::map<Component, std::vector<std::vector<unsigned int>>>
         &fe_support_on_face)
     {
@@ -208,12 +211,12 @@ namespace Ddhdg
       return dofs_per_component_on_face;
     }
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     template <class data_type>
     std::map<Component, data_type>
-    CTScratchData<dim, ProblemType>::initialize_map_on_components(
-      unsigned int               n,
-      const std::set<Component> &components)
+    CTScratchData<dim, ProblemType, TauComputerClass>::
+      initialize_map_on_components(unsigned int               n,
+                                   const std::set<Component> &components)
     {
       std::map<Component, data_type> map_on_components;
       for (const auto c : components)
@@ -223,11 +226,12 @@ namespace Ddhdg
       return map_on_components;
     }
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     template <class data_type>
     std::map<Component, data_type>
-    CTScratchData<dim, ProblemType>::initialize_map_on_components(
-      const std::map<Component, unsigned int> &dofs_per_component)
+    CTScratchData<dim, ProblemType, TauComputerClass>::
+      initialize_map_on_components(
+        const std::map<Component, unsigned int> &dofs_per_component)
     {
       std::map<Component, data_type> map_on_components;
       for (const auto &[c, n_of_dofs] : dofs_per_component)
@@ -235,8 +239,8 @@ namespace Ddhdg
       return map_on_components;
     }
 
-    template <int dim, typename ProblemType>
-    CTScratchData<dim, ProblemType>::CTScratchData(
+    template <int dim, typename ProblemType, typename TauComputerClass>
+    CTScratchData<dim, ProblemType, TauComputerClass>::CTScratchData(
       const dealii::FiniteElement<dim> &fe_cell,
       const dealii::FiniteElement<dim> &fe_trace,
       const std::set<Component> &       active_components,
@@ -251,7 +255,8 @@ namespace Ddhdg
       dealii::UpdateFlags            trace_flags,
       const Permittivity &           permittivity,
       const NMobility &              n_mobility,
-      const PMobility &              p_mobility)
+      const PMobility &              p_mobility,
+      const TauComputerClass &       tau_computer)
       : fe_face_values_cell(fe_cell, face_quadrature_formula, cell_flags)
       , fe_face_values_trace(fe_trace, face_quadrature_formula, trace_flags)
       , fe_subface_values_cell(fe_cell, face_quadrature_formula, cell_flags)
@@ -265,9 +270,10 @@ namespace Ddhdg
       , permittivity(permittivity)
       , n_mobility(n_mobility)
       , p_mobility(p_mobility)
+      , tau_computer(tau_computer)
       , trace_global_dofs(fe_trace.dofs_per_cell)
       , quadrature_points(face_quadrature_formula.size())
-      , stabilized_tau(initialize_map_on_components<std::vector<double>>(
+      , tau(initialize_map_on_components<std::vector<double>>(
           face_quadrature_formula.size()))
       , T(face_quadrature_formula.size())
       , U_T(face_quadrature_formula.size())
@@ -285,9 +291,9 @@ namespace Ddhdg
       , U_T_cell(U_T)
     {}
 
-    template <int dim, typename ProblemType>
-    CTScratchData<dim, ProblemType>::CTScratchData(
-      const CTScratchData<dim, ProblemType> &ct_scratch_data)
+    template <int dim, typename ProblemType, typename TauComputerClass>
+    CTScratchData<dim, ProblemType, TauComputerClass>::CTScratchData(
+      const CTScratchData<dim, ProblemType, TauComputerClass> &ct_scratch_data)
       : fe_face_values_cell(
           ct_scratch_data.fe_face_values_cell.get_fe(),
           ct_scratch_data.fe_face_values_cell.get_quadrature(),
@@ -308,9 +314,10 @@ namespace Ddhdg
       , permittivity(ct_scratch_data.permittivity)
       , n_mobility(ct_scratch_data.n_mobility)
       , p_mobility(ct_scratch_data.p_mobility)
+      , tau_computer(ct_scratch_data.tau_computer)
       , trace_global_dofs(ct_scratch_data.trace_global_dofs)
       , quadrature_points(ct_scratch_data.quadrature_points)
-      , stabilized_tau(ct_scratch_data.stabilized_tau)
+      , tau(ct_scratch_data.tau)
       , T(ct_scratch_data.T)
       , U_T(ct_scratch_data.U_T)
       , c(ct_scratch_data.c)
@@ -322,9 +329,9 @@ namespace Ddhdg
       , U_T_cell(U_T)
     {}
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     unsigned int
-    CTScratchData<dim, ProblemType>::total_dofs_per_face()
+    CTScratchData<dim, ProblemType, TauComputerClass>::total_dofs_per_face()
     {
       unsigned int dofs_per_face = 0;
       for (const auto cmp : this->active_components)
@@ -332,9 +339,9 @@ namespace Ddhdg
       return dofs_per_face;
     }
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     void
-    CTScratchData<dim, ProblemType>::clean_matrix()
+    CTScratchData<dim, ProblemType, TauComputerClass>::clean_matrix()
     {
       for (const auto &element : this->matrix)
         {
@@ -344,9 +351,9 @@ namespace Ddhdg
         }
     }
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     void
-    CTScratchData<dim, ProblemType>::clean_rhs()
+    CTScratchData<dim, ProblemType, TauComputerClass>::clean_rhs()
     {
       for (const auto &element : this->rhs)
         {
@@ -356,9 +363,9 @@ namespace Ddhdg
         }
     }
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     void
-    CTScratchData<dim, ProblemType>::assemble_matrix(
+    CTScratchData<dim, ProblemType, TauComputerClass>::assemble_matrix(
       const unsigned int face_number)
     {
       this->clean_matrix();
@@ -391,15 +398,15 @@ namespace Ddhdg
         }
     }
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     template <class CellIteratorType>
     void
-    CTScratchData<dim, ProblemType>::copy_data_for_cell_regular(
-      const CellIteratorType &      cell,
-      unsigned int                  face,
-      const ProblemType &           problem,
-      const Adimensionalizer &      adimensionalizer,
-      const dealii::Vector<double> &current_solution)
+    CTScratchData<dim, ProblemType, TauComputerClass>::
+      copy_data_for_cell_regular(const CellIteratorType &      cell,
+                                 unsigned int                  face,
+                                 const ProblemType &           problem,
+                                 const Adimensionalizer &      adimensionalizer,
+                                 const dealii::Vector<double> &current_solution)
     {
       this->fe_face_values_cell.reinit(cell, face);
 
@@ -461,18 +468,23 @@ namespace Ddhdg
       for (unsigned int q = 0; q < q_points; ++q)
         this->U_T[q] = Constants::KB * this->T[q] /
                        (Constants::Q * thermal_voltage_rescaling_factor);
+
+      for (const auto cmp : this->active_components)
+        this->tau_computer.template compute_tau<dim>(
+          this->quadrature_points, cell, face, cmp, this->tau.at(cmp));
     }
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     template <class CellIteratorType>
     void
-    CTScratchData<dim, ProblemType>::copy_data_for_cell_local_ref(
-      const CellIteratorType &      cell,
-      unsigned int                  face,
-      unsigned int                  subface,
-      const ProblemType &           problem,
-      const Adimensionalizer &      adimensionalizer,
-      const dealii::Vector<double> &current_solution)
+    CTScratchData<dim, ProblemType, TauComputerClass>::
+      copy_data_for_cell_local_ref(
+        const CellIteratorType &      cell,
+        unsigned int                  face,
+        unsigned int                  subface,
+        const ProblemType &           problem,
+        const Adimensionalizer &      adimensionalizer,
+        const dealii::Vector<double> &current_solution)
     {
       this->fe_subface_values_cell.reinit(cell, face, subface);
 
@@ -535,10 +547,12 @@ namespace Ddhdg
                        (Constants::Q * thermal_voltage_rescaling_factor);
     }
 
-    template <int dim, typename ProblemType>
+
+
+    template <int dim, typename ProblemType, typename TauComputerClass>
     template <class CellIteratorType>
     void
-    CTScratchData<dim, ProblemType>::copy_data_for_cell(
+    CTScratchData<dim, ProblemType, TauComputerClass>::copy_data_for_cell(
       const CellIteratorType &      cell,
       unsigned int                  face,
       unsigned int                  subface,
@@ -555,9 +569,10 @@ namespace Ddhdg
 
 
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     void
-    CTScratchData<dim, ProblemType>::multiply_rhs(const double k)
+    CTScratchData<dim, ProblemType, TauComputerClass>::multiply_rhs(
+      const double k)
     {
       for (const auto cmp : this->active_components)
         {
@@ -567,9 +582,9 @@ namespace Ddhdg
         }
     }
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     void
-    CTScratchData<dim, ProblemType>::solve_system()
+    CTScratchData<dim, ProblemType, TauComputerClass>::solve_system()
     {
       for (const auto cmp : this->active_components)
         {
@@ -581,9 +596,9 @@ namespace Ddhdg
         }
     }
 
-    template <int dim, typename ProblemType>
+    template <int dim, typename ProblemType, typename TauComputerClass>
     void
-    CTScratchData<dim, ProblemType>::copy_solution(
+    CTScratchData<dim, ProblemType, TauComputerClass>::copy_solution(
       const unsigned int face_number,
       CTCopyData<dim> &  copy_data)
     {
@@ -612,27 +627,6 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
-  template <typename CTScratchData>
-  void
-  NPSolver<dim, ProblemType>::copy_trace_compute_tau(
-    CTScratchData &scratch) const
-  {
-    for (const auto c : scratch.active_components)
-      {
-        const double tau_rescaled = this->adimensionalizer->adimensionalize_tau(
-          this->parameters->tau.at(c), c);
-        auto &stb_tau = scratch.stabilized_tau.at(c);
-
-        const unsigned int n_q_points =
-          scratch.fe_face_values_cell.get_quadrature().size();
-
-        for (unsigned int q = 0; q < n_q_points; q++)
-          stb_tau[q] = tau_rescaled;
-      }
-  }
-
-
-  template <int dim, typename ProblemType>
   template <typename CTScratchData,
             TraceProjectionStrategy strategy,
             bool                    regular_face>
@@ -648,7 +642,7 @@ namespace Ddhdg
     const unsigned int q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
 
-    const double c_strategy = (strategy == l2_average) ? 0. : 1.;
+    constexpr double c_strategy = (strategy == l2_average) ? 0. : 1.;
 
     double         JxW;
     Tensor<1, dim> normal;
@@ -660,7 +654,7 @@ namespace Ddhdg
         const auto &V     = scratch.c.at(Component::V);
         const auto &E     = scratch.d.at(Component::V);
         auto &      tr_V  = scratch.tr_c.at(Component::V);
-        const auto &tau   = scratch.stabilized_tau.at(Component::V);
+        const auto &tau   = scratch.tau.at(Component::V);
         auto &      V_rhs = scratch.rhs.at(Component::V);
 
         dealii::Tensor<1, dim> epsilon_times_E;
@@ -717,7 +711,7 @@ namespace Ddhdg
         const auto &n     = scratch.c.at(Component::n);
         const auto &Wn    = scratch.d.at(Component::n);
         auto &      tr_n  = scratch.tr_c.at(Component::n);
-        const auto &tau   = scratch.stabilized_tau.at(Component::n);
+        const auto &tau   = scratch.tau.at(Component::n);
         auto &      n_rhs = scratch.rhs.at(Component::n);
 
         double n_rhs_term = 0.;
@@ -783,7 +777,7 @@ namespace Ddhdg
         const auto &p     = scratch.c.at(Component::p);
         const auto &Wp    = scratch.d.at(Component::p);
         auto &      tr_p  = scratch.tr_c.at(Component::p);
-        const auto &tau   = scratch.stabilized_tau.at(Component::p);
+        const auto &tau   = scratch.tau.at(Component::p);
         auto &      p_rhs = scratch.rhs.at(Component::p);
 
         double p_rhs_term = 0.;
@@ -923,8 +917,6 @@ namespace Ddhdg
       *(this->adimensionalizer),
       this->get_solution_vector());
 
-    this->copy_trace_compute_tau(scratch);
-
     this->copy_trace_assemble_rhs<CTScratchData>(scratch,
                                                  face1,
                                                  strategy,
@@ -938,8 +930,6 @@ namespace Ddhdg
       *(this->problem),
       *(this->adimensionalizer),
       this->get_solution_vector());
-
-    this->copy_trace_compute_tau(scratch);
 
     // Here we have "face1" and not "face2" because, in this function,
     // the face is related with the FeValues for the trace, that has
@@ -986,8 +976,6 @@ namespace Ddhdg
                                *(this->problem),
                                *(this->adimensionalizer),
                                this->get_solution_vector());
-
-    this->copy_trace_compute_tau(scratch);
 
     const unsigned int q_points =
       scratch.fe_face_values_trace.get_quadrature().size();
@@ -1179,25 +1167,23 @@ namespace Ddhdg
             // This ensures that we perform this computation just once for
             // each face
             if (face < neighbor_face)
-              this->copy_trace_face_worker<
-                IteratorType,
-                NeighborIteratorType,
-                CopyTraceInternalTools::CTScratchData<dim, ProblemType>,
-                CopyTraceInternalTools::CTCopyData<dim>>(cell,
-                                                         face,
-                                                         neighbor,
-                                                         neighbor_face,
-                                                         scratch,
-                                                         copy_data,
-                                                         strategy);
+              this->copy_trace_face_worker<IteratorType,
+                                           NeighborIteratorType,
+                                           CTScratchData,
+                                           CTCopyData>(cell,
+                                                       face,
+                                                       neighbor,
+                                                       neighbor_face,
+                                                       scratch,
+                                                       copy_data,
+                                                       strategy);
             continue;
           }
 
-        this->copy_trace_face_worker<
-          IteratorType,
-          NeighborIteratorType,
-          CopyTraceInternalTools::CTScratchData<dim, ProblemType>,
-          CopyTraceInternalTools::CTCopyData<dim>>(
+        this->copy_trace_face_worker<IteratorType,
+                                     NeighborIteratorType,
+                                     CTScratchData,
+                                     CTCopyData>(
           cell, face, neighbor, neighbor_face, scratch, copy_data, strategy);
       }
   }
@@ -1207,6 +1193,31 @@ namespace Ddhdg
   template <int dim, typename ProblemType>
   void
   NPSolver<dim, ProblemType>::project_cell_function_on_trace(
+    const std::set<Component> &components,
+    TraceProjectionStrategy    strategy)
+  {
+    const TauComputerType tc_type = this->parameters->get_tau_computer_type();
+
+    AssertThrow(tc_type != TauComputerType::not_implemented,
+                ExcMessage(
+                  "The current TauComputer class does not report its type"));
+
+    if (tc_type == TauComputerType::fixed_tau_computer)
+      return this
+        ->template project_cell_function_on_trace_internal<FixedTauComputer>(
+          components, strategy);
+
+    AssertThrow(false,
+                ExcMessage(
+                  "The current TauComputer class has not been implemented"));
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  template <typename TauComputerClass>
+  void
+  NPSolver<dim, ProblemType>::project_cell_function_on_trace_internal(
     const std::set<Component> &components,
     TraceProjectionStrategy    strategy)
   {
@@ -1234,26 +1245,37 @@ namespace Ddhdg
                               this->get_displacement_extractor(d)};
       }
 
-    CopyTraceInternalTools::CTScratchData<dim, ProblemType> scratch(
-      *(this->fe_cell),
-      *(this->fe_trace),
-      components,
-      trace_extractors,
-      cell_extractors,
-      face_quadrature_formula,
-      flags_cell,
-      flags_trace,
-      this->problem->permittivity->get_computer(*(this->adimensionalizer)),
-      this->problem->n_mobility->get_computer(*(this->adimensionalizer)),
-      this->problem->p_mobility->get_computer(*(this->adimensionalizer)));
+    this->parameters->get_tau_computer(*(this->adimensionalizer));
+
+    std::unique_ptr<TauComputer> tau_computer_raw =
+      this->parameters->get_tau_computer(*(this->adimensionalizer));
+
+    TauComputerClass &tau_computer =
+      static_cast<TauComputerClass &>(*tau_computer_raw);
+
+    CopyTraceInternalTools::CTScratchData<dim, ProblemType, TauComputerClass>
+      scratch(
+        *(this->fe_cell),
+        *(this->fe_trace),
+        components,
+        trace_extractors,
+        cell_extractors,
+        face_quadrature_formula,
+        flags_cell,
+        flags_trace,
+        this->problem->permittivity->get_computer(*(this->adimensionalizer)),
+        this->problem->n_mobility->get_computer(*(this->adimensionalizer)),
+        this->problem->p_mobility->get_computer(*(this->adimensionalizer)),
+        tau_computer);
 
     CopyTraceInternalTools::CTCopyData<dim> copy_data(
       scratch.total_dofs_per_face());
 
     typedef void (NPSolver<dim, ProblemType>::*copy_trace_worker_pointer_type)(
-      const ActiveCellIteratorType &                           cell,
-      CopyTraceInternalTools::CTScratchData<dim, ProblemType> &scratch,
-      CopyTraceInternalTools::CTCopyData<dim> &                task_data);
+      const ActiveCellIteratorType &cell,
+      CopyTraceInternalTools::CTScratchData<dim, ProblemType, TauComputerClass>
+        &                                      scratch,
+      CopyTraceInternalTools::CTCopyData<dim> &task_data);
 
     copy_trace_worker_pointer_type copy_trace_worker_pointer;
 
@@ -1264,7 +1286,8 @@ namespace Ddhdg
           copy_trace_worker_pointer =
             &NPSolver<dim, ProblemType>::template copy_trace_cell_worker<
               ActiveCellIteratorType,
-              CopyTraceInternalTools::template CTScratchData<dim, ProblemType>,
+              CopyTraceInternalTools::
+                template CTScratchData<dim, ProblemType, TauComputerClass>,
               CopyTraceInternalTools::template CTCopyData<dim>,
               TraceProjectionStrategy::l2_average>;
           break;
@@ -1272,7 +1295,8 @@ namespace Ddhdg
           copy_trace_worker_pointer =
             &NPSolver<dim, ProblemType>::template copy_trace_cell_worker<
               ActiveCellIteratorType,
-              CopyTraceInternalTools::template CTScratchData<dim, ProblemType>,
+              CopyTraceInternalTools::
+                template CTScratchData<dim, ProblemType, TauComputerClass>,
               CopyTraceInternalTools::template CTCopyData<dim>,
               TraceProjectionStrategy::reconstruct_problem_solution>;
           break;

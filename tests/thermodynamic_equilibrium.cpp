@@ -18,7 +18,7 @@ public:
   ThermodynamicEquilibriumTest()
     : Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>(
         get_problem(),
-        std::make_shared<Ddhdg::NPSolverParameters>(1, 1, 1),
+        std::make_shared<Ddhdg::FixedTauNPSolverParameters>(1, 1, 1),
         std::make_shared<Ddhdg::Adimensionalizer>(1,
                                                   Ddhdg::Constants::Q /
                                                     Ddhdg::Constants::KB,

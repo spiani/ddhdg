@@ -113,8 +113,8 @@ TEST(AdimensionalizerTest, scale_length)
     std::make_shared<Ddhdg::Adimensionalizer>(
       1e3, Ddhdg::Constants::Q / Ddhdg::Constants::KB, 1);
 
-  std::shared_ptr<Ddhdg::NPSolverParameters> parameters =
-    std::make_shared<Ddhdg::NPSolverParameters>(
+  std::shared_ptr<Ddhdg::FixedTauNPSolverParameters> parameters =
+    std::make_shared<Ddhdg::FixedTauNPSolverParameters>(
       1,
       1,
       1,

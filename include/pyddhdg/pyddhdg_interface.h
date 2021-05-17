@@ -257,7 +257,7 @@ py::class_<Problem<DIM>>(m, "Problem")
 
 py::class_<NPSolver<DIM>>(m, "NPSolver")
   .def(py::init<const Problem<DIM> &,
-                const Ddhdg::NPSolverParameters &,
+                const std::shared_ptr<const Ddhdg::NPSolverParameters>,
                 const Ddhdg::Adimensionalizer &,
                 bool>(),
        py::arg("problem"),

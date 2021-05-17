@@ -4,6 +4,7 @@
 
 #include "dof_types.h"
 #include "local_condenser.h"
+#include "np_solver_parameters.h"
 #include "solver.h"
 
 namespace pyddhdg
@@ -22,13 +23,6 @@ namespace Ddhdg
   template <int dim, class Permittivity, unsigned int parameter_mask>
   class TemplatizedParameters;
 
-  enum DDFluxType
-  {
-    use_cell,
-    use_trace,
-    qiu_shi_stabilization
-  };
-
   DeclExceptionMsg(InvalidDDFluxType,
                    "Invalid flux specified for drift-diffusion equation");
 
@@ -40,52 +34,6 @@ namespace Ddhdg
 
   DeclExceptionMsg(InvalidStrategy, "Invalid strategy for trace projection");
 
-  struct NonlinearSolverParameters
-  {
-    explicit NonlinearSolverParameters(double absolute_tolerance       = 1e-10,
-                                       double relative_tolerance       = 1e-10,
-                                       int    max_number_of_iterations = 100,
-                                       double alpha                    = 1.)
-      : absolute_tolerance(absolute_tolerance)
-      , relative_tolerance(relative_tolerance)
-      , max_number_of_iterations(max_number_of_iterations)
-      , alpha(alpha)
-    {}
-
-    double absolute_tolerance;
-    double relative_tolerance;
-    int    max_number_of_iterations;
-    double alpha;
-  };
-
-  struct NPSolverParameters
-  {
-    explicit NPSolverParameters(
-      unsigned int                               V_degree = 1,
-      unsigned int                               n_degree = 1,
-      unsigned int                               p_degree = 1,
-      std::shared_ptr<NonlinearSolverParameters> nonlinear_parameters =
-        std::make_shared<NonlinearSolverParameters>(),
-      double     V_tau                   = 1.,
-      double     n_tau                   = 1.,
-      double     p_tau                   = 1.,
-      bool       iterative_linear_solver = false,
-      bool       multithreading          = true,
-      DDFluxType dd_flux_type            = use_cell,
-      bool       phi_linearize           = false);
-
-    NPSolverParameters(const NPSolverParameters &solver) = default;
-
-    const std::map<Component, unsigned int> degree;
-
-    const std::shared_ptr<NonlinearSolverParameters> nonlinear_parameters;
-
-    const std::map<Component, double> tau;
-    const bool                        iterative_linear_solver;
-    bool                              multithreading;
-    const DDFluxType                  dd_flux_type;
-    const bool                        phi_linearize;
-  };
 
   template <int dim, typename ProblemType>
   class NPSolver : public Solver<dim, ProblemType>
@@ -456,6 +404,12 @@ namespace Ddhdg
       const std::set<Component> &components = all_primary_components(),
       TraceProjectionStrategy    strategy   = l2_average);
 
+    template <typename TauComputerClass>
+    void
+    project_cell_function_on_trace_internal(
+      const std::set<Component> &components = all_primary_components(),
+      TraceProjectionStrategy    strategy   = l2_average);
+
     template <typename PCScratchData, typename PCCopyData, Component c>
     void
     project_component_one_cell(
@@ -501,10 +455,10 @@ namespace Ddhdg
     void
     setup_restricted_trace_system();
 
-    template <bool multithreading>
     void
     assemble_system(bool reconstruct_trace                 = false,
-                    bool compute_thermodynamic_equilibrium = false);
+                    bool compute_thermodynamic_equilibrium = false,
+                    bool multithreading                    = false);
 
     void
     solve_linear_problem();
@@ -516,7 +470,9 @@ namespace Ddhdg
     dealii::Threads::Mutex inversion_mutex;
 #endif
 
-    template <typename prm, bool has_boundary_conditions>
+    template <typename prm,
+              bool has_boundary_conditions,
+              typename TauComputerClass>
     void
     assemble_system_one_cell_internal(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
@@ -533,7 +489,7 @@ namespace Ddhdg
     get_assemble_system_one_cell_function(
       bool compute_thermodynamic_equilibrium);
 
-    template <typename prm>
+    template <typename prm, typename TauComputerClass>
     void
     assemble_system_one_cell(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
@@ -560,8 +516,12 @@ namespace Ddhdg
     void
     add_cell_products_to_cc_rhs(ScratchData &scratch);
 
+    template <typename TauComputerClass>
     void
-    prepare_data_on_face_quadrature_points(ScratchData &scratch);
+    prepare_data_on_face_quadrature_points(
+      ScratchData &                                         scratch,
+      const typename DoFHandler<dim>::active_cell_iterator &cell,
+      unsigned int                                          face);
 
     inline void
     copy_fe_values_on_scratch(ScratchData &scratch,
@@ -680,10 +640,6 @@ namespace Ddhdg
     void
     compute_local_charge_neutrality_on_cells();
 
-    template <typename CTScratchData>
-    inline void
-    copy_trace_compute_tau(CTScratchData &scratch) const;
-
     template <typename CTScratchData,
               TraceProjectionStrategy strategy,
               bool                    regular_face>
@@ -735,7 +691,7 @@ namespace Ddhdg
                            CTCopyData &        copy_data);
 
     std::unique_ptr<Triangulation<dim>>       triangulation;
-    const std::unique_ptr<NPSolverParameters> parameters;
+    const std::shared_ptr<NPSolverParameters> parameters;
 
     const std::shared_ptr<const dealii::Function<dim>> rescaled_doping;
     const std::unique_ptr<RecombinationTerm<dim>>      recombination_term;
@@ -823,6 +779,7 @@ namespace Ddhdg
     typename Permittivity::PermittivityComputer      permittivity;
     typename NMobility::MobilityComputer             n_mobility;
     typename PMobility::MobilityComputer             p_mobility;
+    std::unique_ptr<TauComputer>                     tau_computer;
     std::vector<Point<dim>>                          cell_quadrature_points;
     std::vector<Point<dim>>                          face_quadrature_points;
     std::vector<double>                              T_cell;
@@ -832,6 +789,7 @@ namespace Ddhdg
     std::vector<double>                              doping_cell;
     std::vector<double>                              r_cell;
     std::map<Component, std::vector<double>>         dr_cell;
+    std::map<Component, std::vector<double>>         tau;
     std::map<Component, std::vector<double>>         phi;
     std::map<Component, std::vector<double>>         previous_c_cell;
     std::map<Component, std::vector<double>>         previous_c_face;
@@ -883,6 +841,7 @@ namespace Ddhdg
       const typename Permittivity::PermittivityComputer &permittivity,
       const typename NMobility::MobilityComputer &       n_mobility,
       const typename PMobility::MobilityComputer &       p_mobility,
+      std::unique_ptr<TauComputer> &&                    tau_computer,
       const std::set<Component> &                        enabled_components,
       const std::map<Component, const dealii::FiniteElement<dim> &> &fe_map);
 

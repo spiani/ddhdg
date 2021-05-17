@@ -28,31 +28,6 @@
 
 namespace Ddhdg
 {
-  NPSolverParameters::NPSolverParameters(
-    const unsigned int                               V_degree,
-    const unsigned int                               n_degree,
-    const unsigned int                               p_degree,
-    const std::shared_ptr<NonlinearSolverParameters> nonlinear_parameters,
-    const double                                     V_tau,
-    const double                                     n_tau,
-    const double                                     p_tau,
-    const bool                                       iterative_linear_solver,
-    const bool                                       multithreading,
-    const DDFluxType                                 dd_flux_type,
-    const bool                                       phi_linearize)
-    : degree{{Component::V, V_degree},
-             {Component::n, n_degree},
-             {Component::p, p_degree}}
-    , nonlinear_parameters(nonlinear_parameters)
-    , tau{{Component::V, V_tau}, {Component::n, n_tau}, {Component::p, p_tau}}
-    , iterative_linear_solver(iterative_linear_solver)
-    , multithreading(multithreading)
-    , dd_flux_type(dd_flux_type)
-    , phi_linearize(phi_linearize)
-  {}
-
-
-
   template <int dim, typename ProblemType>
   std::unique_ptr<dealii::Triangulation<dim>>
   NPSolver<dim, ProblemType>::copy_triangulation(
@@ -123,6 +98,7 @@ namespace Ddhdg
     const typename Permittivity::PermittivityComputer &permittivity,
     const typename NMobility::MobilityComputer &       n_mobility,
     const typename PMobility::MobilityComputer &       p_mobility,
+    std::unique_ptr<TauComputer> &&                    tau_computer,
     const std::set<Component> &                        enabled_components,
     const std::map<Component, const dealii::FiniteElement<dim> &> &fe_map)
     : fe_values_cell(fe_cell, quadrature_formula, cell_flags)
@@ -148,6 +124,7 @@ namespace Ddhdg
     , permittivity(permittivity)
     , n_mobility(n_mobility)
     , p_mobility(p_mobility)
+    , tau_computer(std::move(tau_computer))
     , cell_quadrature_points(quadrature_formula.size())
     , face_quadrature_points(face_quadrature_formula.size())
     , T_cell(quadrature_formula.size())
@@ -157,6 +134,7 @@ namespace Ddhdg
     , doping_cell(quadrature_formula.size())
     , r_cell(quadrature_formula.size())
     , dr_cell(initialize_double_map_on_n_and_p(quadrature_formula.size()))
+    , tau(initialize_double_map_on_components(face_quadrature_formula.size()))
     , phi(initialize_double_map_on_n_and_p(quadrature_formula.size()))
     , previous_c_cell(
         initialize_double_map_on_components(quadrature_formula.size()))
@@ -283,6 +261,7 @@ namespace Ddhdg
     , permittivity(sd.permittivity)
     , n_mobility(sd.n_mobility)
     , p_mobility(sd.p_mobility)
+    , tau_computer(sd.tau_computer->make_copy())
     , cell_quadrature_points(sd.cell_quadrature_points)
     , face_quadrature_points(sd.face_quadrature_points)
     , T_cell(sd.T_cell)
@@ -292,6 +271,7 @@ namespace Ddhdg
     , doping_cell(sd.doping_cell)
     , r_cell(sd.r_cell)
     , dr_cell(sd.dr_cell)
+    , tau(sd.tau)
     , phi(sd.phi)
     , previous_c_cell(sd.previous_c_cell)
     , previous_c_face(sd.previous_c_face)
@@ -354,7 +334,7 @@ namespace Ddhdg
     const bool                                      verbose)
     : Solver<dim, ProblemType>(problem, adimensionalizer)
     , triangulation(copy_triangulation(problem->triangulation))
-    , parameters(std::make_unique<NPSolverParameters>(*parameters))
+    , parameters(parameters->make_shared_copy())
     , rescaled_doping(
         this->adimensionalizer->template adimensionalize_doping_function<dim>(
           this->problem->doping))
@@ -1506,10 +1486,10 @@ namespace Ddhdg
         this->system_solution         = 0;
         this->n_dirichlet_constraints = 0;
 
-        if (parameters->multithreading)
-          assemble_system<true>(false, compute_thermodynamic_equilibrium);
-        else
-          assemble_system<false>(false, compute_thermodynamic_equilibrium);
+        assemble_system(false,
+                        compute_thermodynamic_equilibrium,
+                        parameters->multithreading);
+
 
         Assert(
           this->n_dirichlet_constraints == dirichlet_constrains_check,
@@ -1533,10 +1513,9 @@ namespace Ddhdg
 
         this->copy_restricted_to_trace();
 
-        if (parameters->multithreading)
-          assemble_system<true>(true, compute_thermodynamic_equilibrium);
-        else
-          assemble_system<false>(true, compute_thermodynamic_equilibrium);
+        assemble_system(true,
+                        compute_thermodynamic_equilibrium,
+                        parameters->multithreading);
 
         update_cell_norm           = this->update_cell.linfty_norm();
         current_solution_cell_norm = this->current_solution_cell.linfty_norm();

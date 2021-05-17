@@ -6,11 +6,11 @@
 namespace Ddhdg
 {
   template <int dim, typename ProblemType>
-  template <bool multithreading>
   void
   NPSolver<dim, ProblemType>::assemble_system(
     const bool trace_reconstruct,
-    const bool compute_thermodynamic_equilibrium)
+    const bool compute_thermodynamic_equilibrium,
+    const bool multithreading)
   {
     Assert(this->initialized, dealii::ExcNotInitialized());
 
@@ -58,10 +58,11 @@ namespace Ddhdg
       this->problem->permittivity->get_computer(*(this->adimensionalizer)),
       this->problem->n_mobility->get_computer(*(this->adimensionalizer)),
       this->problem->p_mobility->get_computer(*(this->adimensionalizer)),
+      this->parameters->get_tau_computer(*(this->adimensionalizer)),
       this->enabled_components,
       component_to_fe);
 
-    if constexpr (multithreading)
+    if (multithreading)
       {
         WorkStream::run(dof_handler_trace_restricted.begin_active(),
                         dof_handler_trace_restricted.end(),
@@ -119,7 +120,8 @@ namespace Ddhdg
       }
 
     typename NPSolver<dim, ProblemType>::assemble_system_one_cell_pointer f =
-      p1->get_assemble_system_one_cell_function();
+      p1->get_assemble_system_one_cell_function(
+        this->parameters->get_tau_computer(*(this->adimensionalizer)).get());
     delete p1;
     return f;
   }
@@ -757,12 +759,18 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
+  template <typename TauComputerClass>
   void
   NPSolver<dim, ProblemType>::prepare_data_on_face_quadrature_points(
-    Ddhdg::NPSolver<dim, ProblemType>::ScratchData &scratch)
+    Ddhdg::NPSolver<dim, ProblemType>::ScratchData &      scratch,
+    const typename DoFHandler<dim>::active_cell_iterator &cell,
+    const unsigned int                                    face)
   {
     const unsigned int n_face_q_points =
       scratch.fe_face_values_cell.get_quadrature().size();
+
+    TauComputerClass *tau_computer =
+      static_cast<TauComputerClass *>(scratch.tau_computer.get());
 
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       scratch.face_quadrature_points[q] =
@@ -796,6 +804,10 @@ namespace Ddhdg
 
     this->problem->temperature->value_list(scratch.face_quadrature_points,
                                            scratch.T_face);
+
+    for (const auto c : this->enabled_components)
+      tau_computer->template compute_tau<dim>(
+        scratch.face_quadrature_points, cell, face, c, scratch.tau.at(c));
 
     const double thermal_voltage_rescaling_factor =
       this->adimensionalizer->get_thermal_voltage_rescaling_factor();
@@ -907,15 +919,9 @@ namespace Ddhdg
         dealii::Tensor<1, dim> mu_n_times_previous_E;
         dealii::Tensor<1, dim> mu_p_times_previous_E;
 
-        const double V_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::V>(
-            this->parameters->tau.at(Component::V));
-        const double n_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::n>(
-            this->parameters->tau.at(Component::n));
-        const double p_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::p>(
-            this->parameters->tau.at(Component::p));
+        const std::vector<double> &V_tau = scratch.tau.at(Component::V);
+        const std::vector<double> &n_tau = scratch.tau.at(Component::n);
+        const std::vector<double> &p_tau = scratch.tau.at(Component::p);
 
         double E0_times_n = 0.;
 
@@ -966,7 +972,7 @@ namespace Ddhdg
                       {
                         scratch.ct_matrix(ii, jj) +=
                           (tr_V[j] * (q1[i] * normal) -
-                           V_tau * tr_V[j] * z1[i]) *
+                           V_tau[q] * tr_V[j] * z1[i]) *
                           JxW;
                       }
                     if constexpr (prm::is_n_enabled)
@@ -983,7 +989,7 @@ namespace Ddhdg
                                                          z2[i] * JxW;
                         scratch.ct_matrix(ii, jj) +=
                           (tr_n[j] * (q2[i] * normal) +
-                           n_tau * (tr_n[j] * z2[i])) *
+                           n_tau[q] * (tr_n[j] * z2[i])) *
                           JxW;
                       }
                     if constexpr (prm::is_p_enabled)
@@ -1000,7 +1006,7 @@ namespace Ddhdg
                               z3[i] * JxW;
                         scratch.ct_matrix(ii, jj) +=
                           (tr_p[j] * (q3[i] * normal) +
-                           p_tau * (tr_p[j] * z3[i])) *
+                           p_tau[q] * (tr_p[j] * z3[i])) *
                           JxW;
                       }
                   }
@@ -1062,15 +1068,9 @@ namespace Ddhdg
         const auto &tr_n0 = scratch.previous_tr_c_face.at(Component::n);
         const auto &tr_p0 = scratch.previous_tr_c_face.at(Component::p);
 
-        const double V_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::V>(
-            this->parameters->tau.at(Component::V));
-        const double n_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::n>(
-            this->parameters->tau.at(Component::n));
-        const double p_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::p>(
-            this->parameters->tau.at(Component::p));
+        const std::vector<double> &V_tau = scratch.tau.at(Component::V);
+        const std::vector<double> &n_tau = scratch.tau.at(Component::n);
+        const std::vector<double> &p_tau = scratch.tau.at(Component::p);
 
         if constexpr (!prm::is_V_enabled)
           (void)V_tau;
@@ -1102,7 +1102,8 @@ namespace Ddhdg
                                                                             q);
 
                     scratch.cc_rhs(ii) +=
-                      (-tr_V0[q] * (q1 * normal) + V_tau * tr_V0[q] * z1) * JxW;
+                      (-tr_V0[q] * (q1 * normal) + V_tau[q] * tr_V0[q] * z1) *
+                      JxW;
                   }
 
                 if constexpr (prm::is_n_enabled)
@@ -1115,7 +1116,8 @@ namespace Ddhdg
                                                                           q);
 
                     scratch.cc_rhs(ii) +=
-                      (-tr_n0[q] * (q2 * normal) - n_tau * tr_n0[q] * z2) * JxW;
+                      (-tr_n0[q] * (q2 * normal) - n_tau[q] * tr_n0[q] * z2) *
+                      JxW;
                   }
 
                 if constexpr (prm::is_p_enabled)
@@ -1127,7 +1129,8 @@ namespace Ddhdg
                       scratch.fe_face_values_cell[hole_density].value(iii, q);
 
                     scratch.cc_rhs(ii) +=
-                      (-tr_p0[q] * (q3 * normal) - p_tau * tr_p0[q] * z3) * JxW;
+                      (-tr_p0[q] * (q3 * normal) - p_tau[q] * tr_p0[q] * z3) *
+                      JxW;
                   }
               }
           }
@@ -1174,8 +1177,7 @@ namespace Ddhdg
     const std::vector<double> &tr_p0 =
       scratch.previous_tr_c_face.at(Component::p);
 
-    const double tau = this->adimensionalizer->template adimensionalize_tau<c>(
-      this->parameters->tau.at(c));
+    const std::vector<double> &tau = scratch.tau.at(c);
 
     double E0_times_n = 0.;
 
@@ -1228,7 +1230,7 @@ namespace Ddhdg
                     scratch.permittivity.epsilon_operator_on_face(
                       q, f[j], epsilon_times_E);
                     scratch.tc_matrix(ii, jj) -=
-                      (epsilon_times_E * normal + tau * c_[j]) * xi[i] * JxW;
+                      (epsilon_times_E * normal + tau[q] * c_[j]) * xi[i] * JxW;
                   }
                 if constexpr (c == Component::n)
                   {
@@ -1260,7 +1262,7 @@ namespace Ddhdg
                     scratch.tc_matrix(ii, jj) -=
                       (cE_flux -
                        n_einstein_diffusion_coefficient_times_f * normal -
-                       tau * c_[j]) *
+                       tau[q] * c_[j]) *
                       xi[i] * JxW;
                   }
                 if constexpr (c == Component::p)
@@ -1293,7 +1295,7 @@ namespace Ddhdg
                     scratch.tc_matrix(ii, jj) -=
                       (cE_flux -
                        p_einstein_diffusion_coefficient_times_f * normal -
-                       tau * c_[j]) *
+                       tau[q] * c_[j]) *
                       xi[i] * JxW;
                   }
               }
@@ -1344,8 +1346,7 @@ namespace Ddhdg
     dealii::Tensor<1, dim> n_einstein_diffusion_coefficient_times_f0;
     dealii::Tensor<1, dim> p_einstein_diffusion_coefficient_times_f0;
 
-    const double tau = this->adimensionalizer->template adimensionalize_tau<c>(
-      this->parameters->tau.at(c));
+    const std::vector<double> &tau = scratch.tau.at(c);
 
     double n0;
     double p0;
@@ -1399,8 +1400,8 @@ namespace Ddhdg
             if constexpr (c == Component::V)
               {
                 task_data.tt_vector[ii] +=
-                  (-epsilon_times_previous_E_times_normal - tau * c0[q]) * xi *
-                  JxW;
+                  (-epsilon_times_previous_E_times_normal - tau[q] * c0[q]) *
+                  xi * JxW;
               }
             if constexpr (c == Component::n)
               {
@@ -1417,7 +1418,7 @@ namespace Ddhdg
                 task_data.tt_vector[ii] +=
                   (-n0 * mu_n_times_previous_E_times_normal +
                    n_einstein_diffusion_coefficient_times_f0 * normal +
-                   tau * c0[q]) *
+                   tau[q] * c0[q]) *
                   xi * JxW;
               }
             if constexpr (c == Component::p)
@@ -1435,7 +1436,7 @@ namespace Ddhdg
                 task_data.tt_vector[ii] +=
                   (p0 * mu_p_times_previous_E_times_normal +
                    p_einstein_diffusion_coefficient_times_f0 * normal +
-                   tau * c0[q]) *
+                   tau[q] * c0[q]) *
                   xi * JxW;
               }
           }
@@ -1458,9 +1459,8 @@ namespace Ddhdg
     auto &tr_c = scratch.tr_c.at(c);
     auto &xi   = scratch.tr_c.at(c);
 
-    const double tau = this->adimensionalizer->template adimensionalize_tau<c>(
-      this->parameters->tau.at(c));
-    const double sign = (c == Component::V) ? -1 : 1;
+    const std::vector<double> &tau  = scratch.tau.at(c);
+    const double               sign = (c == Component::V) ? -1 : 1;
 
     const auto &E0 = scratch.previous_d_face.at(Component::V);
 
@@ -1482,6 +1482,11 @@ namespace Ddhdg
         const double JxW = scratch.fe_face_values_trace_restricted.JxW(q);
         const Tensor<1, dim> normal =
           scratch.fe_face_values_trace_restricted.normal_vector(q);
+
+        if constexpr (c == Component::V ||
+                      (dd_flux_type != DDFluxType::use_trace &&
+                       dd_flux_type != DDFluxType::qiu_shi_stabilization))
+          (void)normal;
 
         if constexpr (dd_flux_type == DDFluxType::qiu_shi_stabilization &&
                       (c == Component::n || c == Component::p))
@@ -1532,7 +1537,7 @@ namespace Ddhdg
                   }
 
                 task_data.tt_matrix(ii, jj) +=
-                  sign * tau * tr_c[j] * xi[i] * JxW;
+                  sign * tau[q] * tr_c[j] * xi[i] * JxW;
               }
           }
       }
@@ -1556,9 +1561,8 @@ namespace Ddhdg
     const unsigned int trace_dofs_per_face =
       scratch.fe_trace_support_on_face[face].size();
 
-    const double tau = this->adimensionalizer->template adimensionalize_tau<c>(
-      this->parameters->tau.at(c));
-    const double sign = (c == Component::V) ? -1 : 1;
+    const std::vector<double> &tau  = scratch.tau.at(c);
+    const double               sign = (c == Component::V) ? -1 : 1;
 
     const FEValuesExtractors::Scalar tr_c_extractor =
       this->get_trace_component_extractor(c, true);
@@ -1575,7 +1579,7 @@ namespace Ddhdg
             const double       xi =
               scratch.fe_face_values_trace_restricted[tr_c_extractor].value(ii,
                                                                             q);
-            task_data.tt_vector[ii] += -sign * tau * tr_c0[q] * xi * JxW;
+            task_data.tt_vector[ii] += -sign * tau[q] * tr_c0[q] * xi * JxW;
           }
       }
   }
@@ -1764,15 +1768,9 @@ namespace Ddhdg
         const auto  tr_n0 = scratch.previous_tr_c_face.at(Component::n);
         const auto  tr_p0 = scratch.previous_tr_c_face.at(Component::p);
 
-        const double V_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::V>(
-            this->parameters->tau.at(Component::V));
-        const double n_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::n>(
-            this->parameters->tau.at(Component::n));
-        const double p_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::p>(
-            this->parameters->tau.at(Component::p));
+        const std::vector<double> &V_tau = scratch.tau.at(Component::V);
+        const std::vector<double> &n_tau = scratch.tau.at(Component::n);
+        const std::vector<double> &p_tau = scratch.tau.at(Component::p);
 
         if constexpr (!prm::is_V_enabled)
           (void)V_tau;
@@ -1836,7 +1834,7 @@ namespace Ddhdg
                           q, E[j], epsilon_times_E);
                         scratch.cc_matrix(ii, jj) +=
                           (epsilon_times_E * normal * z1[i] +
-                           V_tau * V[j] * z1[i]) *
+                           V_tau[q] * V[j] * z1[i]) *
                           JxW;
                       }
                     if constexpr (prm::is_n_enabled)
@@ -1874,7 +1872,7 @@ namespace Ddhdg
                           (cE_flux * z2[i] -
                            n_einstein_diffusion_coefficient_times_Wn * normal *
                              z2[i] -
-                           n_tau * n[j] * z2[i]) *
+                           n_tau[q] * n[j] * z2[i]) *
                           JxW;
                       }
                     if constexpr (prm::is_p_enabled)
@@ -1912,7 +1910,7 @@ namespace Ddhdg
                           (cE_flux * z3[i] -
                            p_einstein_diffusion_coefficient_times_Wp * normal *
                              z3[i] -
-                           p_tau * p[j] * z3[i]) *
+                           p_tau[q] * p[j] * z3[i]) *
                           JxW;
                       }
                   }
@@ -1965,15 +1963,9 @@ namespace Ddhdg
         auto &tr_n0 = scratch.previous_tr_c_face.at(Component::n);
         auto &tr_p0 = scratch.previous_tr_c_face.at(Component::p);
 
-        const double V_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::V>(
-            this->parameters->tau.at(Component::V));
-        const double n_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::n>(
-            this->parameters->tau.at(Component::n));
-        const double p_tau =
-          this->adimensionalizer->template adimensionalize_tau<Component::p>(
-            this->parameters->tau.at(Component::p));
+        const std::vector<double> &V_tau = scratch.tau.at(Component::V);
+        const std::vector<double> &n_tau = scratch.tau.at(Component::n);
+        const std::vector<double> &p_tau = scratch.tau.at(Component::p);
 
         dealii::Tensor<1, dim> mu_n_times_previous_E;
         dealii::Tensor<1, dim> mu_p_times_previous_E;
@@ -2099,7 +2091,7 @@ namespace Ddhdg
                       scratch.fe_face_values_cell[electric_potential].value(iii,
                                                                             q);
                     scratch.cc_rhs[ii] += (-epsilon_times_E0_times_normal * z1 -
-                                           V_tau * V0[q] * z1) *
+                                           V_tau[q] * V0[q] * z1) *
                                           JxW;
                   }
                 if constexpr (prm::is_n_enabled)
@@ -2108,14 +2100,14 @@ namespace Ddhdg
                       scratch.fe_face_values_cell[electron_density].value(iii,
                                                                           q);
                     scratch.cc_rhs[ii] +=
-                      (-Jn_flux * z2 + n_tau * n0[q] * z2) * JxW;
+                      (-Jn_flux * z2 + n_tau[q] * n0[q] * z2) * JxW;
                   }
                 if constexpr (prm::is_p_enabled)
                   {
                     const double z3 =
                       scratch.fe_face_values_cell[hole_density].value(iii, q);
                     scratch.cc_rhs[ii] +=
-                      (-Jp_flux * z3 + p_tau * p0[q] * z3) * JxW;
+                      (-Jp_flux * z3 + p_tau[q] * p0[q] * z3) * JxW;
                   }
               }
           }
@@ -2148,18 +2140,8 @@ namespace Ddhdg
             auto &c_                   = scratch.c.at(c);
             auto &tr_c_solution_values = scratch.tr_c_solution_values.at(c);
 
-            const double tau  = (c == Component::V) ?
-                                  this->adimensionalizer
-                                   ->template adimensionalize_tau<Component::V>(
-                                     this->parameters->tau.at(Component::V)) :
-                                (c == Component::n) ?
-                                  this->adimensionalizer
-                                   ->template adimensionalize_tau<Component::n>(
-                                     this->parameters->tau.at(Component::n)) :
-                                  this->adimensionalizer
-                                   ->template adimensionalize_tau<Component::p>(
-                                     this->parameters->tau.at(Component::p));
-            const double sign = (c == Component::V) ? 1 : -1;
+            const std::vector<double> &tau  = scratch.tau.at(c);
+            const double               sign = (c == Component::V) ? 1 : -1;
 
             for (unsigned int i = 0;
                  i < scratch.fe_cell_support_on_face[face].size();
@@ -2167,7 +2149,7 @@ namespace Ddhdg
               {
                 const unsigned int ii =
                   scratch.fe_cell_support_on_face[face][i];
-                scratch.cc_rhs(ii) += (-f[i] * normal + sign * tau * c_[i]) *
+                scratch.cc_rhs(ii) += (-f[i] * normal + sign * tau[q] * c_[i]) *
                                       tr_c_solution_values[q] * JxW;
               }
           }
@@ -2300,7 +2282,9 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
-  template <typename prm, bool has_boundary_conditions>
+  template <typename prm,
+            bool has_boundary_conditions,
+            typename TauComputerClass>
   void
   NPSolver<dim, ProblemType>::assemble_system_one_cell_internal(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
@@ -2379,7 +2363,9 @@ namespace Ddhdg
         // face. Moreover, we want to populate the scratch object with the
         // values of the solution at the previous step. All this jobs are
         // accomplished by the next function
-        this->prepare_data_on_face_quadrature_points(scratch);
+        this->prepare_data_on_face_quadrature_points<TauComputerClass>(scratch,
+                                                                       cell,
+                                                                       face);
 
         // The following function adds some terms to cc_rhs. Usually, all the
         // functions are coupled (like assemble_matrix_XXX and
@@ -2704,7 +2690,7 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
-  template <typename prm>
+  template <typename prm, typename TauComputerClass>
   void
   NPSolver<dim, ProblemType>::assemble_system_one_cell(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
@@ -2738,13 +2724,11 @@ namespace Ddhdg
     // we are far from the boundary, we do not have to care about boundary
     // conditions
     if (has_boundary_conditions)
-      this->assemble_system_one_cell_internal<prm, true>(cell,
-                                                         scratch,
-                                                         task_data);
+      this->assemble_system_one_cell_internal<prm, true, TauComputerClass>(
+        cell, scratch, task_data);
     else
-      this->assemble_system_one_cell_internal<prm, false>(cell,
-                                                          scratch,
-                                                          task_data);
+      this->assemble_system_one_cell_internal<prm, false, TauComputerClass>(
+        cell, scratch, task_data);
   }
 
 } // namespace Ddhdg

@@ -82,7 +82,24 @@ namespace pyddhdg
         &Ddhdg::NonlinearSolverParameters::max_number_of_iterations)
       .def_readwrite("alpha", &Ddhdg::NonlinearSolverParameters::alpha);
 
-    py::class_<Ddhdg::NPSolverParameters>(m, "NPSolverParameters")
+    py::class_<Ddhdg::NPSolverParameters,
+               std::shared_ptr<Ddhdg::NPSolverParameters>>(m,
+                                                           "NPSolverParameters")
+      .def("degree",
+           [](const Ddhdg::NPSolverParameters &a, const Ddhdg::Component c) {
+             return a.degree.at(c);
+           })
+      .def_readonly("nonlinear_parameters",
+                    &Ddhdg::NPSolverParameters::nonlinear_parameters)
+      .def_readonly("iterative_linear_solver",
+                    &Ddhdg::NPSolverParameters::iterative_linear_solver)
+      .def_readonly("multithreading",
+                    &Ddhdg::NPSolverParameters::multithreading);
+
+    py::class_<Ddhdg::FixedTauNPSolverParameters,
+               Ddhdg::NPSolverParameters,
+               std::shared_ptr<Ddhdg::FixedTauNPSolverParameters>>(
+      m, "FixedTauNPSolverParameters")
       .def(py::init<const unsigned int,
                     const unsigned int,
                     const unsigned int,
@@ -106,27 +123,18 @@ namespace pyddhdg
            py::arg("multithreading")          = true,
            py::arg("dd_flux_type")            = Ddhdg::DDFluxType::use_cell,
            py::arg("linearize_on_phi")        = false)
-      .def("degree",
-           [](const Ddhdg::NPSolverParameters &a, const Ddhdg::Component c) {
-             return a.degree.at(c);
-           })
-      .def_readonly("nonlinear_parameters",
-                    &Ddhdg::NPSolverParameters::nonlinear_parameters)
-      .def_readonly("iterative_linear_solver",
-                    &Ddhdg::NPSolverParameters::iterative_linear_solver)
-      .def_readonly("multithreading",
-                    &Ddhdg::NPSolverParameters::multithreading)
       .def_property_readonly("v_tau",
-                             [](const Ddhdg::NPSolverParameters &a) {
-                               return a.tau.at(Ddhdg::Component::V);
+                             [](const Ddhdg::FixedTauNPSolverParameters &a) {
+                               return a.get_tau(Ddhdg::Component::V);
                              })
       .def_property_readonly("n_tau",
-                             [](const Ddhdg::NPSolverParameters &a) {
-                               return a.tau.at(Ddhdg::Component::n);
+                             [](const Ddhdg::FixedTauNPSolverParameters &a) {
+                               return a.get_tau(Ddhdg::Component::n);
                              })
-      .def_property_readonly("p_tau", [](const Ddhdg::NPSolverParameters &a) {
-        return a.tau.at(Ddhdg::Component::p);
-      });
+      .def_property_readonly("p_tau",
+                             [](const Ddhdg::FixedTauNPSolverParameters &a) {
+                               return a.get_tau(Ddhdg::Component::p);
+                             });
 
     py::class_<Ddhdg::Adimensionalizer>(m, "Adimensionalizer")
       .def(py::init<double, double, double, double>(),

@@ -124,7 +124,7 @@ DDFluxType = pyddhdg_common.DDFluxType
 # Now, we also import the common classes from the pyddhdg_common module
 ErrorPerCell = pyddhdg_common.ErrorPerCell
 NonlinearSolverParameters = pyddhdg_common.NonlinearSolverParameters
-NPSolverParameters = pyddhdg_common.NPSolverParameters
+NPSolverParameters = pyddhdg_common.FixedTauNPSolverParameters
 Adimensionalizer = pyddhdg_common.Adimensionalizer
 NonlinearIterationResults = pyddhdg_common.NonlinearIterationResults
 
@@ -470,7 +470,7 @@ def _plot_linfty_error_per_cell(solver, expected_solution, component, ax=None,
 
 # These are the classes that are templatized over dimension
 HomogeneousPermittivity = TemplateClass('HomogeneousPermittivity')
-HomogeneousElectronMobility = TemplateClass('HomogeneousElectronMobility')
+HomogeneousMobility = TemplateClass('HomogeneousMobility')
 DealIIFunction = TemplateClass('DealIIFunction')
 AnalyticFunction = TemplateClass('AnalyticFunction')
 PiecewiseFunction = TemplateClass('PiecewiseFunction')

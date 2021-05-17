@@ -664,14 +664,15 @@ namespace pyddhdg
 
 
   template <int dim>
-  NPSolver<dim>::NPSolver(const Problem<dim> &             problem,
-                          const Ddhdg::NPSolverParameters &parameters,
-                          const Ddhdg::Adimensionalizer &  adimensionalizer,
-                          const bool                       verbose)
+  NPSolver<dim>::NPSolver(
+    const Problem<dim> &                                   problem,
+    const std::shared_ptr<const Ddhdg::NPSolverParameters> parameters,
+    const Ddhdg::Adimensionalizer &                        adimensionalizer,
+    const bool                                             verbose)
     : ddhdg_solver(
         std::make_shared<Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>>(
           problem.get_ddhdg_problem(),
-          std::make_shared<const Ddhdg::NPSolverParameters>(parameters),
+          parameters,
           std::make_shared<const Ddhdg::Adimensionalizer>(adimensionalizer),
           verbose))
   {}
@@ -899,10 +900,10 @@ namespace pyddhdg
 
 
   template <int dim>
-  Ddhdg::NPSolverParameters
+  std::shared_ptr<Ddhdg::NPSolverParameters>
   NPSolver<dim>::get_parameters() const
   {
-    return *(this->ddhdg_solver->parameters);
+    return this->ddhdg_solver->parameters;
   }
 
 
@@ -917,10 +918,8 @@ namespace pyddhdg
     this->ddhdg_solver->system_matrix = 0;
     this->ddhdg_solver->system_rhs    = 0;
 
-    if (this->ddhdg_solver->parameters->multithreading)
-      this->ddhdg_solver->template assemble_system<true>(false, false);
-    else
-      this->ddhdg_solver->template assemble_system<false>(false, false);
+    this->ddhdg_solver->template assemble_system(
+      false, false, this->ddhdg_solver->parameters->multithreading);
   }
 
 
@@ -1236,15 +1235,15 @@ namespace pyddhdg
     double abs_tol =
       (absolute_tol.has_value()) ?
         absolute_tol.value() :
-        this->get_parameters().nonlinear_parameters->absolute_tolerance;
+        this->get_parameters()->nonlinear_parameters->absolute_tolerance;
     double rel_tol =
       (relative_tol.has_value()) ?
         relative_tol.value() :
-        this->get_parameters().nonlinear_parameters->relative_tolerance;
+        this->get_parameters()->nonlinear_parameters->relative_tolerance;
     int iterations =
       (max_number_of_iterations.has_value()) ?
         max_number_of_iterations.value() :
-        this->get_parameters().nonlinear_parameters->max_number_of_iterations;
+        this->get_parameters()->nonlinear_parameters->max_number_of_iterations;
 
     return this->ddhdg_solver->run(abs_tol, rel_tol, iterations);
   }

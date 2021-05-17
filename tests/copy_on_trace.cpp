@@ -15,7 +15,7 @@ public:
   CopyTrace()
     : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>(
         get_problem(),
-        std::make_shared<Ddhdg::NPSolverParameters>(3, 1, 2),
+        std::make_shared<Ddhdg::FixedTauNPSolverParameters>(3, 1, 2),
         std::make_shared<Ddhdg::Adimensionalizer>(1,
                                                   Ddhdg::Constants::Q /
                                                     Ddhdg::Constants::KB,

@@ -12,7 +12,7 @@ public:
   LogPotentialTest()
     : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>(
         get_problem(),
-        std::make_shared<Ddhdg::NPSolverParameters>(1, 2, 1),
+        std::make_shared<Ddhdg::FixedTauNPSolverParameters>(1, 2, 1),
         std::make_shared<Ddhdg::Adimensionalizer>(1,
                                                   Ddhdg::Constants::Q /
                                                     Ddhdg::Constants::KB,

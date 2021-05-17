@@ -240,29 +240,29 @@ namespace Ddhdg
 
     template <Component c>
     [[nodiscard]] inline double
-    adimensionalize_tau(const double tau) const
+    get_tau_rescaling_factor() const
     {
       double Tv = this->temperature_magnitude * Constants::KB / Constants::Q;
       const double k = this->doping_magnitude;
       switch (c)
         {
           case (Component::V):
-            return (tau * Tv) / (Constants::Q * k);
+            return Constants::Q * k / Tv;
           case (Component::n):
-            return tau * this->scale_length * this->scale_length /
-                   (Tv * this->mobility_magnitude);
+            return (Tv * this->mobility_magnitude) /
+                   (this->scale_length * this->scale_length);
           case (Component::p):
-            return tau * this->scale_length * this->scale_length /
-                   (Tv * this->mobility_magnitude);
+            return (Tv * this->mobility_magnitude) /
+                   (this->scale_length * this->scale_length);
             default: {
               Assert(false, InvalidComponent());
-              return tau;
+              return 1.;
             }
         }
     }
 
     [[nodiscard]] double
-    adimensionalize_tau(const double tau, Component c) const;
+    get_tau_rescaling_factor(Component c) const;
 
     const double scale_length;
     const double temperature_magnitude;

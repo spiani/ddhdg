@@ -28,7 +28,8 @@ namespace Ddhdg
 
     virtual
       typename NPSolver<dim, ProblemType>::assemble_system_one_cell_pointer
-      get_assemble_system_one_cell_function() const = 0;
+      get_assemble_system_one_cell_function(
+        const TauComputer *tau_computer) const = 0;
 
     virtual ~TemplatizedParametersInterface() = default;
   };
@@ -52,7 +53,8 @@ namespace Ddhdg
     get_previous() const override;
 
     typename NPSolver<dim, ProblemType>::assemble_system_one_cell_pointer
-    get_assemble_system_one_cell_function() const override;
+    get_assemble_system_one_cell_function(
+      const TauComputer *tau_computer) const override;
   };
 
   template <int dim, typename ProblemType>
@@ -99,10 +101,22 @@ namespace Ddhdg
   template <int dim, typename ProblemType, unsigned int parameter_mask>
   typename NPSolver<dim, ProblemType>::assemble_system_one_cell_pointer
   TemplatizedParameters<dim, ProblemType, parameter_mask>::
-    get_assemble_system_one_cell_function() const
+    get_assemble_system_one_cell_function(const TauComputer *tau_computer) const
   {
-    return &NPSolver<dim, ProblemType>::template assemble_system_one_cell<
-      TemplatizedParameters<dim, ProblemType, parameter_mask>>;
+    const TauComputerType tc_type = tau_computer->get_tau_computer_type();
+
+    AssertThrow(tc_type != TauComputerType::not_implemented,
+                ExcMessage(
+                  "The current TauComputer class does not report its type"));
+
+    if (tc_type == TauComputerType::fixed_tau_computer)
+      return &NPSolver<dim, ProblemType>::template assemble_system_one_cell<
+        TemplatizedParameters<dim, ProblemType, parameter_mask>,
+        FixedTauComputer>;
+
+    AssertThrow(false,
+                ExcMessage(
+                  "The current TauComputer class has not been implemented"));
   }
 
 } // namespace Ddhdg
