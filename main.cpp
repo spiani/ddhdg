@@ -464,8 +464,8 @@ main(int argc, char **argv)
         prm.nonlinear_solver_relative_tolerance,
         prm.nonlinear_solver_max_number_of_iterations);
 
-  std::shared_ptr<const Ddhdg::FixedTauNPSolverParameters> parameters =
-    std::make_shared<const Ddhdg::FixedTauNPSolverParameters>(
+  std::shared_ptr<Ddhdg::FixedTauNPSolverParameters> parameters =
+    std::make_shared<Ddhdg::FixedTauNPSolverParameters>(
       prm.V_degree,
       prm.n_degree,
       prm.p_degree,

@@ -665,10 +665,10 @@ namespace pyddhdg
 
   template <int dim>
   NPSolver<dim>::NPSolver(
-    const Problem<dim> &                                   problem,
-    const std::shared_ptr<const Ddhdg::NPSolverParameters> parameters,
-    const Ddhdg::Adimensionalizer &                        adimensionalizer,
-    const bool                                             verbose)
+    const Problem<dim> &                             problem,
+    const std::shared_ptr<Ddhdg::NPSolverParameters> parameters,
+    const Ddhdg::Adimensionalizer &                  adimensionalizer,
+    const bool                                       verbose)
     : ddhdg_solver(
         std::make_shared<Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>>(
           problem.get_ddhdg_problem(),
@@ -918,7 +918,7 @@ namespace pyddhdg
     this->ddhdg_solver->system_matrix = 0;
     this->ddhdg_solver->system_rhs    = 0;
 
-    this->ddhdg_solver->template assemble_system(
+    this->ddhdg_solver->assemble_system(
       false, false, this->ddhdg_solver->parameters->multithreading);
   }
 

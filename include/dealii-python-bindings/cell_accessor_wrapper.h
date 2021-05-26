@@ -23,6 +23,7 @@
 #ifdef USE_BOOST_PYTHON
 #  include <boost/python.hpp>
 #  define PYLIST boost::python::list
+#  define PYBIND11_EXPORT
 #endif
 
 #ifdef USE_PYBIND11
@@ -37,7 +38,7 @@ namespace python
   class PointWrapper;
   class TriangulationWrapper;
 
-  class CellAccessorWrapper
+  class PYBIND11_EXPORT CellAccessorWrapper
   {
   public:
     /**
@@ -191,6 +192,29 @@ namespace python
      */
     unsigned int
     vertex_index(const unsigned int i) const;
+
+    inline int
+    get_dim() const
+    {
+      return this->dim;
+    }
+
+    inline int
+    get_spacedim() const
+    {
+      return this->spacedim;
+    }
+
+    template <int dim, int spacedim>
+    CellAccessor<dim, spacedim> *
+    get_cell_accessor_pointer() const
+    {
+      Assert(this->dim == dim && this->spacedim == spacedim,
+             ExcMessage("Casting cell on wrong dimensions"));
+      auto *cell = static_cast<CellAccessor<dim, spacedim> *>(cell_accessor);
+
+      return cell;
+    }
 
     /**
      * Exception.

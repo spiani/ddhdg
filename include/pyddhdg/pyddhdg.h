@@ -371,10 +371,10 @@ namespace pyddhdg
   class NPSolver
   {
   public:
-    NPSolver(const Problem<dim> &                             problem,
-             std::shared_ptr<const Ddhdg::NPSolverParameters> parameters,
-             const Ddhdg::Adimensionalizer &                  adimensionalizer,
-             bool                                             verbose = true);
+    NPSolver(const Problem<dim> &                       problem,
+             std::shared_ptr<Ddhdg::NPSolverParameters> parameters,
+             const Ddhdg::Adimensionalizer &            adimensionalizer,
+             bool                                       verbose = true);
 
     void
     set_verbose(bool verbose);

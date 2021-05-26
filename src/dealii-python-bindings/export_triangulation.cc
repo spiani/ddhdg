@@ -784,6 +784,11 @@ namespace python
            generate_parallelogram_docstring,
            pybind11::arg("corners"),
            pybind11::arg("colorize") = false)
+      .def("generate_parallelepiped",
+           &TriangulationWrapper::generate_parallelepiped,
+           generate_parallelepiped_docstring,
+           pybind11::arg("corners"),
+           pybind11::arg("colorize") = false)
       .def("generate_fixed_subdivided_parallelepiped",
            &TriangulationWrapper::generate_fixed_subdivided_parallelepiped,
            generate_fixed_subdivided_parallelepiped_docstring,

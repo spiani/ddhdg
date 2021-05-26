@@ -1207,6 +1207,11 @@ namespace Ddhdg
         ->template project_cell_function_on_trace_internal<FixedTauComputer>(
           components, strategy);
 
+    if (tc_type == TauComputerType::cell_face_tau_computer)
+      return this
+        ->template project_cell_function_on_trace_internal<CellFaceTauComputer>(
+          components, strategy);
+
     AssertThrow(false,
                 ExcMessage(
                   "The current TauComputer class has not been implemented"));

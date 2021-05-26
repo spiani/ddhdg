@@ -3,16 +3,16 @@
 #include <ddhdg.h>
 #include <gtest/gtest.h>
 
-template <typename D>
-class LogPotentialTest
-  : public Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>,
-    public ::testing::Test
+template <int dim>
+class SolverForLogPotentialProblem
+  : public Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>
 {
 public:
-  LogPotentialTest()
-    : Ddhdg::NPSolver<D::value, Ddhdg::HomogeneousProblem<D::value>>(
+  SolverForLogPotentialProblem(
+    const std::shared_ptr<Ddhdg::NPSolverParameters> parameters)
+    : Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>(
         get_problem(),
-        std::make_shared<Ddhdg::FixedTauNPSolverParameters>(1, 2, 1),
+        parameters,
         std::make_shared<Ddhdg::Adimensionalizer>(1,
                                                   Ddhdg::Constants::Q /
                                                     Ddhdg::Constants::KB,
@@ -21,11 +21,9 @@ public:
         false){};
 
 protected:
-  static std::shared_ptr<dealii::FunctionParser<D::value>>
+  static std::shared_ptr<dealii::FunctionParser<dim>>
   get_expected_solution(const Ddhdg::Component c)
   {
-    const unsigned int dim = D::value;
-
     std::shared_ptr<dealii::FunctionParser<dim>> expected_solution =
       std::make_shared<dealii::FunctionParser<dim>>();
     if (c == Ddhdg::Component::V)
@@ -41,11 +39,9 @@ protected:
     return expected_solution;
   }
 
-  static std::shared_ptr<dealii::Triangulation<D::value>>
+  static std::shared_ptr<dealii::Triangulation<dim>>
   get_triangulation()
   {
-    const unsigned int dim = D::value;
-
     std::shared_ptr<dealii::Triangulation<dim>> triangulation =
       std::make_shared<dealii::Triangulation<dim>>();
 
@@ -53,11 +49,9 @@ protected:
     return triangulation;
   }
 
-  static std::shared_ptr<dealii::FunctionParser<D::value>>
+  static std::shared_ptr<dealii::FunctionParser<dim>>
   get_temperature()
   {
-    const unsigned int dim = D::value;
-
     std::shared_ptr<dealii::FunctionParser<dim>> temperature =
       std::make_shared<dealii::FunctionParser<dim>>();
     temperature->initialize(
@@ -67,11 +61,9 @@ protected:
     return temperature;
   }
 
-  static std::shared_ptr<dealii::FunctionParser<D::value>>
+  static std::shared_ptr<dealii::FunctionParser<dim>>
   get_doping()
   {
-    const unsigned int dim = D::value;
-
     std::shared_ptr<dealii::FunctionParser<dim>> doping =
       std::make_shared<dealii::FunctionParser<dim>>();
     doping->initialize(dealii::FunctionParser<dim>::default_variable_names(),
@@ -80,11 +72,9 @@ protected:
     return doping;
   }
 
-  static std::shared_ptr<Ddhdg::BoundaryConditionHandler<D::value>>
+  static std::shared_ptr<Ddhdg::BoundaryConditionHandler<dim>>
   get_boundary_conditions()
   {
-    const unsigned int dim = D::value;
-
     std::shared_ptr<Ddhdg::BoundaryConditionHandler<dim>> boundary_handler =
       std::make_shared<Ddhdg::BoundaryConditionHandler<dim>>();
 
@@ -110,11 +100,9 @@ protected:
     return boundary_handler;
   }
 
-  static std::shared_ptr<Ddhdg::HomogeneousProblem<D::value>>
+  static std::shared_ptr<Ddhdg::HomogeneousProblem<dim>>
   get_problem()
   {
-    const unsigned int dim = D::value;
-
     std::shared_ptr<Ddhdg::HomogeneousProblem<dim>> problem =
       std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
         get_triangulation(),
@@ -137,47 +125,85 @@ protected:
 
 
 
+template <typename D>
+class CellFaceTauComputerTest : public testing::Test
+{};
+
+
+
 using dimensions = ::testing::Types<std::integral_constant<unsigned int, 1>,
                                     std::integral_constant<unsigned int, 2>,
                                     std::integral_constant<unsigned int, 3>>;
 
 
 
-TYPED_TEST_SUITE(LogPotentialTest, dimensions, );
+TYPED_TEST_SUITE(CellFaceTauComputerTest, dimensions, );
 
 
 
-TYPED_TEST(LogPotentialTest, LogPotentialTest) // NOLINT
+TYPED_TEST(CellFaceTauComputerTest, CompareWithFixedTau)
 {
-  const unsigned int dim = TypeParam::value;
+  constexpr unsigned int dim       = TypeParam::value;
+  constexpr double       tolerance = 1e-9;
 
-  const double V_tolerance = (dim == 3) ? 2e-2 : 1e-2;
-  const double n_tolerance = 1e-2;
+#ifdef DEBUG
+  constexpr bool multithreading = false;
+#else
+  constexpr bool multithreading = true;
+#endif
 
-  const auto zero_function =
-    std::make_shared<dealii::Functions::ZeroFunction<dim>>();
+  const std::shared_ptr<Ddhdg::NonlinearSolverParameters>
+    nonlinear_solver_parameters =
+      std::make_shared<Ddhdg::NonlinearSolverParameters>();
 
-  const auto V_expected_solution = TestFixture::get_expected_solution(Ddhdg::V);
-  const auto n_expected_solution = TestFixture::get_expected_solution(Ddhdg::n);
+  std::shared_ptr<Ddhdg::FixedTauNPSolverParameters> fixed_tau_parameters =
+    std::make_shared<Ddhdg::FixedTauNPSolverParameters>(
+      1,
+      1,
+      1,
+      nonlinear_solver_parameters,
+      1,
+      100,
+      10000,
+      true,
+      multithreading);
 
-  this->set_multithreading(false);
-  this->refine_grid(4 - dim, false);
-  this->set_current_solution(zero_function,
-                             zero_function,
-                             zero_function,
-                             false);
+  std::shared_ptr<Ddhdg::CellFaceTauNPSolverParameters>
+    cell_face_tau_parameters =
+      std::make_shared<Ddhdg::CellFaceTauNPSolverParameters>(
+        1, 1, 1, nonlinear_solver_parameters, true, multithreading);
 
-  const Ddhdg::NonlinearIterationResults status = this->run();
+  std::unique_ptr<SolverForLogPotentialProblem<dim>> fixed_tau_solver =
+    std::make_unique<SolverForLogPotentialProblem<dim>>(fixed_tau_parameters);
+  std::unique_ptr<SolverForLogPotentialProblem<dim>> cell_face_tau_solver =
+    std::make_unique<SolverForLogPotentialProblem<dim>>(
+      cell_face_tau_parameters);
 
-  const unsigned int number_of_iterations = status.iterations;
+  fixed_tau_solver->refine_grid(4 - dim, false);
+  cell_face_tau_solver->refine_grid(4 - dim, false);
 
-  EXPECT_LE(number_of_iterations, 25);
+  const unsigned int faces_per_cell = dealii::GeometryInfo<dim>::faces_per_cell;
+  for (const auto cell : cell_face_tau_solver->get_active_cell_iterator())
+    for (unsigned int face = 0; face < faces_per_cell; ++face)
+      cell_face_tau_parameters->set_face<dim>(*cell, face, 1., 100., 10000.);
 
-  const double V_l2_error =
-    this->estimate_l2_error(V_expected_solution, Ddhdg::Component::V);
-  const double n_l2_error =
-    this->estimate_l2_error(n_expected_solution, Ddhdg::Component::n);
+  fixed_tau_solver->run();
+  cell_face_tau_solver->run();
 
-  EXPECT_LT(V_l2_error, V_tolerance);
-  EXPECT_LT(n_l2_error, n_tolerance);
+  const double error_on_V = fixed_tau_solver->estimate_error(
+    *cell_face_tau_solver,
+    Ddhdg::Component::V,
+    dealii::VectorTools::NormType::Linfty_norm);
+  const double error_on_n = fixed_tau_solver->estimate_error(
+    *cell_face_tau_solver,
+    Ddhdg::Component::n,
+    dealii::VectorTools::NormType::Linfty_norm);
+  const double error_on_p = fixed_tau_solver->estimate_error(
+    *cell_face_tau_solver,
+    Ddhdg::Component::p,
+    dealii::VectorTools::NormType::Linfty_norm);
+
+  EXPECT_LT(error_on_V, tolerance);
+  EXPECT_LT(error_on_n, tolerance);
+  EXPECT_LT(error_on_p, tolerance);
 }

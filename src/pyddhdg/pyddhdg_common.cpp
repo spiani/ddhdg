@@ -41,6 +41,8 @@ namespace pyddhdg
       .value("qiu_shi_stabilization", Ddhdg::DDFluxType::qiu_shi_stabilization)
       .export_values();
 
+
+
     py::class_<ErrorPerCell>(m, "ErrorPerCell")
       .def("as_numpy_array", [](const ErrorPerCell &self) {
         const size_t size = self.data_vector->size();
@@ -65,6 +67,8 @@ namespace pyddhdg
           free_when_done); // numpy array references this parent
       });
 
+
+
     py::class_<Ddhdg::NonlinearSolverParameters,
                std::shared_ptr<Ddhdg::NonlinearSolverParameters>>(
       m, "NonlinearSolverParameters")
@@ -82,6 +86,8 @@ namespace pyddhdg
         &Ddhdg::NonlinearSolverParameters::max_number_of_iterations)
       .def_readwrite("alpha", &Ddhdg::NonlinearSolverParameters::alpha);
 
+
+
     py::class_<Ddhdg::NPSolverParameters,
                std::shared_ptr<Ddhdg::NPSolverParameters>>(m,
                                                            "NPSolverParameters")
@@ -95,6 +101,8 @@ namespace pyddhdg
                     &Ddhdg::NPSolverParameters::iterative_linear_solver)
       .def_readonly("multithreading",
                     &Ddhdg::NPSolverParameters::multithreading);
+
+
 
     py::class_<Ddhdg::FixedTauNPSolverParameters,
                Ddhdg::NPSolverParameters,
@@ -136,6 +144,62 @@ namespace pyddhdg
                                return a.get_tau(Ddhdg::Component::p);
                              });
 
+
+
+    py::class_<Ddhdg::CellFaceTauNPSolverParameters,
+               Ddhdg::NPSolverParameters,
+               std::shared_ptr<Ddhdg::CellFaceTauNPSolverParameters>>(
+      m, "CellFaceTauNPSolverParameters")
+      .def(py::init<const unsigned int,
+                    const unsigned int,
+                    const unsigned int,
+                    const std::shared_ptr<Ddhdg::NonlinearSolverParameters>,
+                    const bool,
+                    const bool,
+                    const Ddhdg::DDFluxType,
+                    const bool>(),
+           py::arg("v_degree") = 1,
+           py::arg("n_degree") = 1,
+           py::arg("p_degree") = 1,
+           py::arg("nonlinear_parameters") =
+             std::make_shared<Ddhdg::NonlinearSolverParameters>(),
+           py::arg("iterative_linear_solver") = false,
+           py::arg("multithreading")          = true,
+           py::arg("dd_flux_type")            = Ddhdg::DDFluxType::use_cell,
+           py::arg("linearize_on_phi")        = false)
+      .def(
+        "set_face",
+        [](Ddhdg::CellFaceTauNPSolverParameters &     parameters,
+           const dealii::python::CellAccessorWrapper &cell,
+           const unsigned int                         face,
+           const double                               V_tau,
+           const double                               n_tau,
+           const double                               p_tau) {
+          const int dim = cell.get_dim();
+
+          Assert(dim == cell.get_spacedim(),
+                 dealii::ExcMessage(
+                   "spacedim different from dim is not allowed"));
+
+          const unsigned int faces_per_cell =
+            (dim == 1) ? dealii::GeometryInfo<1>::faces_per_cell :
+            (dim == 2) ? dealii::GeometryInfo<2>::faces_per_cell :
+                         dealii::GeometryInfo<3>::faces_per_cell;
+
+          const unsigned int level = cell.level();
+          const unsigned int index = cell.index();
+
+          parameters.set_face(
+            level, index, faces_per_cell, face, V_tau, n_tau, p_tau);
+        },
+        py::arg("cell"),
+        py::arg("face"),
+        py::arg("V_tau_value"),
+        py::arg("n_tau_value"),
+        py::arg("p_tau_value"));
+
+
+
     py::class_<Ddhdg::Adimensionalizer>(m, "Adimensionalizer")
       .def(py::init<double, double, double, double>(),
            py::arg("scale_length")                = 1.,
@@ -149,6 +213,8 @@ namespace pyddhdg
                     &Ddhdg::Adimensionalizer::doping_magnitude)
       .def_readonly("electron_mobility_magnitude",
                     &Ddhdg::Adimensionalizer::mobility_magnitude);
+
+
 
     py::class_<Ddhdg::NonlinearIterationResults>(m, "NonlinearIterationResults")
       .def(py::init<const bool, const unsigned int, const double>())

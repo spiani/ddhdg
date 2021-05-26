@@ -51,6 +51,9 @@ EPS = 0.01
 class InvalidDimensionException(ValueError):
     pass
 
+class InvalidTypenameException(ValueError):
+    pass
+
 
 # Make the constants available in the current namespace in a nice way
 class ConstantsNamespace:
@@ -124,7 +127,6 @@ DDFluxType = pyddhdg_common.DDFluxType
 # Now, we also import the common classes from the pyddhdg_common module
 ErrorPerCell = pyddhdg_common.ErrorPerCell
 NonlinearSolverParameters = pyddhdg_common.NonlinearSolverParameters
-NPSolverParameters = pyddhdg_common.FixedTauNPSolverParameters
 Adimensionalizer = pyddhdg_common.Adimensionalizer
 NonlinearIterationResults = pyddhdg_common.NonlinearIterationResults
 
@@ -180,6 +182,38 @@ class TemplateClass:
             )
 
         return self._reference_class[dimension]
+
+
+class _NPSolverParametersTemplate:
+    _error_message = 'The class NPSolverParameters is a TemplateClass over '
+    'a typename. Specify this typename with the syntax '
+    'NPSolverParameters[typename] where typename is a string that can be '
+    'chosen among: "FixedTau", "CellFaceTau"'
+
+    def __init__(self):
+        self._reference_class = {
+            "FixedTau": pyddhdg_common.FixedTauNPSolverParameters,
+            "CellFaceTau": pyddhdg_common.CellFaceTauNPSolverParameters
+        }
+
+    def __getattr__(self, attr):
+        raise AttributeError(_NPSolverParametersTemplate._error_message)
+
+    def __call__(self, *args, **kwargs):
+        AttributeError(_NPSolverParametersTemplate._error_message)
+
+    def __getitem__(self, typename):
+        if typename not in self._reference_class:
+            raise InvalidTypenameException(
+                'The only valid typename accepted are: {}'.format(
+                    ', '.join(['"' + k + '"' for k in self._reference_class])
+                )
+            )
+
+        return self._reference_class[typename]
+
+
+NPSolverParameters = _NPSolverParametersTemplate()
 
 
 def _get_points_to_evaluate(all_cell_vertices, degree, to_be_interp=True):

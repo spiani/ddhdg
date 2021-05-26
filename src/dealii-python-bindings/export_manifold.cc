@@ -128,7 +128,7 @@ namespace python
         "create_cylindrical",
         pybind11::overload_cast<const pybind11::list &, const pybind11::list &>(
           &ManifoldWrapper::create_cylindrical),
-        create_cylindrical_fixed_docstring,
+        create_cylindrical_direction_docstring,
         pybind11::arg("direction"),
         pybind11::arg("axial_point"))
       .def("create_function",

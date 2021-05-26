@@ -328,13 +328,13 @@ namespace Ddhdg
 
   template <int dim, typename ProblemType>
   NPSolver<dim, ProblemType>::NPSolver(
-    const std::shared_ptr<const ProblemType>        problem,
-    const std::shared_ptr<const NPSolverParameters> parameters,
-    const std::shared_ptr<const Adimensionalizer>   adimensionalizer,
-    const bool                                      verbose)
+    const std::shared_ptr<const ProblemType>      problem,
+    std::shared_ptr<NPSolverParameters>           parameters,
+    const std::shared_ptr<const Adimensionalizer> adimensionalizer,
+    const bool                                    verbose)
     : Solver<dim, ProblemType>(problem, adimensionalizer)
     , triangulation(copy_triangulation(problem->triangulation))
-    , parameters(parameters->make_shared_copy())
+    , parameters(parameters)
     , rescaled_doping(
         this->adimensionalizer->template adimensionalize_doping_function<dim>(
           this->problem->doping))
@@ -617,7 +617,7 @@ namespace Ddhdg
     this->constrained_dof_indices.resize(this->n_dirichlet_constraints);
     this->constrained_dof_values.resize(this->n_dirichlet_constraints);
 
-    // This is tricky; we need as way to recognize if we have computed the
+    // This is tricky; we need a way to recognize if we have computed the
     // the values of the previous vectors (or if they are still just allocated)
     // For this reason, we put a "invalid flag" at the beginning of the vector
     // to make clear that they do not contain (yet) reasonable values. If there
@@ -2124,7 +2124,6 @@ namespace Ddhdg
                                   last_step_difference_function,
                                   false);
 
-
     for (unsigned int cycle = 0; cycle < n_cycles; ++cycle)
       {
         this->set_current_solution(initial_V_function,
@@ -2148,6 +2147,24 @@ namespace Ddhdg
           this->refine_grid_once(false);
       }
     error_table->output_table(out);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  IteratorRange<typename dealii::Triangulation<dim>::cell_iterator>
+  NPSolver<dim, ProblemType>::get_cell_iterator() const
+  {
+    return this->triangulation->cell_iterators();
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  IteratorRange<typename dealii::Triangulation<dim>::active_cell_iterator>
+  NPSolver<dim, ProblemType>::get_active_cell_iterator() const
+  {
+    return this->triangulation->active_cell_iterators();
   }
 
 

@@ -16,14 +16,6 @@
 find_package(pybind11 REQUIRED)
 
 SET(_src
-        wrappers.cc
-        export_tria_accessor.cc
-        export_cell_accessor.cc
-        export_point.cc
-        export_triangulation.cc
-        export_mapping.cc
-        export_manifold.cc
-        export_quadrature.cc
         cell_accessor_wrapper.cc
         tria_accessor_wrapper.cc
         point_wrapper.cc
@@ -33,23 +25,32 @@ SET(_src
         quadrature_wrapper.cc
         )
 
-add_library(dealii-python-bindings MODULE ${_src})
+SET(_exports
+        wrappers.cc
+        export_tria_accessor.cc
+        export_cell_accessor.cc
+        export_point.cc
+        export_triangulation.cc
+        export_mapping.cc
+        export_manifold.cc
+        export_quadrature.cc
+        )
 
-IF (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-    # Intel (at least up to 19.0.5) confuses an external TBB installation with
-    # our selected one if we use -Isystem includes. Work around this by using
-    # normal includes.
-    # See https://github.com/dealii/dealii/issues/8374 for details.
-    TARGET_INCLUDE_DIRECTORIES(dealii-python-bindings PRIVATE ${DEAL_II_INCLUDE_DIRS})
-ELSE ()
-    TARGET_INCLUDE_DIRECTORIES(dealii-python-bindings SYSTEM PRIVATE ${DEAL_II_INCLUDE_DIRS})
-ENDIF ()
+add_library(dealii-python-bindings-symbols STATIC ${_src})
+TARGET_INCLUDE_DIRECTORIES(dealii-python-bindings-symbols SYSTEM PRIVATE ${DEAL_II_INCLUDE_DIRS})
+target_link_libraries(dealii-python-bindings-symbols pybind11::module)
+set_target_properties(dealii-python-bindings-symbols PROPERTIES CXX_VISIBILITY_PRESET hidden)
+DEAL_II_SETUP_TARGET(dealii-python-bindings-symbols)
+
+
+add_library(dealii-python-bindings MODULE ${_exports})
+TARGET_INCLUDE_DIRECTORIES(dealii-python-bindings SYSTEM PRIVATE ${DEAL_II_INCLUDE_DIRS})
 
 set_target_properties(dealii-python-bindings PROPERTIES LIBRARY_OUTPUT_DIRECTORY
         "${CMAKE_BINARY_DIR}/src/PyDealII/")
 
 set_target_properties(dealii-python-bindings PROPERTIES OUTPUT_NAME "PyDealII")
 
-target_link_libraries(dealii-python-bindings pybind11::module DDHDG)
+target_link_libraries(dealii-python-bindings pybind11::module dealii-python-bindings-symbols)
 set_target_properties(dealii-python-bindings PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}"
         SUFFIX "${PYTHON_MODULE_EXTENSION}")

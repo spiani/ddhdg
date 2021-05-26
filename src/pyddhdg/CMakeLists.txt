@@ -20,7 +20,7 @@ ELSE ()
     TARGET_INCLUDE_DIRECTORIES(pyddhdg_common SYSTEM PRIVATE ${DEAL_II_INCLUDE_DIRS})
 ENDIF ()
 
-target_link_libraries(pyddhdg_common pyddhdg pybind11::module)
+target_link_libraries(pyddhdg_common pyddhdg dealii-python-bindings-symbols pybind11::module)
 set_target_properties(pyddhdg_common PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}"
         SUFFIX "${PYTHON_MODULE_EXTENSION}")
 

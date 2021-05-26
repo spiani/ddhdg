@@ -46,9 +46,8 @@ namespace Ddhdg
     using NMobility    = typename ProblemType::NMobilityClass;
     using PMobility    = typename ProblemType::PMobilityClass;
 
-    explicit NPSolver(std::shared_ptr<const ProblemType>        problem,
-                      std::shared_ptr<const NPSolverParameters> parameters =
-                        std::make_shared<NPSolverParameters>(),
+    explicit NPSolver(std::shared_ptr<const ProblemType>      problem,
+                      std::shared_ptr<NPSolverParameters>     parameters,
                       std::shared_ptr<const Adimensionalizer> adimensionalizer =
                         std::make_shared<Adimensionalizer>(),
                       bool verbose = true);
@@ -342,6 +341,12 @@ namespace Ddhdg
       unsigned int                                    n_cycles,
       unsigned int                                    initial_refinements,
       std::ostream &                                  out) override;
+
+    IteratorRange<typename dealii::Triangulation<dim>::cell_iterator>
+    get_cell_iterator() const override;
+
+    IteratorRange<typename dealii::Triangulation<dim>::active_cell_iterator>
+    get_active_cell_iterator() const override;
 
   protected:
     static std::unique_ptr<dealii::Triangulation<dim>>

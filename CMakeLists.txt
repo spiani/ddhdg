@@ -52,12 +52,7 @@ include_directories("include")
 add_subdirectory("src")
 
 if (WITH_TESTS)
-    find_package(GTest)
-    if (GTest_FOUND)
-        add_subdirectory("tests")
-    else ()
-        MESSAGE(WARNING "GTest library not found. Tests will not be compiled!")
-    endif ()
+    add_subdirectory("tests")
 endif ()
 
 add_executable(MAIN main.cpp)

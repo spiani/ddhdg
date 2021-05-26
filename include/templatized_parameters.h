@@ -114,6 +114,11 @@ namespace Ddhdg
         TemplatizedParameters<dim, ProblemType, parameter_mask>,
         FixedTauComputer>;
 
+    if (tc_type == TauComputerType::cell_face_tau_computer)
+      return &NPSolver<dim, ProblemType>::template assemble_system_one_cell<
+        TemplatizedParameters<dim, ProblemType, parameter_mask>,
+        CellFaceTauComputer>;
+
     AssertThrow(false,
                 ExcMessage(
                   "The current TauComputer class has not been implemented"));

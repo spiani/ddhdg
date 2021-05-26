@@ -235,6 +235,13 @@ namespace Ddhdg
       unsigned int                                    initial_refinements,
       std::ostream &                                  out) = 0;
 
+    virtual IteratorRange<typename dealii::Triangulation<dim>::cell_iterator>
+    get_cell_iterator() const = 0;
+
+    virtual IteratorRange<
+      typename dealii::Triangulation<dim>::active_cell_iterator>
+    get_active_cell_iterator() const = 0;
+
     inline void
     write_log(const std::string &log_message) const
     {
