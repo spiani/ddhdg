@@ -234,6 +234,26 @@ namespace python
                    << "acceptable is " << arg2 - 1);
 
   private:
+    template <int d, int sd>
+    static void *
+    cell_accessor_factory1(const CellAccessorWrapper &other,
+                           const int                  dim,
+                           const int                  spacedim);
+
+    template <int d, int sd>
+    static void *
+    cell_accessor_factory2(TriangulationWrapper &triangulation_wrapper,
+                           const int             level,
+                           const int             index,
+                           const int             dim,
+                           const int             spacedim);
+
+    template <int d, int sd>
+    static void
+    cell_accessor_destroyer(void     *cell_accessor,
+                            const int dim,
+                            const int spacedim);
+
     template <int dim_, int spacedim_>
     const CellAccessorWrapper
     construct_neighbor_wrapper(const int i) const;

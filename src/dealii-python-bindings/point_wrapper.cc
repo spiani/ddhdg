@@ -83,7 +83,9 @@ namespace python
     Point<dim>
     subtract_point(const Point<dim> &p1, const Point<dim> &p2)
     {
-      if (dim == 2)
+      if constexpr (dim == 1)
+        return Point<dim>(p1[0] - p2[0]);
+      else if constexpr (dim == 2)
         return Point<dim>(p1[0] - p2[0], p1[1] - p2[1]);
       else
         return Point<dim>(p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]);
@@ -162,12 +164,18 @@ namespace python
   PointWrapper::PointWrapper(PYSPACE::list coord)
   {
     dim = PYSPACE::len(coord);
-    if (dim == 2)
+    if (dim == 1)
+#ifdef USE_BOOST_PYTHON
+      point = new Point<1>(PYSPACE::extract<double>(coord[0]));
+#endif
+#ifdef USE_PYBIND11
+    point = new Point<1>(pybind11::cast<double>(coord[0]));
+#endif
+    else if (dim == 2)
 #ifdef USE_BOOST_PYTHON
       point = new Point<2>(PYSPACE::extract<double>(coord[0]),
                            PYSPACE::extract<double>(coord[1]));
 #endif
-
 #ifdef USE_PYBIND11
     point = new Point<2>(pybind11::cast<double>(coord[0]),
                          pybind11::cast<double>(coord[1]));
@@ -178,7 +186,6 @@ namespace python
                            PYSPACE::extract<double>(coord[1]),
                            PYSPACE::extract<double>(coord[2]));
 #endif
-
 #ifdef USE_PYBIND11
     point = new Point<3>(pybind11::cast<double>(coord[0]),
                          pybind11::cast<double>(coord[1]),
@@ -187,7 +194,7 @@ namespace python
     else AssertThrow(
       false,
       ExcMessage(
-        "The list of coordinates must contain two or three elements."));
+        "The list of coordinates must contain one, two or three elements."));
   }
 
 
@@ -196,9 +203,10 @@ namespace python
   PointWrapper::PointWrapper(const Point<d> &p)
   {
     dim = d;
-    if (dim == 2)
+    if constexpr (d == 1)
+      point = new Point<1>(p[0]);
+    else if constexpr (d == 2)
       point = new Point<2>(p[0], p[1]);
-
     else
       point = new Point<3>(p[0], p[1], p[2]);
   }
@@ -223,7 +231,9 @@ namespace python
   PYSPACE::list
   PointWrapper::to_list() const
   {
-    if (dim == 2)
+    if (dim == 1)
+      return internal::to_list<1>(point);
+    else if (dim == 2)
       return internal::to_list<2>(point);
     else
       return internal::to_list<3>(point);
@@ -237,7 +247,10 @@ namespace python
     AssertThrow(p.get_dim() == dim,
                 ExcMessage("The points do not have the same dimension."));
 
-    if (dim == 2)
+    if (dim == 1)
+      return internal::distance(*static_cast<Point<1> *>(point),
+                                *static_cast<const Point<1> *>(p.get_point()));
+    else if (dim == 2)
       return internal::distance(*static_cast<Point<2> *>(point),
                                 *static_cast<const Point<2> *>(p.get_point()));
     else
@@ -250,7 +263,9 @@ namespace python
   double
   PointWrapper::norm() const
   {
-    if (dim == 2)
+    if (dim == 1)
+      return static_cast<Point<1> *>(point)->norm();
+    else if (dim == 2)
       return static_cast<Point<2> *>(point)->norm();
     else
       return static_cast<Point<3> *>(point)->norm();
@@ -261,7 +276,9 @@ namespace python
   double
   PointWrapper::norm_square() const
   {
-    if (dim == 2)
+    if (dim == 1)
+      return static_cast<Point<1> *>(point)->norm_square();
+    else if (dim == 2)
       return static_cast<Point<2> *>(point)->norm_square();
     else
       return static_cast<Point<3> *>(point)->norm_square();
@@ -286,7 +303,10 @@ namespace python
     AssertThrow(p.get_dim() == dim,
                 ExcMessage("The points do not have the same dimension."));
 
-    if (dim == 2)
+    if (dim == 1)
+      return internal::not_equal(*static_cast<const Point<1> *>(point),
+                                 *static_cast<const Point<1> *>(p.get_point()));
+    else if (dim == 2)
       return internal::not_equal(*static_cast<const Point<2> *>(point),
                                  *static_cast<const Point<2> *>(p.get_point()));
     else
@@ -302,7 +322,10 @@ namespace python
     AssertThrow(p.get_dim() == dim,
                 ExcMessage("The points do not have the same dimension."));
 
-    if (dim == 2)
+    if (dim == 1)
+      return internal::equal(*static_cast<const Point<1> *>(point),
+                             *static_cast<const Point<1> *>(p.get_point()));
+    else if (dim == 2)
       return internal::equal(*static_cast<const Point<2> *>(point),
                              *static_cast<const Point<2> *>(p.get_point()));
     else
@@ -319,6 +342,10 @@ namespace python
                 ExcMessage("The points do not have the same dimension."));
 
     if (dim == 2)
+      return internal::dot_product(*static_cast<const Point<1> *>(point),
+                                   *static_cast<const Point<1> *>(
+                                     p.get_point()));
+    else if (dim == 2)
       return internal::dot_product(*static_cast<const Point<2> *>(point),
                                    *static_cast<const Point<2> *>(
                                      p.get_point()));
@@ -336,7 +363,11 @@ namespace python
     AssertThrow(p.get_dim() == dim,
                 ExcMessage("The points do not have the same dimension."));
 
-    if (dim == 2)
+    if (dim == 1)
+      return PointWrapper(
+        internal::add_points(*static_cast<const Point<1> *>(point),
+                             *static_cast<const Point<1> *>(p.get_point())));
+    else if (dim == 2)
       return PointWrapper(
         internal::add_points(*static_cast<const Point<2> *>(point),
                              *static_cast<const Point<2> *>(p.get_point())));
@@ -354,7 +385,11 @@ namespace python
     AssertThrow(p.get_dim() == dim,
                 ExcMessage("The points do not have the same dimension."));
 
-    if (dim == 2)
+    if (dim == 1)
+      return PointWrapper(internal::subtract_point(
+        *static_cast<const Point<1> *>(point),
+        *static_cast<const Point<1> *>(p.get_point())));
+    else if (dim == 2)
       return PointWrapper(internal::subtract_point(
         *static_cast<const Point<2> *>(point),
         *static_cast<const Point<2> *>(p.get_point())));
@@ -369,7 +404,10 @@ namespace python
   PointWrapper
   PointWrapper::operator-() const
   {
-    if (dim == 2)
+    if (dim == 1)
+      return PointWrapper(
+        internal::opposite_point(*static_cast<Point<1> *>(point)));
+    else if (dim == 2)
       return PointWrapper(
         internal::opposite_point(*static_cast<Point<2> *>(point)));
     else
@@ -384,7 +422,10 @@ namespace python
   {
     AssertThrow(factor != 0., ExcMessage("Dividing by zero."));
 
-    if (dim == 2)
+    if (dim == 1)
+      return PointWrapper(
+        internal::divide_point(*static_cast<Point<1> *>(point), factor));
+    else if (dim == 2)
       return PointWrapper(
         internal::divide_point(*static_cast<Point<2> *>(point), factor));
     else
@@ -396,7 +437,10 @@ namespace python
   PointWrapper
   PointWrapper::operator*(const double factor) const
   {
-    if (dim == 2)
+    if (dim == 1)
+      return PointWrapper(
+        internal::multiply_point(*static_cast<Point<1> *>(point), factor));
+    else if (dim == 2)
       return PointWrapper(
         internal::multiply_point(*static_cast<Point<2> *>(point), factor));
     else
@@ -412,7 +456,10 @@ namespace python
     AssertThrow(p.get_dim() == dim,
                 ExcMessage("The points do not have the same dimension."));
 
-    if (dim == 2)
+    if (dim == 1)
+      internal::add_and_set(*static_cast<Point<1> *>(point),
+                            *static_cast<const Point<1> *>(p.get_point()));
+    else if (dim == 2)
       internal::add_and_set(*static_cast<Point<2> *>(point),
                             *static_cast<const Point<2> *>(p.get_point()));
     else
@@ -430,7 +477,10 @@ namespace python
     AssertThrow(p.get_dim() == dim,
                 ExcMessage("The points do not have the same dimension."));
 
-    if (dim == 2)
+    if (dim == 1)
+      internal::subtract_and_set(*static_cast<Point<1> *>(point),
+                                 *static_cast<const Point<1> *>(p.get_point()));
+    else if (dim == 2)
       internal::subtract_and_set(*static_cast<Point<2> *>(point),
                                  *static_cast<const Point<2> *>(p.get_point()));
     else
@@ -445,7 +495,9 @@ namespace python
   PointWrapper &
   PointWrapper::operator*=(const double factor)
   {
-    if (dim == 2)
+    if (dim == 1)
+      internal::multiply_and_set(*static_cast<Point<1> *>(point), factor);
+    else if (dim == 2)
       internal::multiply_and_set(*static_cast<Point<2> *>(point), factor);
     else
       internal::multiply_and_set(*static_cast<Point<3> *>(point), factor);
@@ -460,7 +512,9 @@ namespace python
   {
     AssertThrow(factor != 0., ExcMessage("Dividing by zero."));
 
-    if (dim == 2)
+    if (dim == 1)
+      internal::divide_and_set(*static_cast<Point<1> *>(point), factor);
+    else if (dim == 2)
       internal::divide_and_set(*static_cast<Point<2> *>(point), factor);
     else
       internal::divide_and_set(*static_cast<Point<3> *>(point), factor);
@@ -473,7 +527,9 @@ namespace python
   double
   PointWrapper::get_x() const
   {
-    if (dim == 2)
+    if (dim == 1)
+      return (*static_cast<Point<1> *>(point))(0);
+    else if (dim == 2)
       return (*static_cast<Point<2> *>(point))(0);
     else
       return (*static_cast<Point<3> *>(point))(0);
@@ -484,7 +540,9 @@ namespace python
   void
   PointWrapper::set_x(double x)
   {
-    if (dim == 2)
+    if (dim == 1)
+      (*static_cast<Point<1> *>(point))(0) = x;
+    else if (dim == 2)
       (*static_cast<Point<2> *>(point))(0) = x;
     else
       (*static_cast<Point<3> *>(point))(0) = x;
@@ -495,7 +553,15 @@ namespace python
   double
   PointWrapper::get_y() const
   {
-    if (dim == 2)
+    if (dim == 1)
+      {
+        AssertThrow(
+          false,
+          ExcMessage(
+            "The y coordinate is only available for 2D and 3D points"));
+        return 0.;
+      }
+    else if (dim == 2)
       return (*static_cast<Point<2> *>(point))(1);
     else
       return (*static_cast<Point<3> *>(point))(1);
@@ -506,7 +572,14 @@ namespace python
   void
   PointWrapper::set_y(double y)
   {
-    if (dim == 2)
+    if (dim == 1)
+      {
+        AssertThrow(
+          false,
+          ExcMessage(
+            "The y coordinate is only available for 2D and 3D points"));
+      }
+    else if (dim == 2)
       (*static_cast<Point<2> *>(point))(1) = y;
     else
       (*static_cast<Point<3> *>(point))(1) = y;
@@ -549,10 +622,15 @@ namespace python
   {
     if (point != nullptr)
       {
-        if (dim == 2)
+        if (dim == 1)
           {
             // We cannot call delete on a void pointer so cast the void pointer
             // back first.
+            Point<1> *tmp = static_cast<Point<1> *>(point);
+            delete tmp;
+          }
+        else if (dim == 2)
+          {
             Point<2> *tmp = static_cast<Point<2> *>(point);
             delete tmp;
           }
@@ -575,7 +653,12 @@ namespace python
     AssertThrow(other.point != nullptr,
                 ExcMessage("Underlying point does not exist."));
 
-    if (dim == 2)
+    if (dim == 1)
+      {
+        Point<1> *other_point = static_cast<Point<1> *>(other.point);
+        point = new Point<1>((*other_point)[0], (*other_point)[1]);
+      }
+    else if (dim == 2)
       {
         Point<2> *other_point = static_cast<Point<2> *>(other.point);
         point = new Point<2>((*other_point)[0], (*other_point)[1]);

@@ -68,7 +68,8 @@ namespace python
     : dim(dim)
     , quadrature_ptr(nullptr)
   {
-    AssertThrow(dim == 2 || dim == 3, ExcMessage("Unsupported dimension."));
+    AssertThrow(dim == 1 || dim == 2 || dim == 3,
+                ExcMessage("Unsupported dimension."));
   }
 
 
@@ -80,7 +81,13 @@ namespace python
     AssertThrow(other.quadrature_ptr != nullptr,
                 ExcMessage("Underlying quadrature does not exist."));
 
-    if (dim == 2)
+    if (dim == 1)
+      {
+        const auto quadrature =
+          static_cast<const Quadrature<1> *>(other.quadrature_ptr);
+        quadrature_ptr = new Quadrature<1>(*quadrature);
+      }
+    else if (dim == 2)
       {
         const auto quadrature =
           static_cast<const Quadrature<2> *>(other.quadrature_ptr);
@@ -102,7 +109,14 @@ namespace python
   {
     if (dim != -1)
       {
-        if (dim == 2)
+        if (dim == 1)
+          {
+            // We cannot call delete on a void pointer so cast the void pointer
+            // back first.
+            Quadrature<1> *tmp = static_cast<Quadrature<1> *>(quadrature_ptr);
+            delete tmp;
+          }
+        else if (dim == 2)
           {
             // We cannot call delete on a void pointer so cast the void pointer
             // back first.
@@ -125,7 +139,11 @@ namespace python
   void
   QuadratureWrapper::create_gauss(const unsigned int n)
   {
-    if (dim == 2)
+    if (dim == 1)
+      {
+        quadrature_ptr = new QGauss<1>(n);
+      }
+    else if (dim == 2)
       {
         quadrature_ptr = new QGauss<2>(n);
       }
@@ -142,7 +160,11 @@ namespace python
   void
   QuadratureWrapper::create_gauss_lobatto(const unsigned int n)
   {
-    if (dim == 2)
+    if (dim == 1)
+      {
+        quadrature_ptr = new QGaussLobatto<1>(n);
+      }
+    else if (dim == 2)
       {
         quadrature_ptr = new QGaussLobatto<2>(n);
       }
@@ -159,7 +181,9 @@ namespace python
   PYSPACE::list
   QuadratureWrapper::get_points() const
   {
-    if (dim == 2)
+    if (dim == 1)
+      return internal::get_points<1>(quadrature_ptr);
+    else if (dim == 2)
       return internal::get_points<2>(quadrature_ptr);
     else if (dim == 3)
       return internal::get_points<3>(quadrature_ptr);
@@ -172,7 +196,9 @@ namespace python
   PYSPACE::list
   QuadratureWrapper::get_weights() const
   {
-    if (dim == 2)
+    if (dim == 1)
+      return internal::get_weights<1>(quadrature_ptr);
+    else if (dim == 2)
       return internal::get_weights<2>(quadrature_ptr);
     else if (dim == 3)
       return internal::get_weights<3>(quadrature_ptr);

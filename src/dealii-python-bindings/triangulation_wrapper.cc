@@ -48,7 +48,7 @@ namespace python
     void
     create_triangulation(const PYSPACE::list &vertices_list,
                          const PYSPACE::list &cells_vertices,
-                         void *               triangulation)
+                         void                *triangulation)
     {
       Triangulation<dim, spacedim> *tria =
         static_cast<Triangulation<dim, spacedim> *>(triangulation);
@@ -99,12 +99,44 @@ namespace python
   }
 
 
+
+  template <int d, int sd>
+  void
+  create_triangulation_wrapper(const PYSPACE::list &vertices_list,
+                               const PYSPACE::list &cells_vertices,
+                               void                *triangulation,
+                               const int            dim,
+                               const int            spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return create_triangulation<d, sd>(vertices_list,
+                                         cells_vertices,
+                                         triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return create_triangulation_wrapper<sd - 1, sd - 1>(
+            vertices_list, cells_vertices, triangulation, dim, spacedim);
+      }
+    else
+      {
+        return create_triangulation_wrapper<d - 1, sd>(
+          vertices_list, cells_vertices, triangulation, dim, spacedim);
+      }
+  }
+
+
   template <int dim, int spacedim>
   void
   generate_hyper_cube(const double left,
                       const double right,
                       const bool   colorize,
-                      void *       triangulation)
+                      void        *triangulation)
   {
     Triangulation<dim, spacedim> *tria =
       static_cast<Triangulation<dim, spacedim> *>(triangulation);
@@ -114,10 +146,41 @@ namespace python
 
 
 
+  template <int d, int sd>
+  void
+  generate_hyper_cube_wrapper(const double left,
+                              const double right,
+                              const bool   colorize,
+                              void        *triangulation,
+                              const int    dim,
+                              const int    spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return generate_hyper_cube<d, sd>(left, right, colorize, triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return generate_hyper_cube_wrapper<sd - 1, sd - 1>(
+            left, right, colorize, triangulation, dim, spacedim);
+      }
+    else
+      {
+        return generate_hyper_cube_wrapper<d - 1, sd>(
+          left, right, colorize, triangulation, dim, spacedim);
+      }
+  }
+
+
+
   template <int dim>
   void
   generate_simplex(std::vector<PointWrapper> &wrapped_points,
-                   void *                     triangulation)
+                   void                      *triangulation)
   {
     // Cast the PointWrapper objects to Point<dim>
     std::vector<Point<dim>> points(dim + 1);
@@ -136,7 +199,7 @@ namespace python
   generate_subdivided_hyper_cube(const unsigned int repetitions,
                                  const double       left,
                                  const double       right,
-                                 void *             triangulation)
+                                 void              *triangulation)
   {
     Triangulation<dim, spacedim> *tria =
       static_cast<Triangulation<dim, spacedim> *>(triangulation);
@@ -146,12 +209,46 @@ namespace python
 
 
 
+  template <int d, int sd>
+  void
+  generate_subdivided_hyper_cube_wrapper(const unsigned int repetitions,
+                                         const double       left,
+                                         const double       right,
+                                         void              *triangulation,
+                                         const int          dim,
+                                         const int          spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return generate_subdivided_hyper_cube<d, sd>(repetitions,
+                                                   left,
+                                                   right,
+                                                   triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return generate_subdivided_hyper_cube_wrapper<sd - 1, sd - 1>(
+            repetitions, left, right, triangulation, dim, spacedim);
+      }
+    else
+      {
+        return generate_subdivided_hyper_cube_wrapper<d - 1, sd>(
+          repetitions, left, right, triangulation, dim, spacedim);
+      }
+  }
+
+
+
   template <int dim, int spacedim>
   void
   generate_hyper_rectangle(PointWrapper &p1,
                            PointWrapper &p2,
                            const bool    colorize,
-                           void *        triangulation)
+                           void         *triangulation)
   {
     AssertThrow(
       p1.get_dim() == dim,
@@ -172,6 +269,38 @@ namespace python
   }
 
 
+
+  template <int d, int sd>
+  void
+  generate_hyper_rectangle_wrapper(PointWrapper &p1,
+                                   PointWrapper &p2,
+                                   const bool    colorize,
+                                   void         *triangulation,
+                                   const int     dim,
+                                   const int     spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return generate_hyper_rectangle<d, sd>(p1, p2, colorize, triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return generate_hyper_rectangle_wrapper<sd - 1, sd - 1>(
+            p1, p2, colorize, triangulation, dim, spacedim);
+      }
+    else
+      {
+        return generate_hyper_rectangle_wrapper<d - 1, sd>(
+          p1, p2, colorize, triangulation, dim, spacedim);
+      }
+  }
+
+
+
   template <int dim>
   void
   generate_hyper_cube_with_cylindrical_hole(const double       inner_radius,
@@ -179,7 +308,7 @@ namespace python
                                             const double       L,
                                             const unsigned int repetitions,
                                             const bool         colorize,
-                                            void *             triangulation)
+                                            void              *triangulation)
   {
     Triangulation<dim> *tria = static_cast<Triangulation<dim> *>(triangulation);
     tria->clear();
@@ -193,10 +322,10 @@ namespace python
   void
   generate_subdivided_hyper_rectangle(
     const std::vector<unsigned int> &repetitions,
-    PointWrapper &                   p1,
-    PointWrapper &                   p2,
+    PointWrapper                    &p1,
+    PointWrapper                    &p2,
     const bool                       colorize,
-    void *                           triangulation)
+    void                            *triangulation)
   {
     AssertThrow(
       p1.get_dim() == dim,
@@ -219,14 +348,48 @@ namespace python
 
 
 
+  template <int d, int sd>
+  void
+  generate_subdivided_hyper_rectangle_wrapper(
+    const std::vector<unsigned int> &repetitions,
+    PointWrapper                    &p1,
+    PointWrapper                    &p2,
+    const bool                       colorize,
+    void                            *triangulation,
+    const int                        dim,
+    const int                        spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return generate_subdivided_hyper_rectangle<d, sd>(
+        repetitions, p1, p2, colorize, triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return generate_subdivided_hyper_rectangle_wrapper<sd - 1, sd - 1>(
+            repetitions, p1, p2, colorize, triangulation, dim, spacedim);
+      }
+    else
+      {
+        return generate_subdivided_hyper_rectangle_wrapper<d - 1, sd>(
+          repetitions, p1, p2, colorize, triangulation, dim, spacedim);
+      }
+  }
+
+
+
   template <int dim>
   void
   generate_subdivided_steps_hyper_rectangle(
     const std::vector<std::vector<double>> &step_sizes,
-    PointWrapper &                          p1,
-    PointWrapper &                          p2,
+    PointWrapper                           &p1,
+    PointWrapper                           &p2,
     const bool                              colorize,
-    void *                                  triangulation)
+    void                                   *triangulation)
   {
     AssertThrow(
       p1.get_dim() == dim,
@@ -252,10 +415,10 @@ namespace python
   void
   generate_subdivided_material_hyper_rectangle(
     const std::vector<std::vector<double>> &spacing,
-    PointWrapper &                          p,
-    const Table<dim, types::material_id> &  material_ids,
+    PointWrapper                           &p,
+    const Table<dim, types::material_id>   &material_ids,
     const bool                              colorize,
-    void *                                  triangulation)
+    void                                   *triangulation)
   {
     AssertThrow(
       p.get_dim() == dim,
@@ -283,11 +446,44 @@ namespace python
 
 
 
+  template <int d, int sd>
+  void
+  generate_cheese_wrapper(const std::vector<unsigned int> &holes,
+                          void                            *triangulation,
+                          const int                        dim,
+                          const int                        spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return generate_cheese<d, sd>(holes, triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return generate_cheese_wrapper<sd - 1, sd - 1>(holes,
+                                                         triangulation,
+                                                         dim,
+                                                         spacedim);
+      }
+    else
+      {
+        return generate_cheese_wrapper<d - 1, sd>(holes,
+                                                  triangulation,
+                                                  dim,
+                                                  spacedim);
+      }
+  }
+
+
+
   template <int dim>
   void
   generate_general_cell(std::vector<PointWrapper> &wrapped_points,
                         const bool                 colorize,
-                        void *                     triangulation)
+                        void                      *triangulation)
   {
     // Cast the PointWrapper objects to Point<dim>
     const unsigned int      size = wrapped_points.size();
@@ -306,7 +502,7 @@ namespace python
   void
   generate_parallelogram(std::vector<PointWrapper> &wrapped_points,
                          const bool                 colorize,
-                         void *                     triangulation)
+                         void                      *triangulation)
   {
     // Cast the PointWrapper objects to Point<dim>
     Point<dim> points[dim];
@@ -324,7 +520,7 @@ namespace python
   void
   generate_parallelepiped(std::vector<PointWrapper> &wrapped_points,
                           const bool                 colorize,
-                          void *                     triangulation)
+                          void                      *triangulation)
   {
     // Cast the PointWrapper objects to Point<dim>
     Point<dim> points[dim];
@@ -344,7 +540,7 @@ namespace python
     unsigned int               n_subdivisions,
     std::vector<PointWrapper> &wrapped_points,
     const bool                 colorize,
-    void *                     triangulation)
+    void                      *triangulation)
   {
     // Cast the PointWrapper objects to Point<dim>
     Point<dim> points[dim];
@@ -367,7 +563,7 @@ namespace python
     std::vector<unsigned int> &n_subdivisions,
     std::vector<PointWrapper> &wrapped_points,
     const bool                 colorize,
-    void *                     triangulation)
+    void                      *triangulation)
   {
     // Cast the PointWrapper objects to Point<dim>
     Point<dim>   points[dim];
@@ -395,7 +591,7 @@ namespace python
                                const double right,
                                const double thickness,
                                const bool   colorize,
-                               void *       triangulation)
+                               void        *triangulation)
   {
     Triangulation<dim> *tria = static_cast<Triangulation<dim> *>(triangulation);
     tria->clear();
@@ -408,7 +604,7 @@ namespace python
   void
   generate_hyper_ball(PointWrapper &center,
                       const double  radius,
-                      void *        triangulation)
+                      void         *triangulation)
   {
     // Cast the PointWrapper object to Point<dim>
     Point<dim> center_point = *(static_cast<Point<dim> *>(center.get_point()));
@@ -424,7 +620,7 @@ namespace python
   void
   generate_hyper_sphere(PointWrapper &center,
                         const double  radius,
-                        void *        triangulation)
+                        void         *triangulation)
   {
     // Cast the PointWrapper object to Point<dim>
     Point<spacedim> center_point =
@@ -439,12 +635,12 @@ namespace python
 
   template <int dim>
   void
-  generate_hyper_shell(PointWrapper & center,
+  generate_hyper_shell(PointWrapper  &center,
                        const double   inner_radius,
                        const double   outer_radius,
                        const unsigned n_cells,
                        bool           colorize,
-                       void *         triangulation)
+                       void          *triangulation)
   {
     // Cast the PointWrapper object to Point<dim>
     Point<dim> center_point = *(static_cast<Point<dim> *>(center.get_point()));
@@ -460,7 +656,7 @@ namespace python
   void
   generate_quarter_hyper_ball(PointWrapper &center,
                               const double  radius,
-                              void *        triangulation)
+                              void         *triangulation)
   {
     // Cast the PointWrapper object to Point<dim>
     Point<dim> center_point = *(static_cast<Point<dim> *>(center.get_point()));
@@ -476,7 +672,7 @@ namespace python
   void
   generate_half_hyper_ball(PointWrapper &center,
                            const double  radius,
-                           void *        triangulation)
+                           void         *triangulation)
   {
     // Cast the PointWrapper object to Point<dim>
     Point<dim> center_point = *(static_cast<Point<dim> *>(center.get_point()));
@@ -495,6 +691,39 @@ namespace python
     Triangulation<dim, spacedim> *tria =
       static_cast<Triangulation<dim, spacedim> *>(triangulation);
     GridTools::scale(scaling_factor, *tria);
+  }
+
+
+
+  template <int d, int sd>
+  void
+  scale_wrapper(const double scaling_factor,
+                void        *triangulation,
+                const int    dim,
+                const int    spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return scale<d, sd>(scaling_factor, triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return scale_wrapper<sd - 1, sd - 1>(scaling_factor,
+                                               triangulation,
+                                               dim,
+                                               spacedim);
+      }
+    else
+      {
+        return scale_wrapper<d - 1, sd>(scaling_factor,
+                                        triangulation,
+                                        dim,
+                                        spacedim);
+      }
   }
 
 
@@ -520,11 +749,44 @@ namespace python
 
 
 
+  template <int d, int sd>
+  void
+  shift_wrapper(PYSPACE::list &shift_list,
+                void          *triangulation,
+                const int      dim,
+                const int      spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return shift<d, sd>(shift_list, triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return shift_wrapper<sd - 1, sd - 1>(shift_list,
+                                               triangulation,
+                                               dim,
+                                               spacedim);
+      }
+    else
+      {
+        return shift_wrapper<d - 1, sd>(shift_list,
+                                        triangulation,
+                                        dim,
+                                        spacedim);
+      }
+  }
+
+
+
   template <int dim, int spacedim>
   void
   merge_triangulations(TriangulationWrapper &triangulation_1,
                        TriangulationWrapper &triangulation_2,
-                       void *                triangulation)
+                       void                 *triangulation)
   {
     Triangulation<dim, spacedim> *tria =
       static_cast<Triangulation<dim, spacedim> *>(triangulation);
@@ -539,6 +801,38 @@ namespace python
     // We need to reassign tria to triangulation because tria was cleared
     // inside merge_triangulations.
     triangulation = tria;
+  }
+
+
+
+  template <int d, int sd>
+  void
+  merge_triangulations_wrapper(TriangulationWrapper &triangulation_1,
+                               TriangulationWrapper &triangulation_2,
+                               void                 *triangulation,
+                               const int             dim,
+                               const int             spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return merge_triangulations<d, sd>(triangulation_1,
+                                         triangulation_2,
+                                         triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return merge_triangulations_wrapper<sd - 1, sd - 1>(
+            triangulation_1, triangulation_2, triangulation, dim, spacedim);
+      }
+    else
+      {
+        return merge_triangulations_wrapper<d - 1, sd>(
+          triangulation_1, triangulation_2, triangulation, dim, spacedim);
+      }
   }
 
 
@@ -561,12 +855,42 @@ namespace python
   void
   distort_random(const double factor,
                  const bool   keep_boundary,
-                 void *       triangulation)
+                 void        *triangulation)
   {
     Triangulation<dim, spacedim> *tria =
       static_cast<Triangulation<dim, spacedim> *>(triangulation);
 
     GridTools::distort_random(factor, *tria, keep_boundary);
+  }
+
+
+
+  template <int d, int sd>
+  void
+  distort_random_wrapper(const double factor,
+                         const bool   keep_boundary,
+                         void        *triangulation,
+                         const int    dim,
+                         const int    spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return distort_random<d, sd>(factor, keep_boundary, triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return distort_random_wrapper<sd - 1, sd - 1>(
+            factor, keep_boundary, triangulation, dim, spacedim);
+      }
+    else
+      {
+        return distort_random_wrapper<d - 1, sd>(
+          factor, keep_boundary, triangulation, dim, spacedim);
+      }
   }
 
 
@@ -609,11 +933,44 @@ namespace python
 
 
 
+  template <int d, int sd>
+  void
+  transform_wrapper(PYSPACE::object &transformation,
+                    void            *triangulation,
+                    const int        dim,
+                    const int        spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return transform<d, sd>(transformation, triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return transform_wrapper<sd - 1, sd - 1>(transformation,
+                                                   triangulation,
+                                                   dim,
+                                                   spacedim);
+      }
+    else
+      {
+        return transform_wrapper<d - 1, sd>(transformation,
+                                            triangulation,
+                                            dim,
+                                            spacedim);
+      }
+  }
+
+
+
   template <int dim, int spacedim>
   std::pair<int, int>
-  find_active_cell_around_point(PointWrapper &          p,
+  find_active_cell_around_point(PointWrapper           &p,
                                 MappingQGenericWrapper &mapping_wrapper,
-                                void *                  triangulation)
+                                void                   *triangulation)
   {
     Triangulation<dim, spacedim> *tria =
       static_cast<Triangulation<dim, spacedim> *>(triangulation);
@@ -639,12 +996,45 @@ namespace python
   }
 
 
+
+  template <int d, int sd>
+  std::pair<int, int>
+  find_active_cell_around_point_wrapper(PointWrapper           &p,
+                                        MappingQGenericWrapper &mapping_wrapper,
+                                        void                   *triangulation,
+                                        const int               dim,
+                                        const int               spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return find_active_cell_around_point<d, sd>(p,
+                                                  mapping_wrapper,
+                                                  triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return find_active_cell_around_point_wrapper<sd - 1, sd - 1>(
+            p, mapping_wrapper, triangulation, dim, spacedim);
+      }
+    else
+      {
+        return find_active_cell_around_point_wrapper<d - 1, sd>(
+          p, mapping_wrapper, triangulation, dim, spacedim);
+      }
+  }
+
+
+
   template <int dim, int spacedim>
   PYSPACE::list
   compute_aspect_ratio_of_cells(
     const MappingQGenericWrapper &mapping_wrapper,
-    const QuadratureWrapper &     quadrature_wrapper,
-    const TriangulationWrapper &  triangulation_wrapper)
+    const QuadratureWrapper      &quadrature_wrapper,
+    const TriangulationWrapper   &triangulation_wrapper)
   {
     const Triangulation<dim, spacedim> *tria =
       static_cast<const Triangulation<dim, spacedim> *>(
@@ -666,6 +1056,7 @@ namespace python
 
     return ratios;
   }
+
 
 
   template <int dim, int spacedim>
@@ -692,6 +1083,37 @@ namespace python
 
 
 
+  template <int d, int sd>
+  PYSPACE::list
+  find_cells_adjacent_to_vertex_wrapper(
+    const unsigned int    vertex_index,
+    TriangulationWrapper &triangulation_wrapper,
+    const int             dim,
+    const int             spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return find_cells_adjacent_to_vertex<d, sd>(vertex_index,
+                                                  triangulation_wrapper);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return find_cells_adjacent_to_vertex_wrapper<sd - 1, sd - 1>(
+            vertex_index, triangulation_wrapper, dim, spacedim);
+      }
+    else
+      {
+        return find_cells_adjacent_to_vertex_wrapper<d - 1, sd>(
+          vertex_index, triangulation_wrapper, dim, spacedim);
+      }
+  }
+
+
+
   template <int dim, int spacedim>
   PYSPACE::list
   active_cells(TriangulationWrapper &triangulation_wrapper)
@@ -710,6 +1132,36 @@ namespace python
 
 
 
+  template <int d, int sd>
+  PYSPACE::list
+  active_cells_wrapper(TriangulationWrapper &triangulation_wrapper,
+                       const int             dim,
+                       const int             spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return active_cells<d, sd>(triangulation_wrapper);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return active_cells_wrapper<sd - 1, sd - 1>(triangulation_wrapper,
+                                                      dim,
+                                                      spacedim);
+      }
+    else
+      {
+        return active_cells_wrapper<d - 1, sd>(triangulation_wrapper,
+                                               dim,
+                                               spacedim);
+      }
+  }
+
+
+
   template <int dim, int spacedim>
   double
   maximal_cell_diameter(const void *triangulation)
@@ -717,6 +1169,36 @@ namespace python
     const Triangulation<dim, spacedim> *tria =
       static_cast<const Triangulation<dim, spacedim> *>(triangulation);
     return GridTools::maximal_cell_diameter(*tria);
+  }
+
+
+
+  template <int d, int sd>
+  double
+  maximal_cell_diameter_wrapper(const void *triangulation,
+                                const int   dim,
+                                const int   spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return maximal_cell_diameter<d, sd>(triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return maximal_cell_diameter_wrapper<sd - 1, sd - 1>(triangulation,
+                                                               dim,
+                                                               spacedim);
+      }
+    else
+      {
+        return maximal_cell_diameter_wrapper<d - 1, sd>(triangulation,
+                                                        dim,
+                                                        spacedim);
+      }
   }
 
 
@@ -732,11 +1214,41 @@ namespace python
 
 
 
+  template <int d, int sd>
+  double
+  minimal_cell_diameter_wrapper(const void *triangulation,
+                                const int   dim,
+                                const int   spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return minimal_cell_diameter<d, sd>(triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return minimal_cell_diameter_wrapper<sd - 1, sd - 1>(triangulation,
+                                                               dim,
+                                                               spacedim);
+      }
+    else
+      {
+        return minimal_cell_diameter_wrapper<d - 1, sd>(triangulation,
+                                                        dim,
+                                                        spacedim);
+      }
+  }
+
+
+
   template <int dim, int spacedim>
   void
   write(const std::string &filename,
         const std::string &format,
-        const void *       triangulation)
+        const void        *triangulation)
   {
     const Triangulation<dim, spacedim> *tria =
       static_cast<const Triangulation<dim, spacedim> *>(triangulation);
@@ -773,11 +1285,41 @@ namespace python
 
 
 
+  template <int d, int sd>
+  void
+  write_wrapper(const std::string &filename,
+                const std::string &format,
+                const void        *triangulation,
+                const int          dim,
+                const int          spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return write<d, sd>(filename, format, triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return write_wrapper<sd - 1, sd - 1>(
+            filename, format, triangulation, dim, spacedim);
+      }
+    else
+      {
+        return write_wrapper<d - 1, sd>(
+          filename, format, triangulation, dim, spacedim);
+      }
+  }
+
+
+
   template <int dim, int spacedim>
   void
   read(const std::string &filename,
        const std::string &format,
-       void *             triangulation)
+       void              *triangulation)
   {
     Triangulation<dim, spacedim> *tria =
       static_cast<Triangulation<dim, spacedim> *>(triangulation);
@@ -801,18 +1343,83 @@ namespace python
     mesh_reader.read(ifs, input_format);
     ifs.close();
   }
+
+
+
+  template <int d, int sd>
+  void
+  read_wrapper(const std::string &filename,
+               const std::string &format,
+               void              *triangulation,
+               const int          dim,
+               const int          spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      return read<d, sd>(filename, format, triangulation);
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return read_wrapper<sd - 1, sd - 1>(
+            filename, format, triangulation, dim, spacedim);
+      }
+    else
+      {
+        return read_wrapper<d - 1, sd>(
+          filename, format, triangulation, dim, spacedim);
+      }
+  }
+
+
+
+  template <int d, int sd>
+  void
+  delete_triangulation_pointer(void     *triangulation,
+                               const int dim,
+                               const int spacedim)
+  {
+    if (dim == d && spacedim == sd)
+      {
+        Triangulation<d, sd> *tmp =
+          static_cast<Triangulation<d, sd> *>(triangulation);
+        delete tmp;
+        return;
+      }
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          delete_triangulation_pointer<sd - 1, sd - 1>(triangulation,
+                                                       dim,
+                                                       spacedim);
+      }
+    else
+      {
+        delete_triangulation_pointer<d - 1, sd>(triangulation, dim, spacedim);
+      }
+  }
 } // namespace internal
 
 
 
 TriangulationWrapper::TriangulationWrapper(const std::string &dimension)
 {
-  if ((dimension.compare("2D") == 0) || (dimension.compare("2d") == 0))
+  if ((dimension.compare("1D") == 0) || (dimension.compare("1d") == 0))
+    setup("1D", "1D");
+  else if ((dimension.compare("2D") == 0) || (dimension.compare("2d") == 0))
     setup("2D", "2D");
   else if ((dimension.compare("3D") == 0) || (dimension.compare("3d") == 0))
     setup("3D", "3D");
   else
-    AssertThrow(false, ExcMessage("Dimension needs to be 2D or 3D"));
+    AssertThrow(false, ExcMessage("Dimension needs to be 1D, 2D or 3D"));
 }
 
 
@@ -828,32 +1435,7 @@ TriangulationWrapper::TriangulationWrapper(const std::string &dimension,
 TriangulationWrapper::~TriangulationWrapper()
 {
   if (triangulation != nullptr)
-    {
-      if (dim == 2)
-        {
-          if (spacedim == 2)
-            {
-              // We cannot call delete on a void pointer so cast the void
-              // pointer back first.
-              Triangulation<2, 2> *tmp =
-                static_cast<Triangulation<2, 2> *>(triangulation);
-              delete tmp;
-            }
-          else
-            {
-              Triangulation<2, 3> *tmp =
-                static_cast<Triangulation<2, 3> *>(triangulation);
-              delete tmp;
-            }
-        }
-      else
-        {
-          Triangulation<3, 3> *tmp =
-            static_cast<Triangulation<3, 3> *>(triangulation);
-          delete tmp;
-        }
-      triangulation = nullptr;
-    }
+    internal::delete_triangulation_pointer<3, 3>(triangulation, dim, spacedim);
   dim = -1;
 }
 
@@ -862,15 +1444,32 @@ TriangulationWrapper::~TriangulationWrapper()
 unsigned int
 TriangulationWrapper::n_active_cells() const
 {
-  if ((dim == 2) && (spacedim == 2))
+  if ((dim == 1) && (spacedim == 1))
+    {
+      return (*static_cast<Triangulation<1, 1> *>(triangulation))
+        .n_active_cells();
+    }
+  else if ((dim == 1) && (spacedim == 2))
+    {
+      return (*static_cast<Triangulation<1, 2> *>(triangulation))
+        .n_active_cells();
+    }
+  else if ((dim == 1) && (spacedim == 3))
+    {
+      return (*static_cast<Triangulation<1, 3> *>(triangulation))
+        .n_active_cells();
+    }
+  else if ((dim == 2) && (spacedim == 2))
     return (*static_cast<Triangulation<2, 2> *>(triangulation))
       .n_active_cells();
   else if ((dim == 2) && (spacedim == 3))
     return (*static_cast<Triangulation<2, 3> *>(triangulation))
       .n_active_cells();
-  else
+  else if ((dim == 3) && (spacedim == 3))
     return (*static_cast<Triangulation<3, 3> *>(triangulation))
       .n_active_cells();
+  else
+    AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
 }
 
 
@@ -879,18 +1478,8 @@ void
 TriangulationWrapper::create_triangulation(const PYSPACE::list &vertices,
                                            const PYSPACE::list &cells_vertices)
 {
-  if ((dim == 2) && (spacedim == 2))
-    internal::create_triangulation<2, 2>(vertices,
-                                         cells_vertices,
-                                         triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::create_triangulation<2, 3>(vertices,
-                                         cells_vertices,
-                                         triangulation);
-  else
-    internal::create_triangulation<3, 3>(vertices,
-                                         cells_vertices,
-                                         triangulation);
+  internal::create_triangulation_wrapper<3, 3>(
+    vertices, cells_vertices, triangulation, dim, spacedim);
 }
 
 
@@ -900,12 +1489,8 @@ TriangulationWrapper::generate_hyper_cube(const double left,
                                           const double right,
                                           const bool   colorize)
 {
-  if ((dim == 2) && (spacedim == 2))
-    internal::generate_hyper_cube<2, 2>(left, right, colorize, triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::generate_hyper_cube<2, 3>(left, right, colorize, triangulation);
-  else
-    internal::generate_hyper_cube<3, 3>(left, right, colorize, triangulation);
+  internal::generate_hyper_cube_wrapper<3, 3>(
+    left, right, colorize, triangulation, dim, spacedim);
 }
 
 
@@ -932,10 +1517,14 @@ TriangulationWrapper::generate_simplex(PYSPACE::list &vertices)
                   ExcMessage("Point of wrong dimension."));
     }
 
-  if (dim == 2)
+  if (dim == 1)
+    internal::generate_simplex<1>(wrapped_points, triangulation);
+  else if (dim == 2)
     internal::generate_simplex<2>(wrapped_points, triangulation);
-  else
+  else if (dim == 3)
     internal::generate_simplex<3>(wrapped_points, triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -946,21 +1535,8 @@ TriangulationWrapper::generate_subdivided_hyper_cube(
   const double       left,
   const double       right)
 {
-  if ((dim == 2) && (spacedim == 2))
-    internal::generate_subdivided_hyper_cube<2, 2>(repetitions,
-                                                   left,
-                                                   right,
-                                                   triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::generate_subdivided_hyper_cube<2, 3>(repetitions,
-                                                   left,
-                                                   right,
-                                                   triangulation);
-  else
-    internal::generate_subdivided_hyper_cube<3, 3>(repetitions,
-                                                   left,
-                                                   right,
-                                                   triangulation);
+  internal::generate_subdivided_hyper_cube_wrapper<3, 3>(
+    repetitions, left, right, triangulation, dim, spacedim);
 }
 
 
@@ -970,12 +1546,8 @@ TriangulationWrapper::generate_hyper_rectangle(PointWrapper &p1,
                                                PointWrapper &p2,
                                                const bool    colorize)
 {
-  if ((dim == 2) && (spacedim == 2))
-    internal::generate_hyper_rectangle<2, 2>(p1, p2, colorize, triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::generate_hyper_rectangle<2, 3>(p1, p2, colorize, triangulation);
-  else
-    internal::generate_hyper_rectangle<3, 3>(p1, p2, colorize, triangulation);
+  internal::generate_hyper_rectangle_wrapper<3, 3>(
+    p1, p2, colorize, triangulation, dim, spacedim);
 }
 
 
@@ -983,8 +1555,8 @@ TriangulationWrapper::generate_hyper_rectangle(PointWrapper &p1,
 void
 TriangulationWrapper::generate_subdivided_hyper_rectangle(
   PYSPACE::list &repetition_list,
-  PointWrapper & p1,
-  PointWrapper & p2,
+  PointWrapper  &p1,
+  PointWrapper  &p2,
   const bool     colorize)
 {
   AssertThrow(
@@ -1001,15 +1573,8 @@ TriangulationWrapper::generate_subdivided_hyper_rectangle(
 #ifdef USE_PYBIND11
   repetitions[i] = pybind11::cast<unsigned int>(repetition_list[i]);
 #endif
-  if ((dim == 2) && (spacedim == 2))
-    internal::generate_subdivided_hyper_rectangle<2, 2>(
-      repetitions, p1, p2, colorize, triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::generate_subdivided_hyper_rectangle<2, 3>(
-      repetitions, p1, p2, colorize, triangulation);
-  else
-    internal::generate_subdivided_hyper_rectangle<3, 3>(
-      repetitions, p1, p2, colorize, triangulation);
+  internal::generate_subdivided_hyper_rectangle_wrapper<3, 3>(
+    repetitions, p1, p2, colorize, triangulation, dim, spacedim);
 }
 
 
@@ -1017,8 +1582,8 @@ TriangulationWrapper::generate_subdivided_hyper_rectangle(
 void
 TriangulationWrapper::generate_subdivided_steps_hyper_rectangle(
   PYSPACE::list &step_sizes_list,
-  PointWrapper & p1,
-  PointWrapper & p2,
+  PointWrapper  &p1,
+  PointWrapper  &p2,
   const bool     colorize)
 {
   AssertThrow(
@@ -1045,12 +1610,17 @@ TriangulationWrapper::generate_subdivided_steps_hyper_rectangle(
 #endif
     }
 
-  if (dim == 2)
+  if (dim == 1)
+    internal::generate_subdivided_steps_hyper_rectangle<1>(
+      step_sizes, p1, p2, colorize, triangulation);
+  else if (dim == 2)
     internal::generate_subdivided_steps_hyper_rectangle<2>(
       step_sizes, p1, p2, colorize, triangulation);
-  else
+  else if (dim == 3)
     internal::generate_subdivided_steps_hyper_rectangle<3>(
       step_sizes, p1, p2, colorize, triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -1058,7 +1628,7 @@ TriangulationWrapper::generate_subdivided_steps_hyper_rectangle(
 void
 TriangulationWrapper::generate_subdivided_material_hyper_rectangle(
   PYSPACE::list &spacing_list,
-  PointWrapper & p,
+  PointWrapper  &p,
   PYSPACE::list &material_id_list,
   const bool     colorize)
 {
@@ -1084,15 +1654,29 @@ TriangulationWrapper::generate_subdivided_material_hyper_rectangle(
         pybind11::cast<pybind11::list>(spacing_list[i])[j]);
 #endif
     }
-  if (dim == 2)
+  if (dim == 1)
+    {
+      const unsigned int           index_0 = PYSPACE::len(material_id_list);
+      Table<1, types::material_id> material_ids(index_0);
+      for (unsigned int i = 0; i < index_0; ++i)
+      // We cannot use extract<types::material_id> because boost will
+      // throw an exception if we try to extract -1
+#ifdef USE_BOOST_PYTHON
+        material_ids[i] = boost::python::extract<int>(material_id_list[i]);
+#endif
+#ifdef USE_PYBIND11
+      material_ids[i] = pybind11::cast<int>(material_id_list[i]);
+#endif
+      internal::generate_subdivided_material_hyper_rectangle<1>(
+        spacing, p, material_ids, colorize, triangulation);
+    }
+  else if (dim == 2)
     {
       const unsigned int           index_0 = PYSPACE::len(material_id_list);
       const unsigned int           index_1 = PYSPACE::len(material_id_list[0]);
       Table<2, types::material_id> material_ids(index_0, index_1);
       for (unsigned int i = 0; i < index_0; ++i)
         for (unsigned int j = 0; j < index_1; ++j)
-        // We cannot use extract<types::material_id> because boost will
-        // throw an exception if we try to extract -1
 #ifdef USE_BOOST_PYTHON
           material_ids[i][j] =
             boost::python::extract<int>(material_id_list[i][j]);
@@ -1101,11 +1685,10 @@ TriangulationWrapper::generate_subdivided_material_hyper_rectangle(
       material_ids[i][j] = pybind11::cast<int>(
         pybind11::cast<pybind11::list>(material_id_list[i])[j]);
 #endif
-
       internal::generate_subdivided_material_hyper_rectangle<2>(
         spacing, p, material_ids, colorize, triangulation);
     }
-  else
+  else if (dim == 3)
     {
       const unsigned int index_0 = PYSPACE::len(material_id_list);
       const unsigned int index_1 = PYSPACE::len(material_id_list[0]);
@@ -1126,6 +1709,8 @@ TriangulationWrapper::generate_subdivided_material_hyper_rectangle(
       internal::generate_subdivided_material_hyper_rectangle<3>(
         spacing, p, material_ids, colorize, triangulation);
     }
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -1143,12 +1728,7 @@ TriangulationWrapper::generate_cheese(PYSPACE::list &holes_list)
   holes[i] = pybind11::cast<unsigned int>(holes_list[i]);
 #endif
 
-  if ((dim == 2) && (spacedim == 2))
-    internal::generate_cheese<2, 2>(holes, triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::generate_cheese<2, 3>(holes, triangulation);
-  else
-    internal::generate_cheese<3, 3>(holes, triangulation);
+  internal::generate_cheese_wrapper<3, 3>(holes, triangulation, dim, spacedim);
 }
 
 
@@ -1157,9 +1737,9 @@ void
 TriangulationWrapper::generate_general_cell(PYSPACE::list &vertices,
                                             const bool     colorize)
 {
-  AssertThrow(spacedim == dim,
-              ExcMessage(
-                "This function is only implementd for dim equal to spacedim."));
+  AssertThrow(
+    spacedim == dim,
+    ExcMessage("This function is only implemented for dim equal to spacedim."));
   // Extract the PointWrapper object from the python list
   const int size = PYSPACE::len(vertices);
   AssertThrow(size > 0, ExcMessage("The vertices list is empty."));
@@ -1171,10 +1751,14 @@ TriangulationWrapper::generate_general_cell(PYSPACE::list &vertices,
 #ifdef USE_PYBIND11
   wrapped_points[i] = pybind11::cast<PointWrapper>(vertices[i]);
 #endif
-  if (dim == 2)
+  if (dim == 1)
+    internal::generate_general_cell<1>(wrapped_points, colorize, triangulation);
+  else if (dim == 2)
     internal::generate_general_cell<2>(wrapped_points, colorize, triangulation);
-  else
+  else if (dim == 3)
     internal::generate_general_cell<3>(wrapped_points, colorize, triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -1199,14 +1783,20 @@ TriangulationWrapper::generate_parallelogram(PYSPACE::list &corners,
 #ifdef USE_PYBIND11
   wrapped_points[i] = pybind11::cast<PointWrapper>(corners[i]);
 #endif
-  if (dim == 2)
+  if (dim == 1)
+    internal::generate_parallelogram<1>(wrapped_points,
+                                        colorize,
+                                        triangulation);
+  else if (dim == 2)
     internal::generate_parallelogram<2>(wrapped_points,
                                         colorize,
                                         triangulation);
-  else
+  else if (dim == 3)
     internal::generate_parallelogram<3>(wrapped_points,
                                         colorize,
                                         triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -1231,14 +1821,20 @@ TriangulationWrapper::generate_parallelepiped(PYSPACE::list &corners,
 #ifdef USE_PYBIND11
   wrapped_points[i] = pybind11::cast<PointWrapper>(corners[i]);
 #endif
-  if (dim == 2)
+  if (dim == 1)
+    internal::generate_parallelepiped<1>(wrapped_points,
+                                         colorize,
+                                         triangulation);
+  else if (dim == 2)
     internal::generate_parallelepiped<2>(wrapped_points,
                                          colorize,
                                          triangulation);
-  else
+  else if (dim == 3)
     internal::generate_parallelepiped<3>(wrapped_points,
                                          colorize,
                                          triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -1246,7 +1842,7 @@ TriangulationWrapper::generate_parallelepiped(PYSPACE::list &corners,
 void
 TriangulationWrapper::generate_fixed_subdivided_parallelepiped(
   const unsigned int n_subdivisions,
-  PYSPACE::list &    corners,
+  PYSPACE::list     &corners,
   const bool         colorize)
 {
   AssertThrow(
@@ -1265,16 +1861,25 @@ TriangulationWrapper::generate_fixed_subdivided_parallelepiped(
 #ifdef USE_PYBIND11
   wrapped_points[i] = pybind11::cast<PointWrapper>(corners[i]);
 #endif
-  if ((dim == 2) && (spacedim == 2))
+  if (dim == 1)
+    {
+      internal::generate_fixed_subdivided_parallelepiped<1>(n_subdivisions,
+                                                            wrapped_points,
+                                                            colorize,
+                                                            triangulation);
+    }
+  else if (dim == 2)
     internal::generate_fixed_subdivided_parallelepiped<2>(n_subdivisions,
                                                           wrapped_points,
                                                           colorize,
                                                           triangulation);
-  else
+  else if (dim == 3)
     internal::generate_fixed_subdivided_parallelepiped<3>(n_subdivisions,
                                                           wrapped_points,
                                                           colorize,
                                                           triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -1314,16 +1919,23 @@ TriangulationWrapper::generate_varying_subdivided_parallelepiped(
 #ifdef USE_PYBIND11
   wrapped_points[i] = pybind11::cast<PointWrapper>(corners[i]);
 #endif
-  if (dim == 2)
+  if (dim == 1)
+    internal::generate_varying_subdivided_parallelepiped<1>(subdivisions,
+                                                            wrapped_points,
+                                                            colorize,
+                                                            triangulation);
+  else if (dim == 2)
     internal::generate_varying_subdivided_parallelepiped<2>(subdivisions,
                                                             wrapped_points,
                                                             colorize,
                                                             triangulation);
-  else
+  else if (dim == 3)
     internal::generate_varying_subdivided_parallelepiped<3>(subdivisions,
                                                             wrapped_points,
                                                             colorize,
                                                             triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -1337,12 +1949,18 @@ TriangulationWrapper::generate_enclosed_hyper_cube(const double left,
   AssertThrow(
     spacedim == dim,
     ExcMessage("This function is only implemented for dim equal to spacedim."));
-  if (dim == 2)
+
+  if (dim == 1)
+    internal::generate_enclosed_hyper_cube<1>(
+      left, right, thickness, colorize, triangulation);
+  else if (dim == 2)
     internal::generate_enclosed_hyper_cube<2>(
       left, right, thickness, colorize, triangulation);
-  else
+  else if (dim == 3)
     internal::generate_enclosed_hyper_cube<3>(
       left, right, thickness, colorize, triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -1354,16 +1972,20 @@ TriangulationWrapper::generate_hyper_ball(PointWrapper &center,
   AssertThrow(
     dim == spacedim,
     ExcMessage("This function is only implemented for dim equal to spacedim."));
-  if (dim == 2)
+  if (dim == 1)
+    internal::generate_hyper_ball<1>(center, radius, triangulation);
+  else if (dim == 2)
     internal::generate_hyper_ball<2>(center, radius, triangulation);
-  else
+  else if (dim == 3)
     internal::generate_hyper_ball<3>(center, radius, triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
 
 void
-TriangulationWrapper::generate_hyper_shell(PointWrapper & center,
+TriangulationWrapper::generate_hyper_shell(PointWrapper  &center,
                                            const double   inner_radius,
                                            const double   outer_radius,
                                            const unsigned n_cells,
@@ -1372,12 +1994,17 @@ TriangulationWrapper::generate_hyper_shell(PointWrapper & center,
   AssertThrow(
     dim == spacedim,
     ExcMessage("This function is only implemented for dim equal to spacedim."));
-  if (dim == 2)
+  if (dim == 1)
+    internal::generate_hyper_shell<1>(
+      center, inner_radius, outer_radius, n_cells, colorize, triangulation);
+  else if (dim == 2)
     internal::generate_hyper_shell<2>(
       center, inner_radius, outer_radius, n_cells, colorize, triangulation);
-  else
+  else if (dim == 3)
     internal::generate_hyper_shell<3>(
       center, inner_radius, outer_radius, n_cells, colorize, triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -1390,7 +2017,12 @@ TriangulationWrapper::generate_hyper_sphere(PointWrapper &center,
     spacedim == dim + 1,
     ExcMessage(
       "This function is only implemented for spacedim equal to dim+1."));
-  internal::generate_hyper_sphere<2, 3>(center, radius, triangulation);
+  if (dim == 1)
+    internal::generate_hyper_sphere<1, 2>(center, radius, triangulation);
+  else if (dim == 2)
+    internal::generate_hyper_sphere<2, 3>(center, radius, triangulation);
+  else
+    AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
 }
 
 
@@ -1402,10 +2034,14 @@ TriangulationWrapper::generate_quarter_hyper_ball(PointWrapper &center,
   AssertThrow(
     dim == spacedim,
     ExcMessage("This function is only implemented for dim equal to spacedim."));
-  if (dim == 2)
+  if (dim == 1)
+    internal::generate_quarter_hyper_ball<1>(center, radius, triangulation);
+  else if (dim == 2)
     internal::generate_quarter_hyper_ball<2>(center, radius, triangulation);
-  else
+  else if (dim == 3)
     internal::generate_quarter_hyper_ball<3>(center, radius, triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -1416,10 +2052,14 @@ TriangulationWrapper::generate_half_hyper_ball(PointWrapper &center,
   AssertThrow(
     dim == spacedim,
     ExcMessage("This function is only implemented for dim equal to spacedim."));
-  if (dim == 2)
+  if (dim == 1)
+    internal::generate_half_hyper_ball<1>(center, radius, triangulation);
+  else if (dim == 2)
     internal::generate_half_hyper_ball<2>(center, radius, triangulation);
-  else
+  else if (dim == 3)
     internal::generate_half_hyper_ball<3>(center, radius, triangulation);
+  else
+    AssertThrow(false, ExcMessage("Unsupported dimension."));
 }
 
 
@@ -1436,12 +2076,23 @@ TriangulationWrapper::generate_hyper_cube_with_cylindrical_hole(
     dim == spacedim,
     ExcMessage("This function is only implemented for dim equal to spacedim."));
 
-  if (dim == 2)
-    internal::generate_hyper_cube_with_cylindrical_hole<2>(
-      inner_radius, outer_radius, L, repetitions, colorize, triangulation);
-  else
-    internal::generate_hyper_cube_with_cylindrical_hole<3>(
-      inner_radius, outer_radius, L, repetitions, colorize, triangulation);
+  switch (dim)
+    {
+      case 1:
+        internal::generate_hyper_cube_with_cylindrical_hole<1>(
+          inner_radius, outer_radius, L, repetitions, colorize, triangulation);
+        break;
+      case 2:
+        internal::generate_hyper_cube_with_cylindrical_hole<2>(
+          inner_radius, outer_radius, L, repetitions, colorize, triangulation);
+        break;
+      case 3:
+        internal::generate_hyper_cube_with_cylindrical_hole<3>(
+          inner_radius, outer_radius, L, repetitions, colorize, triangulation);
+        break;
+      default:
+        AssertThrow(false, ExcMessage("Unsupported dimension."));
+    }
 }
 
 
@@ -1451,12 +2102,8 @@ TriangulationWrapper::shift(PYSPACE::list &shift_list)
 {
   AssertThrow(PYSPACE::len(shift_list) == (PYSIZET)spacedim,
               ExcMessage("Size of the shift vector is not equal to spacedim."));
-  if ((dim == 2) && (spacedim == 2))
-    internal::shift<2, 2>(shift_list, triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::shift<2, 3>(shift_list, triangulation);
-  else
-    internal::shift<3, 3>(shift_list, triangulation);
+
+  internal::shift_wrapper<3, 3>(shift_list, triangulation, dim, spacedim);
 }
 
 
@@ -1464,12 +2111,7 @@ TriangulationWrapper::shift(PYSPACE::list &shift_list)
 void
 TriangulationWrapper::scale(const double scaling_factor)
 {
-  if ((dim == 2) && (spacedim == 2))
-    internal::scale<2, 2>(scaling_factor, triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::scale<2, 3>(scaling_factor, triangulation);
-  else
-    internal::scale<3, 3>(scaling_factor, triangulation);
+  internal::scale_wrapper<3, 3>(scaling_factor, triangulation, dim, spacedim);
 }
 
 
@@ -1496,19 +2138,8 @@ TriangulationWrapper::merge_triangulations(
     ExcMessage(
       "Triangulation and Triangulation_2 should have the same space dimension."));
 
-  if ((triangulation_1.get_dim() == 2) && (triangulation_1.get_spacedim() == 2))
-    internal::merge_triangulations<2, 2>(triangulation_1,
-                                         triangulation_2,
-                                         triangulation);
-  else if ((triangulation_1.get_dim() == 2) &&
-           (triangulation_1.get_spacedim() == 3))
-    internal::merge_triangulations<2, 3>(triangulation_1,
-                                         triangulation_2,
-                                         triangulation);
-  else
-    internal::merge_triangulations<3, 3>(triangulation_1,
-                                         triangulation_2,
-                                         triangulation);
+  internal::merge_triangulations_wrapper<3, 3>(
+    triangulation_1, triangulation_2, triangulation, dim, spacedim);
 }
 
 
@@ -1520,17 +2151,105 @@ TriangulationWrapper::flatten_triangulation(TriangulationWrapper &tria_out)
     dim == tria_out.get_dim(),
     ExcMessage(
       "The Triangulation and tria_out should have the same dimension."));
+
+  // Why this check???
   AssertThrow(spacedim >= tria_out.get_spacedim(),
               ExcMessage(
                 "The Triangulation should have a spacedim greater or equal "
                 "to the spacedim of tria_out."));
+
   int spacedim_out = tria_out.get_spacedim();
-  if ((dim == 2) && (spacedim == 2) && (spacedim_out == 2))
-    internal::flatten_triangulation<2, 2, 2>(triangulation, tria_out);
-  else if ((dim == 2) && (spacedim == 3) && (spacedim_out == 2))
-    internal::flatten_triangulation<2, 3, 2>(triangulation, tria_out);
-  else
-    internal::flatten_triangulation<3, 3, 3>(triangulation, tria_out);
+  switch (dim)
+    {
+      case 1:
+        switch (spacedim)
+          {
+            case 1:
+              if (spacedim_out == 1)
+                internal::flatten_triangulation<1, 1, 1>(triangulation,
+                                                         tria_out);
+              else if (spacedim_out == 2)
+                internal::flatten_triangulation<1, 1, 2>(triangulation,
+                                                         tria_out);
+              else if (spacedim_out == 3)
+                internal::flatten_triangulation<1, 1, 3>(triangulation,
+                                                         tria_out);
+              else
+                AssertThrow(false,
+                            ExcMessage("Unsupported spacedim for tria_out."));
+              break;
+            case 2:
+              if (spacedim_out == 1)
+                internal::flatten_triangulation<1, 2, 1>(triangulation,
+                                                         tria_out);
+              else if (spacedim_out == 2)
+                internal::flatten_triangulation<1, 2, 2>(triangulation,
+                                                         tria_out);
+              else if (spacedim_out == 3)
+                internal::flatten_triangulation<1, 2, 3>(triangulation,
+                                                         tria_out);
+              else
+                AssertThrow(false,
+                            ExcMessage("Unsupported spacedim for tria_out."));
+              break;
+            case 3:
+              if (spacedim_out == 1)
+                internal::flatten_triangulation<1, 3, 1>(triangulation,
+                                                         tria_out);
+              else if (spacedim_out == 2)
+                internal::flatten_triangulation<1, 3, 2>(triangulation,
+                                                         tria_out);
+              else if (spacedim_out == 3)
+                internal::flatten_triangulation<1, 3, 3>(triangulation,
+                                                         tria_out);
+              else
+                AssertThrow(false,
+                            ExcMessage("Unsupported spacedim for tria_out."));
+              break;
+            default:
+              AssertThrow(false, ExcMessage("Invalid spacedim"));
+          }
+        break;
+        case 2: {
+          switch (spacedim)
+            {
+              case 2:
+                if (spacedim_out == 2)
+                  internal::flatten_triangulation<2, 2, 2>(triangulation,
+                                                           tria_out);
+                else if (spacedim_out == 3)
+                  internal::flatten_triangulation<2, 2, 3>(triangulation,
+                                                           tria_out);
+                else
+                  AssertThrow(false,
+                              ExcMessage("Invalid spacedim for tria_out"));
+                break;
+              case 3:
+                if (spacedim_out == 2)
+                  internal::flatten_triangulation<2, 3, 2>(triangulation,
+                                                           tria_out);
+                else if (spacedim_out == 3)
+                  internal::flatten_triangulation<2, 3, 3>(triangulation,
+                                                           tria_out);
+                else
+                  AssertThrow(false,
+                              ExcMessage("Invalid spacedim for tria_out"));
+                break;
+              default:
+                AssertThrow(false, ExcMessage("Invalid spacedim"));
+            }
+        }
+        break;
+        case 3: {
+          AssertThrow(spacedim == 3, ExcMessage("Invalid spacedim"));
+          AssertThrow(spacedim_out == 3,
+                      ExcMessage("Invalid spacedim for tria_out"));
+          internal::flatten_triangulation<3, 3, 3>(triangulation, tria_out);
+          break;
+        }
+      default:
+        AssertThrow(false, ExcMessage("Unsupported dimension."));
+    }
 }
 
 
@@ -1562,12 +2281,8 @@ void
 TriangulationWrapper::distort_random(const double factor,
                                      const bool   keep_boundary)
 {
-  if ((dim == 2) && (spacedim == 2))
-    internal::distort_random<2, 2>(factor, keep_boundary, triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::distort_random<2, 3>(factor, keep_boundary, triangulation);
-  else
-    internal::distort_random<3, 3>(factor, keep_boundary, triangulation);
+  internal::distort_random_wrapper<3, 3>(
+    factor, keep_boundary, triangulation, dim, spacedim);
 }
 
 
@@ -1575,31 +2290,22 @@ TriangulationWrapper::distort_random(const double factor,
 void
 TriangulationWrapper::transform(PYSPACE::object &transformation)
 {
-  if ((dim == 2) && (spacedim == 2))
-    internal::transform<2, 2>(transformation, triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::transform<2, 3>(transformation, triangulation);
-  else
-    internal::transform<3, 3>(transformation, triangulation);
+  internal::transform_wrapper<3, 3>(transformation,
+                                    triangulation,
+                                    dim,
+                                    spacedim);
 }
 
 
 
 CellAccessorWrapper
 TriangulationWrapper::find_active_cell_around_point(
-  PointWrapper &         p,
+  PointWrapper          &p,
   MappingQGenericWrapper mapping)
 {
-  std::pair<int, int> level_index_pair;
-  if ((dim == 2) && (spacedim == 2))
-    level_index_pair =
-      internal::find_active_cell_around_point<2, 2>(p, mapping, triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    level_index_pair =
-      internal::find_active_cell_around_point<2, 3>(p, mapping, triangulation);
-  else
-    level_index_pair =
-      internal::find_active_cell_around_point<3, 3>(p, mapping, triangulation);
+  std::pair<int, int> level_index_pair =
+    internal::find_active_cell_around_point_wrapper<3, 3>(
+      p, mapping, triangulation, dim, spacedim);
 
   return CellAccessorWrapper(*this,
                              level_index_pair.first,
@@ -1610,7 +2316,7 @@ TriangulationWrapper::find_active_cell_around_point(
 #ifdef USE_PYBIND11
 CellAccessorWrapper
 TriangulationWrapper::find_active_cell_around_point_wrapper(
-  PointWrapper &                        p,
+  PointWrapper                         &p,
   std::optional<MappingQGenericWrapper> mapping)
 {
   if (mapping.has_value())
@@ -1626,12 +2332,10 @@ PYSPACE::list
 TriangulationWrapper::find_cells_adjacent_to_vertex(
   const unsigned int vertex_index)
 {
-  if ((dim == 2) && (spacedim == 2))
-    return internal::find_cells_adjacent_to_vertex<2, 2>(vertex_index, *this);
-  else if ((dim == 2) && (spacedim == 3))
-    return internal::find_cells_adjacent_to_vertex<2, 3>(vertex_index, *this);
-  else
-    return internal::find_cells_adjacent_to_vertex<3, 3>(vertex_index, *this);
+  return internal::find_cells_adjacent_to_vertex_wrapper<3, 3>(vertex_index,
+                                                               *this,
+                                                               dim,
+                                                               spacedim);
 }
 
 
@@ -1639,9 +2343,13 @@ TriangulationWrapper::find_cells_adjacent_to_vertex(
 PYSPACE::list
 TriangulationWrapper::compute_aspect_ratio_of_cells(
   const MappingQGenericWrapper &mapping,
-  const QuadratureWrapper &     quadrature)
+  const QuadratureWrapper      &quadrature)
 {
-  if ((dim == 2) && (spacedim == 2))
+  if ((dim == 1) && (spacedim == 1))
+    return internal::compute_aspect_ratio_of_cells<1, 1>(mapping,
+                                                         quadrature,
+                                                         *this);
+  else if ((dim == 2) && (spacedim == 2))
     return internal::compute_aspect_ratio_of_cells<2, 2>(mapping,
                                                          quadrature,
                                                          *this);
@@ -1659,7 +2367,25 @@ TriangulationWrapper::compute_aspect_ratio_of_cells(
 void
 TriangulationWrapper::refine_global(const unsigned int n)
 {
-  if ((dim == 2) && (spacedim == 2))
+  if ((dim == 1) && (spacedim == 1))
+    {
+      Triangulation<1, 1> *tria =
+        static_cast<Triangulation<1, 1> *>(triangulation);
+      tria->refine_global(n);
+    }
+  else if ((dim == 1) && (spacedim == 2))
+    {
+      Triangulation<1, 2> *tria =
+        static_cast<Triangulation<1, 2> *>(triangulation);
+      tria->refine_global(n);
+    }
+  else if ((dim == 1) && (spacedim == 3))
+    {
+      Triangulation<1, 3> *tria =
+        static_cast<Triangulation<1, 3> *>(triangulation);
+      tria->refine_global(n);
+    }
+  else if ((dim == 2) && (spacedim == 2))
     {
       Triangulation<2, 2> *tria =
         static_cast<Triangulation<2, 2> *>(triangulation);
@@ -1684,7 +2410,25 @@ TriangulationWrapper::refine_global(const unsigned int n)
 void
 TriangulationWrapper::execute_coarsening_and_refinement()
 {
-  if ((dim == 2) && (spacedim == 2))
+  if ((dim == 1) && (spacedim == 1))
+    {
+      Triangulation<1, 1> *tria =
+        static_cast<Triangulation<1, 1> *>(triangulation);
+      tria->execute_coarsening_and_refinement();
+    }
+  else if ((dim == 1) && (spacedim == 2))
+    {
+      Triangulation<1, 2> *tria =
+        static_cast<Triangulation<1, 2> *>(triangulation);
+      tria->execute_coarsening_and_refinement();
+    }
+  else if ((dim == 1) && (spacedim == 3))
+    {
+      Triangulation<1, 3> *tria =
+        static_cast<Triangulation<1, 3> *>(triangulation);
+      tria->execute_coarsening_and_refinement();
+    }
+  else if ((dim == 2) && (spacedim == 2))
     {
       Triangulation<2, 2> *tria =
         static_cast<Triangulation<2, 2> *>(triangulation);
@@ -1709,12 +2453,9 @@ TriangulationWrapper::execute_coarsening_and_refinement()
 double
 TriangulationWrapper::minimal_cell_diameter() const
 {
-  if ((dim == 2) && (spacedim == 2))
-    return internal::minimal_cell_diameter<2, 2>(triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    return internal::minimal_cell_diameter<2, 3>(triangulation);
-  else
-    return internal::minimal_cell_diameter<3, 3>(triangulation);
+  return internal::minimal_cell_diameter_wrapper<3, 3>(triangulation,
+                                                       dim,
+                                                       spacedim);
 }
 
 
@@ -1722,12 +2463,9 @@ TriangulationWrapper::minimal_cell_diameter() const
 double
 TriangulationWrapper::maximal_cell_diameter() const
 {
-  if ((dim == 2) && (spacedim == 2))
-    return internal::maximal_cell_diameter<2, 2>(triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    return internal::maximal_cell_diameter<2, 3>(triangulation);
-  else
-    return internal::maximal_cell_diameter<3, 3>(triangulation);
+  return internal::maximal_cell_diameter_wrapper<3, 3>(triangulation,
+                                                       dim,
+                                                       spacedim);
 }
 
 
@@ -1736,12 +2474,7 @@ void
 TriangulationWrapper::write(const std::string &filename,
                             const std::string  format) const
 {
-  if ((dim == 2) && (spacedim == 2))
-    internal::write<2, 2>(filename, format, triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::write<2, 3>(filename, format, triangulation);
-  else
-    internal::write<3, 3>(filename, format, triangulation);
+  internal::write_wrapper<3, 3>(filename, format, triangulation, dim, spacedim);
 }
 
 
@@ -1750,12 +2483,7 @@ void
 TriangulationWrapper::read(const std::string &filename,
                            const std::string  format) const
 {
-  if ((dim == 2) && (spacedim == 2))
-    internal::read<2, 2>(filename, format, triangulation);
-  else if ((dim == 2) && (spacedim == 3))
-    internal::read<2, 3>(filename, format, triangulation);
-  else
-    internal::read<3, 3>(filename, format, triangulation);
+  internal::read_wrapper<3, 3>(filename, format, triangulation, dim, spacedim);
 }
 
 
@@ -1766,7 +2494,28 @@ TriangulationWrapper::save(const std::string &filename) const
   std::ofstream                   ofs(filename);
   boost::archive::binary_oarchive oa(ofs);
 
-  if ((dim == 2) && (spacedim == 2))
+  if ((dim == 1) && (spacedim == 1))
+    {
+      Triangulation<1, 1> *tria =
+        static_cast<Triangulation<1, 1> *>(triangulation);
+
+      tria->save(oa, 0);
+    }
+  else if ((dim == 1) && (spacedim == 2))
+    {
+      Triangulation<1, 2> *tria =
+        static_cast<Triangulation<1, 2> *>(triangulation);
+
+      tria->save(oa, 0);
+    }
+  else if ((dim == 1) && (spacedim == 3))
+    {
+      Triangulation<1, 3> *tria =
+        static_cast<Triangulation<1, 3> *>(triangulation);
+
+      tria->save(oa, 0);
+    }
+  else if ((dim == 2) && (spacedim == 2))
     {
       Triangulation<2, 2> *tria =
         static_cast<Triangulation<2, 2> *>(triangulation);
@@ -1782,13 +2531,15 @@ TriangulationWrapper::save(const std::string &filename) const
         tria->save(oa, 0);
       }
     }
-  else
+  else if ((dim == 3) && (spacedim == 3))
     {
       Triangulation<3, 3> *tria =
         static_cast<Triangulation<3, 3> *>(triangulation);
 
       tria->save(oa, 0);
     }
+  else
+    AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
 }
 
 
@@ -1799,7 +2550,28 @@ TriangulationWrapper::load(const std::string &filename)
   std::ifstream                   ifs(filename);
   boost::archive::binary_iarchive ia(ifs);
 
-  if ((dim == 2) && (spacedim == 2))
+  if ((dim == 1) && (spacedim == 1))
+    {
+      Triangulation<1, 1> *tria =
+        static_cast<Triangulation<1, 1> *>(triangulation);
+
+      tria->load(ia, 0);
+    }
+  else if ((dim == 1) && (spacedim == 2))
+    {
+      Triangulation<1, 2> *tria =
+        static_cast<Triangulation<1, 2> *>(triangulation);
+
+      tria->load(ia, 0);
+    }
+  else if ((dim == 1) && (spacedim == 3))
+    {
+      Triangulation<1, 3> *tria =
+        static_cast<Triangulation<1, 3> *>(triangulation);
+
+      tria->load(ia, 0);
+    }
+  else if ((dim == 2) && (spacedim == 2))
     {
       Triangulation<2, 2> *tria =
         static_cast<Triangulation<2, 2> *>(triangulation);
@@ -1813,13 +2585,15 @@ TriangulationWrapper::load(const std::string &filename)
 
       tria->load(ia, 0);
     }
-  else
+  else if ((dim == 3) && (spacedim == 3))
     {
       Triangulation<3> *tria =
         static_cast<Triangulation<3, 3> *>(triangulation);
 
       tria->load(ia, 0);
     }
+  else
+    AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
 }
 
 
@@ -1827,12 +2601,7 @@ TriangulationWrapper::load(const std::string &filename)
 PYSPACE::list
 TriangulationWrapper::active_cells()
 {
-  if ((dim == 2) && (spacedim == 2))
-    return internal::active_cells<2, 2>(*this);
-  else if ((dim == 2) && (spacedim == 3))
-    return internal::active_cells<2, 3>(*this);
-  else
-    return internal::active_cells<3, 3>(*this);
+  return internal::active_cells_wrapper<3, 3>(*this, dim, spacedim);
 }
 
 
@@ -1849,7 +2618,31 @@ TriangulationWrapper::set_manifold(const int number, ManifoldWrapper &manifold)
     ExcMessage(
       "The Triangulation and Manifold should have the same space dimension."));
 
-  if ((dim == 2) && (spacedim == 2))
+  if ((dim == 1) && (spacedim == 1))
+    {
+      Triangulation<1, 1> *tria =
+        static_cast<Triangulation<1, 1> *>(triangulation);
+      Manifold<1, 1> *m =
+        static_cast<Manifold<1, 1> *>(manifold.get_manifold());
+      tria->set_manifold(number, *m);
+    }
+  else if ((dim == 1) && (spacedim == 2))
+    {
+      Triangulation<1, 2> *tria =
+        static_cast<Triangulation<1, 2> *>(triangulation);
+      Manifold<1, 2> *m =
+        static_cast<Manifold<1, 2> *>(manifold.get_manifold());
+      tria->set_manifold(number, *m);
+    }
+  else if ((dim == 1) && (spacedim == 3))
+    {
+      Triangulation<1, 3> *tria =
+        static_cast<Triangulation<1, 3> *>(triangulation);
+      Manifold<1, 3> *m =
+        static_cast<Manifold<1, 3> *>(manifold.get_manifold());
+      tria->set_manifold(number, *m);
+    }
+  else if ((dim == 2) && (spacedim == 2))
     {
       Triangulation<2, 2> *tria =
         static_cast<Triangulation<2, 2> *>(triangulation);
@@ -1880,7 +2673,25 @@ TriangulationWrapper::set_manifold(const int number, ManifoldWrapper &manifold)
 void
 TriangulationWrapper::reset_manifold(const int number)
 {
-  if ((dim == 2) && (spacedim == 2))
+  if ((dim == 1) && (spacedim == 1))
+    {
+      Triangulation<1, 1> *tria =
+        static_cast<Triangulation<1, 1> *>(triangulation);
+      tria->reset_manifold(number);
+    }
+  else if ((dim == 1) && (spacedim == 2))
+    {
+      Triangulation<1, 2> *tria =
+        static_cast<Triangulation<1, 2> *>(triangulation);
+      tria->reset_manifold(number);
+    }
+  else if ((dim == 1) && (spacedim == 3))
+    {
+      Triangulation<1, 3> *tria =
+        static_cast<Triangulation<1, 3> *>(triangulation);
+      tria->reset_manifold(number);
+    }
+  else if ((dim == 2) && (spacedim == 2))
     {
       Triangulation<2, 2> *tria =
         static_cast<Triangulation<2, 2> *>(triangulation);
@@ -1906,7 +2717,33 @@ void
 TriangulationWrapper::setup(const std::string &dimension,
                             const std::string &spacedimension)
 {
-  if ((dimension.compare("2D") == 0) || (dimension.compare("2d") == 0))
+  if ((dimension.compare("1D") == 0) || (dimension.compare("1d") == 0))
+    {
+      dim = 1;
+
+      if ((spacedimension.compare("1D") == 0) ||
+          (spacedimension.compare("1d") == 0))
+        {
+          spacedim      = 1;
+          triangulation = new Triangulation<1, 1>();
+        }
+      else if ((spacedimension.compare("2D") == 0) ||
+               (spacedimension.compare("2d") == 0))
+        {
+          spacedim      = 2;
+          triangulation = new Triangulation<1, 2>();
+        }
+      else if ((spacedimension.compare("3D") == 0) ||
+               (spacedimension.compare("3d") == 0))
+        {
+          spacedim      = 3;
+          triangulation = new Triangulation<1, 3>();
+        }
+      else
+        AssertThrow(false,
+                    ExcMessage("Spacedimension needs to be 1D, 2D or 3D."));
+    }
+  else if ((dimension.compare("2D") == 0) || (dimension.compare("2d") == 0))
     {
       dim = 2;
 

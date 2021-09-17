@@ -49,15 +49,15 @@ namespace python
 
     /**
      * Constructor. Takes a string @p dim with one of the following values
-     * "2D", "2d", "3D", or "3d".
+     * "1D", "1d", "2D", "2d", "3D", or "3d".
      */
     TriangulationWrapper(const std::string &dim);
 
     /**
      * Constructor. Takes a string @p dim with one of the following values
-     * "2D", "2d", "3D", or "3d" and a string @p spacedim with one of the
-     * following values "2D", "2d", "3D", or "3d". The dimension of @p spacedim
-     * must be larger than the dimension of @p dim
+     * "1D", "1d", "2D", "2d", "3D", or "3d" and a string @p spacedim with one
+     * of the following values "1D", "1d", "2D", "2d", "3D", or "3d". The
+     * dimension of @p spacedim must be larger than the dimension of @p dim
      */
     TriangulationWrapper(const std::string &dim, const std::string &spacedim);
 
@@ -68,7 +68,7 @@ namespace python
 
     /**
      * Create a triangulation from a list of vertices and a list of indices,
-     * each of the latter being a list of 1<<dim vertex indices.
+     * each of the latter being a list of vertex indices.
      */
     void
     create_triangulation(const PYSPACE::list &vertices,

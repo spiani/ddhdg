@@ -33,39 +33,109 @@ namespace python
         static_cast<CellAccessor<dim, spacedim> *>(cell_accessor);
 
       std::unique_ptr<RefinementCase<dim>> ref_case;
+      bool                                 assigned = false;
+
       if (refinement_case.compare("isotropic") == 0)
-        ref_case.reset(new RefinementCase<dim>(
-          RefinementPossibilities<dim>::Possibilities::isotropic_refinement));
+        {
+          ref_case.reset(new RefinementCase<dim>(
+            RefinementPossibilities<dim>::Possibilities::isotropic_refinement));
+          assigned = true;
+        }
       else if (refinement_case.compare("no_refinement") == 0)
-        ref_case.reset(new RefinementCase<dim>(
-          RefinementPossibilities<dim>::Possibilities::no_refinement));
+        {
+          ref_case.reset(new RefinementCase<dim>(
+            RefinementPossibilities<dim>::Possibilities::no_refinement));
+          assigned = true;
+        }
       else if (refinement_case.compare("cut_x") == 0)
-        ref_case.reset(new RefinementCase<dim>(
-          RefinementPossibilities<dim>::Possibilities::cut_x));
-      else if (refinement_case.compare("cut_y") == 0)
-        ref_case.reset(new RefinementCase<dim>(
-          RefinementPossibilities<dim>::Possibilities::cut_y));
-      else if (refinement_case.compare("cut_xy") == 0)
-        ref_case.reset(new RefinementCase<dim>(
-          RefinementPossibilities<dim>::Possibilities::cut_xy));
-#if dim == 3
-      else if (refinement_case.compare("cut_z") == 0)
-        ref_case.reset(new RefinementCase<3>(
-          RefinementPossibilities<3>::Possibilities::cut_z));
-      else if (refinement_case.compare("cut_xz") == 0)
-        ref_case.reset(new RefinementCase<3>(
-          RefinementPossibilities<3>::Possibilities::cut_xz));
-      else if (refinement_case.compare("cut_yz") == 0)
-        ref_case.reset(new RefinementCase<3>(
-          RefinementPossibilities<3>::Possibilities::cut_yz));
-      else if (refinement_case.compare("cut_xyz") == 0)
-        ref_case.reset(new RefinementCase<3>(
-          RefinementPossibilities<3>::Possibilities::cut_xyz));
-#endif
-      else
+        {
+          ref_case.reset(new RefinementCase<dim>(
+            RefinementPossibilities<dim>::Possibilities::cut_x));
+          assigned = true;
+        }
+
+      if constexpr (dim > 1)
+        if (!assigned)
+          {
+            if (refinement_case.compare("cut_y") == 0)
+              {
+                ref_case.reset(new RefinementCase<dim>(
+                  RefinementPossibilities<dim>::Possibilities::cut_y));
+                assigned = true;
+              }
+            else if (refinement_case.compare("cut_xy") == 0)
+              {
+                ref_case.reset(new RefinementCase<dim>(
+                  RefinementPossibilities<dim>::Possibilities::cut_xy));
+                assigned = true;
+              }
+          }
+
+      if constexpr (dim == 3)
+        if (!assigned)
+          {
+            if (refinement_case.compare("cut_z") == 0)
+              {
+                ref_case.reset(new RefinementCase<3>(
+                  RefinementPossibilities<3>::Possibilities::cut_z));
+                assigned = true;
+              }
+            else if (refinement_case.compare("cut_xz") == 0)
+              {
+                ref_case.reset(new RefinementCase<3>(
+                  RefinementPossibilities<3>::Possibilities::cut_xz));
+                assigned = true;
+              }
+            else if (refinement_case.compare("cut_yz") == 0)
+              {
+                ref_case.reset(new RefinementCase<3>(
+                  RefinementPossibilities<3>::Possibilities::cut_yz));
+                assigned = true;
+              }
+            else if (refinement_case.compare("cut_xyz") == 0)
+              {
+                ref_case.reset(new RefinementCase<3>(
+                  RefinementPossibilities<3>::Possibilities::cut_xyz));
+                assigned = true;
+              }
+          }
+
+      if (!assigned)
         AssertThrow(false, ExcMessage("Unknown refinement possibility."));
 
       cell->set_refine_flag(*ref_case);
+    }
+
+
+    template <int d, int sd>
+    void
+    set_refine_flag_wrapper(const std::string &refinement_case,
+                            void              *cell_accessor,
+                            const int          dim,
+                            const int          spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return set_refine_flag<d, sd>(refinement_case, cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return set_refine_flag_wrapper<sd - 1, sd - 1>(refinement_case,
+                                                           cell_accessor,
+                                                           dim,
+                                                           spacedim);
+        }
+      else
+        {
+          return set_refine_flag_wrapper<d - 1, sd>(refinement_case,
+                                                    cell_accessor,
+                                                    dim,
+                                                    spacedim);
+        }
     }
 
 
@@ -123,16 +193,79 @@ namespace python
 
 
 
+    template <int d, int sd>
+    std::string
+    get_refine_flag_wrapper(const void *cell_accessor,
+                            const int   dim,
+                            const int   spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return get_refine_flag<d, sd>(cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return get_refine_flag_wrapper<sd - 1, sd - 1>(cell_accessor,
+                                                           dim,
+                                                           spacedim);
+        }
+      else
+        {
+          return get_refine_flag_wrapper<d - 1, sd>(cell_accessor,
+                                                    dim,
+                                                    spacedim);
+        }
+    }
+
+
+
     template <int dim, int spacedim>
     void
     set_coarsen_flag(const bool coarsen_flag, void *cell_accessor)
     {
       CellAccessor<dim, spacedim> *cell =
         static_cast<CellAccessor<dim, spacedim> *>(cell_accessor);
-      if (coarsen_flag == true)
+      if (coarsen_flag)
         cell->set_coarsen_flag();
       else
         cell->clear_coarsen_flag();
+    }
+
+
+
+    template <int d, int sd>
+    void
+    set_coarsen_flag_wrapper(const bool coarsen_flag,
+                             void      *cell_accessor,
+                             const int  dim,
+                             const int  spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return set_coarsen_flag<d, sd>(coarsen_flag, cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return set_coarsen_flag_wrapper<sd - 1, sd - 1>(coarsen_flag,
+                                                            cell_accessor,
+                                                            dim,
+                                                            spacedim);
+        }
+      else
+        {
+          return set_coarsen_flag_wrapper<d - 1, sd>(coarsen_flag,
+                                                     cell_accessor,
+                                                     dim,
+                                                     spacedim);
+        }
     }
 
 
@@ -149,6 +282,36 @@ namespace python
 
 
 
+    template <int d, int sd>
+    bool
+    get_coarsen_flag_wrapper(const void *cell_accessor,
+                             const int   dim,
+                             const int   spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return get_coarsen_flag<d, sd>(cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return get_coarsen_flag_wrapper<sd - 1, sd - 1>(cell_accessor,
+                                                            dim,
+                                                            spacedim);
+        }
+      else
+        {
+          return get_coarsen_flag_wrapper<d - 1, sd>(cell_accessor,
+                                                     dim,
+                                                     spacedim);
+        }
+    }
+
+
+
     template <int dim, int spacedim>
     PointWrapper
     get_barycenter(const void *cell_accessor)
@@ -161,6 +324,36 @@ namespace python
         barycenter_list.append(barycenter[i]);
 
       return PointWrapper(barycenter_list);
+    }
+
+
+
+    template <int d, int sd>
+    PointWrapper
+    get_barycenter_wrapper(const void *cell_accessor,
+                           const int   dim,
+                           const int   spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return get_barycenter<d, sd>(cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return get_barycenter_wrapper<sd - 1, sd - 1>(cell_accessor,
+                                                          dim,
+                                                          spacedim);
+        }
+      else
+        {
+          return get_barycenter_wrapper<d - 1, sd>(cell_accessor,
+                                                   dim,
+                                                   spacedim);
+        }
     }
 
 
@@ -183,6 +376,45 @@ namespace python
     }
 
 
+    template <int d, int sd>
+    PointWrapper
+    get_center_wrapper(const bool  respect_manifold,
+                       const bool  interpolate_from_surrounding,
+                       const void *cell_accessor,
+                       const int   dim,
+                       const int   spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return get_center<d, sd>(respect_manifold,
+                                 interpolate_from_surrounding,
+                                 cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return get_center_wrapper<sd - 1, sd - 1>(
+              respect_manifold,
+              interpolate_from_surrounding,
+              cell_accessor,
+              dim,
+              spacedim);
+        }
+      else
+        {
+          return get_center_wrapper<d - 1, sd>(respect_manifold,
+                                               interpolate_from_surrounding,
+                                               cell_accessor,
+                                               dim,
+                                               spacedim);
+        }
+    }
+
+
+
     template <int dim, int spacedim>
     void
     set_material_id(const int material_id, void *cell_accessor)
@@ -190,6 +422,39 @@ namespace python
       CellAccessor<dim, spacedim> *cell =
         static_cast<CellAccessor<dim, spacedim> *>(cell_accessor);
       cell->set_material_id(material_id);
+    }
+
+
+
+    template <int d, int sd>
+    void
+    set_material_id_wrapper(const int material_id,
+                            void     *cell_accessor,
+                            const int dim,
+                            const int spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return set_material_id<d, sd>(material_id, cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return set_material_id_wrapper<sd - 1, sd - 1>(material_id,
+                                                           cell_accessor,
+                                                           dim,
+                                                           spacedim);
+        }
+      else
+        {
+          return set_material_id_wrapper<d - 1, sd>(material_id,
+                                                    cell_accessor,
+                                                    dim,
+                                                    spacedim);
+        }
     }
 
 
@@ -202,6 +467,36 @@ namespace python
         static_cast<const CellAccessor<dim, spacedim> *>(cell_accessor);
 
       return cell->material_id();
+    }
+
+
+
+    template <int d, int sd>
+    int
+    get_material_id_wrapper(const void *cell_accessor,
+                            const int   dim,
+                            const int   spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return get_material_id<d, sd>(cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return get_material_id_wrapper<sd - 1, sd - 1>(cell_accessor,
+                                                           dim,
+                                                           spacedim);
+        }
+      else
+        {
+          return get_material_id_wrapper<d - 1, sd>(cell_accessor,
+                                                    dim,
+                                                    spacedim);
+        }
     }
 
 
@@ -220,6 +515,36 @@ namespace python
 
 
 
+    template <int d, int sd>
+    void
+    set_vertex_wrapper(const int     i,
+                       PointWrapper &point_wrapper,
+                       void         *cell_accessor,
+                       const int     dim,
+                       const int     spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return set_vertex<d, sd>(i, point_wrapper, cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return set_vertex_wrapper<sd - 1, sd - 1>(
+              i, point_wrapper, cell_accessor, dim, spacedim);
+        }
+      else
+        {
+          return set_vertex_wrapper<d - 1, sd>(
+            i, point_wrapper, cell_accessor, dim, spacedim);
+        }
+    }
+
+
+
     template <int dim, int spacedim>
     PointWrapper
     get_vertex(const int i, const void *cell_accessor)
@@ -229,10 +554,40 @@ namespace python
       Point<spacedim> vertex = cell->vertex(i);
 
       PYSPACE::list coordinates;
-      for (int i = 0; i < spacedim; ++i)
+      for (int j = 0; j < spacedim; ++j)
         coordinates.append(vertex[i]);
 
       return PointWrapper(coordinates);
+    }
+
+
+
+    template <int d, int sd>
+    PointWrapper
+    get_vertex_wrapper(const int   i,
+                       const void *cell_accessor,
+                       const int   dim,
+                       const int   spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return get_vertex<d, sd>(i, cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return get_vertex_wrapper<sd - 1, sd - 1>(i,
+                                                      cell_accessor,
+                                                      dim,
+                                                      spacedim);
+        }
+      else
+        {
+          return get_vertex_wrapper<d - 1, sd>(i, cell_accessor, dim, spacedim);
+        }
     }
 
 
@@ -248,6 +603,39 @@ namespace python
 
 
 
+    template <int d, int sd>
+    void
+    set_manifold_id_wrapper(const int manifold_id,
+                            void     *cell_accessor,
+                            const int dim,
+                            const int spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return set_manifold_id<d, sd>(manifold_id, cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return set_manifold_id_wrapper<sd - 1, sd - 1>(manifold_id,
+                                                           cell_accessor,
+                                                           dim,
+                                                           spacedim);
+        }
+      else
+        {
+          return set_manifold_id_wrapper<d - 1, sd>(manifold_id,
+                                                    cell_accessor,
+                                                    dim,
+                                                    spacedim);
+        }
+    }
+
+
+
     template <int dim, int spacedim>
     int
     get_manifold_id(const void *cell_accessor)
@@ -259,6 +647,36 @@ namespace python
 
 
 
+    template <int d, int sd>
+    int
+    get_manifold_id_wrapper(const void *cell_accessor,
+                            const int   dim,
+                            const int   spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return get_manifold_id<d, sd>(cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return get_manifold_id_wrapper<sd - 1, sd - 1>(cell_accessor,
+                                                           dim,
+                                                           spacedim);
+        }
+      else
+        {
+          return get_manifold_id_wrapper<d - 1, sd>(cell_accessor,
+                                                    dim,
+                                                    spacedim);
+        }
+    }
+
+
+
     template <int dim, int spacedim>
     void
     set_all_manifold_ids(const int manifold_id, void *cell_accessor)
@@ -266,6 +684,39 @@ namespace python
       const CellAccessor<dim, spacedim> *cell =
         static_cast<const CellAccessor<dim, spacedim> *>(cell_accessor);
       return cell->set_all_manifold_ids(manifold_id);
+    }
+
+
+
+    template <int d, int sd>
+    void
+    set_all_manifold_ids_wrapper(const int manifold_id,
+                                 void     *cell_accessor,
+                                 const int dim,
+                                 const int spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return set_all_manifold_ids<d, sd>(manifold_id, cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return set_all_manifold_ids_wrapper<sd - 1, sd - 1>(manifold_id,
+                                                                cell_accessor,
+                                                                dim,
+                                                                spacedim);
+        }
+      else
+        {
+          return set_all_manifold_ids_wrapper<d - 1, sd>(manifold_id,
+                                                         cell_accessor,
+                                                         dim,
+                                                         spacedim);
+        }
     }
 
 
@@ -304,6 +755,30 @@ namespace python
 
 
 
+    template <int d, int sd>
+    PYSPACE::list
+    faces_wrapper(const void *cell_accessor, const int dim, const int spacedim)
+    {
+      if (dim == d && spacedim == sd)
+        return faces<d, sd>(cell_accessor);
+
+      if constexpr (d == 1)
+        {
+          if constexpr (sd == 1)
+            {
+              AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+            }
+          else
+            return faces_wrapper<sd - 1, sd - 1>(cell_accessor, dim, spacedim);
+        }
+      else
+        {
+          return faces_wrapper<d - 1, sd>(cell_accessor, dim, spacedim);
+        }
+    }
+
+
+
     template <int dim, int spacedim>
     const CellAccessor<dim, spacedim> *
     cell_cast(const void *cell_accessor)
@@ -314,37 +789,115 @@ namespace python
 
 
 
-  CellAccessorWrapper::CellAccessorWrapper(const CellAccessorWrapper &other)
-    : dim(other.dim)
-    , spacedim(other.spacedim)
+  template <int d, int sd>
+  void *
+  CellAccessorWrapper::cell_accessor_factory1(const CellAccessorWrapper &other,
+                                              const int                  dim,
+                                              const int spacedim)
   {
-    if ((dim == 2) && (spacedim == 2))
+    if (d == dim && sd == spacedim)
       {
-        CellAccessor<2, 2> *other_cell =
-          static_cast<CellAccessor<2, 2> *>(other.cell_accessor);
-        cell_accessor = new CellAccessor<2, 2>(*other_cell);
+        CellAccessor<d, sd> *other_cell =
+          static_cast<CellAccessor<d, sd> *>(other.cell_accessor);
+        return new CellAccessor<d, sd>(*other_cell);
       }
-    else if ((dim == 2) && (spacedim == 3))
+
+    if constexpr (d == 1)
       {
-        CellAccessor<2, 3> *other_cell =
-          static_cast<CellAccessor<2, 3> *>(other.cell_accessor);
-        cell_accessor = new CellAccessor<2, 3>(*other_cell);
-      }
-    else if ((dim == 3) && (spacedim == 3))
-      {
-        CellAccessor<3, 3> *other_cell =
-          static_cast<CellAccessor<3, 3> *>(other.cell_accessor);
-        cell_accessor = new CellAccessor<3, 3>(*other_cell);
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return cell_accessor_factory1<sd - 1, sd - 1>(other, dim, spacedim);
       }
     else
-      AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+      {
+        return cell_accessor_factory1<d - 1, sd>(other, dim, spacedim);
+      }
   }
 
 
 
+  template <int d, int sd>
+  void *
+  CellAccessorWrapper::cell_accessor_factory2(
+    TriangulationWrapper &triangulation_wrapper,
+    const int             level,
+    const int             index,
+    const int             dim,
+    const int             spacedim)
+  {
+    if (d == dim && sd == spacedim)
+      {
+        Triangulation<d, sd> *tmp = static_cast<Triangulation<d, sd> *>(
+          triangulation_wrapper.get_triangulation());
+        return new CellAccessor<d, sd>(tmp, level, index);
+      }
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return cell_accessor_factory2<sd - 1, sd - 1>(
+            triangulation_wrapper, level, index, dim, spacedim);
+      }
+    else
+      {
+        return cell_accessor_factory2<d - 1, sd>(
+          triangulation_wrapper, level, index, dim, spacedim);
+      }
+  }
+
+
+
+  template <int d, int sd>
+  void
+  CellAccessorWrapper::cell_accessor_destroyer(void     *cell_accessor,
+                                               const int dim,
+                                               const int spacedim)
+  {
+    if (d == dim && sd == spacedim)
+      {
+        CellAccessor<d, sd> *tmp =
+          static_cast<CellAccessor<d, sd> *>(cell_accessor);
+        delete tmp;
+        return;
+      }
+
+    if constexpr (d == 1)
+      {
+        if constexpr (sd == 1)
+          {
+            AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+          }
+        else
+          return cell_accessor_destroyer<sd - 1, sd - 1>(cell_accessor,
+                                                         dim,
+                                                         spacedim);
+      }
+    else
+      {
+        return cell_accessor_destroyer<d - 1, sd>(cell_accessor, dim, spacedim);
+      }
+  }
+
+
+
+  CellAccessorWrapper::CellAccessorWrapper(const CellAccessorWrapper &other)
+    : dim(other.dim)
+    , spacedim(other.spacedim)
+    , cell_accessor(cell_accessor_factory1<3, 3>(other, dim, spacedim))
+  {}
+
+
+
   CellAccessorWrapper::CellAccessorWrapper()
-    : dim(0)
-    , spacedim(0)
+    : dim(-1)
+    , spacedim(-1)
     , cell_accessor(nullptr)
   {}
 
@@ -354,30 +907,14 @@ namespace python
     TriangulationWrapper &triangulation_wrapper,
     const int             level,
     const int             index)
-  {
-    dim      = triangulation_wrapper.get_dim();
-    spacedim = triangulation_wrapper.get_spacedim();
-    if ((dim == 2) && (spacedim == 2))
-      {
-        Triangulation<2, 2> *tmp = static_cast<Triangulation<2, 2> *>(
-          triangulation_wrapper.get_triangulation());
-        cell_accessor = new CellAccessor<2, 2>(tmp, level, index);
-      }
-    else if ((dim == 2) && (spacedim == 3))
-      {
-        Triangulation<2, 3> *tmp = static_cast<Triangulation<2, 3> *>(
-          triangulation_wrapper.get_triangulation());
-        cell_accessor = new CellAccessor<2, 3>(tmp, level, index);
-      }
-    else if ((dim == 3) && (spacedim == 3))
-      {
-        Triangulation<3, 3> *tmp = static_cast<Triangulation<3, 3> *>(
-          triangulation_wrapper.get_triangulation());
-        cell_accessor = new CellAccessor<3, 3>(tmp, level, index);
-      }
-    else
-      AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
-  }
+    : dim(triangulation_wrapper.get_dim())
+    , spacedim(triangulation_wrapper.get_spacedim())
+    , cell_accessor(cell_accessor_factory2<3, 3>(triangulation_wrapper,
+                                                 level,
+                                                 index,
+                                                 dim,
+                                                 spacedim))
+  {}
 
 
 
@@ -385,27 +922,7 @@ namespace python
   {
     if (dim != -1)
       {
-        if ((dim == 2) && (spacedim == 2))
-          {
-            // We cannot call delete on a void pointer so cast the void pointer
-            // back first.
-            CellAccessor<2, 2> *tmp =
-              static_cast<CellAccessor<2, 2> *>(cell_accessor);
-            delete tmp;
-          }
-        else if ((dim == 2) && (spacedim == 3))
-          {
-            CellAccessor<2, 3> *tmp =
-              static_cast<CellAccessor<2, 3> *>(cell_accessor);
-            delete tmp;
-          }
-        else
-          {
-            CellAccessor<3, 3> *tmp =
-              static_cast<CellAccessor<3, 3> *>(cell_accessor);
-            delete tmp;
-          }
-
+        cell_accessor_destroyer<3, 3>(cell_accessor, dim, spacedim);
         dim           = -1;
         spacedim      = -1;
         cell_accessor = nullptr;
@@ -417,12 +934,10 @@ namespace python
   void
   CellAccessorWrapper::set_refine_flag(const std::string &refinement_case)
   {
-    if ((dim == 2) && (spacedim == 2))
-      internal::set_refine_flag<2, 2>(refinement_case, cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      internal::set_refine_flag<2, 3>(refinement_case, cell_accessor);
-    else
-      internal::set_refine_flag<3, 3>(refinement_case, cell_accessor);
+    internal::set_refine_flag_wrapper<3, 3>(refinement_case,
+                                            cell_accessor,
+                                            dim,
+                                            spacedim);
   }
 
 
@@ -430,12 +945,9 @@ namespace python
   std::string
   CellAccessorWrapper::get_refine_flag() const
   {
-    if ((dim == 2) && (spacedim == 2))
-      return internal::get_refine_flag<2, 2>(cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      return internal::get_refine_flag<2, 3>(cell_accessor);
-    else
-      return internal::get_refine_flag<3, 3>(cell_accessor);
+    return internal::get_refine_flag_wrapper<3, 3>(cell_accessor,
+                                                   dim,
+                                                   spacedim);
   }
 
 
@@ -443,12 +955,10 @@ namespace python
   void
   CellAccessorWrapper::set_coarsen_flag(const bool coarsen_flag)
   {
-    if ((dim == 2) && (spacedim == 2))
-      internal::set_coarsen_flag<2, 2>(coarsen_flag, cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      internal::set_coarsen_flag<2, 3>(coarsen_flag, cell_accessor);
-    else
-      internal::set_coarsen_flag<3, 3>(coarsen_flag, cell_accessor);
+    internal::set_coarsen_flag_wrapper<3, 3>(coarsen_flag,
+                                             cell_accessor,
+                                             dim,
+                                             spacedim);
   }
 
 
@@ -456,12 +966,9 @@ namespace python
   bool
   CellAccessorWrapper::get_coarsen_flag() const
   {
-    if ((dim == 2) && (spacedim == 2))
-      return internal::get_coarsen_flag<2, 2>(cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      return internal::get_coarsen_flag<2, 3>(cell_accessor);
-    else
-      return internal::get_coarsen_flag<3, 3>(cell_accessor);
+    return internal::get_coarsen_flag_wrapper<3, 3>(cell_accessor,
+                                                    dim,
+                                                    spacedim);
   }
 
 
@@ -469,12 +976,7 @@ namespace python
   PointWrapper
   CellAccessorWrapper::get_barycenter() const
   {
-    if ((dim == 2) && (spacedim == 2))
-      return internal::get_barycenter<2, 2>(cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      return internal::get_barycenter<2, 3>(cell_accessor);
-    else
-      return internal::get_barycenter<3, 3>(cell_accessor);
+    return internal::get_barycenter_wrapper<3, 3>(cell_accessor, dim, spacedim);
   }
 
 
@@ -483,18 +985,11 @@ namespace python
   CellAccessorWrapper::get_center(const bool respect_manifold,
                                   const bool interpolate_from_surrounding) const
   {
-    if ((dim == 2) && (spacedim == 2))
-      return internal::get_center<2, 2>(respect_manifold,
-                                        interpolate_from_surrounding,
-                                        cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      return internal::get_center<2, 3>(respect_manifold,
-                                        interpolate_from_surrounding,
-                                        cell_accessor);
-    else
-      return internal::get_center<3, 3>(respect_manifold,
-                                        interpolate_from_surrounding,
-                                        cell_accessor);
+    return internal::get_center_wrapper<3, 3>(respect_manifold,
+                                              interpolate_from_surrounding,
+                                              cell_accessor,
+                                              dim,
+                                              spacedim);
   }
 
 
@@ -505,12 +1000,10 @@ namespace python
     AssertThrow(static_cast<types::material_id>(material_id) <
                   numbers::invalid_material_id,
                 ExcMessage("material_id is too large."));
-    if ((dim == 2) && (spacedim == 2))
-      return internal::set_material_id<2, 2>(material_id, cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      return internal::set_material_id<2, 3>(material_id, cell_accessor);
-    else
-      return internal::set_material_id<3, 3>(material_id, cell_accessor);
+    return internal::set_material_id_wrapper<3, 3>(material_id,
+                                                   cell_accessor,
+                                                   dim,
+                                                   spacedim);
   }
 
 
@@ -518,12 +1011,9 @@ namespace python
   int
   CellAccessorWrapper::get_material_id() const
   {
-    if ((dim == 2) && (spacedim == 2))
-      return internal::get_material_id<2, 2>(cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      return internal::get_material_id<2, 3>(cell_accessor);
-    else
-      return internal::get_material_id<3, 3>(cell_accessor);
+    return internal::get_material_id_wrapper<3, 3>(cell_accessor,
+                                                   dim,
+                                                   spacedim);
   }
 
 
@@ -533,12 +1023,8 @@ namespace python
   {
     AssertThrow(i < static_cast<int>(Utilities::pow(2, dim)),
                 ExcVertexDoesNotExist(i, Utilities::pow(2, dim)));
-    if ((dim == 2) && (spacedim == 2))
-      internal::set_vertex<2, 2>(i, point_wrapper, cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      internal::set_vertex<2, 3>(i, point_wrapper, cell_accessor);
-    else
-      internal::set_vertex<3, 3>(i, point_wrapper, cell_accessor);
+    internal::set_vertex_wrapper<3, 3>(
+      i, point_wrapper, cell_accessor, dim, spacedim);
   }
 
 
@@ -548,12 +1034,8 @@ namespace python
   {
     AssertThrow(i < static_cast<int>(Utilities::pow(2, dim)),
                 ExcVertexDoesNotExist(i, Utilities::pow(2, dim)));
-    if ((dim == 2) && (spacedim == 2))
-      return internal::get_vertex<2, 2>(i, cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      return internal::get_vertex<2, 3>(i, cell_accessor);
-    else
-      return internal::get_vertex<3, 3>(i, cell_accessor);
+
+    return internal::get_vertex_wrapper<3, 3>(i, cell_accessor, dim, spacedim);
   }
 
 
@@ -561,12 +1043,10 @@ namespace python
   void
   CellAccessorWrapper::set_manifold_id(const int manifold_id)
   {
-    if ((dim == 2) && (spacedim == 2))
-      internal::set_manifold_id<2, 2>(manifold_id, cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      internal::set_manifold_id<2, 3>(manifold_id, cell_accessor);
-    else
-      internal::set_manifold_id<3, 3>(manifold_id, cell_accessor);
+    internal::set_manifold_id_wrapper<3, 3>(manifold_id,
+                                            cell_accessor,
+                                            dim,
+                                            spacedim);
   }
 
 
@@ -574,12 +1054,9 @@ namespace python
   int
   CellAccessorWrapper::get_manifold_id() const
   {
-    if ((dim == 2) && (spacedim == 2))
-      return internal::get_manifold_id<2, 2>(cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      return internal::get_manifold_id<2, 3>(cell_accessor);
-    else
-      return internal::get_manifold_id<3, 3>(cell_accessor);
+    return internal::get_manifold_id_wrapper<3, 3>(cell_accessor,
+                                                   dim,
+                                                   spacedim);
   }
 
 
@@ -587,12 +1064,10 @@ namespace python
   void
   CellAccessorWrapper::set_all_manifold_ids(const int manifold_id)
   {
-    if ((dim == 2) && (spacedim == 2))
-      internal::set_all_manifold_ids<2, 2>(manifold_id, cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      internal::set_all_manifold_ids<2, 3>(manifold_id, cell_accessor);
-    else
-      internal::set_all_manifold_ids<3, 3>(manifold_id, cell_accessor);
+    internal::set_all_manifold_ids_wrapper<3, 3>(manifold_id,
+                                                 cell_accessor,
+                                                 dim,
+                                                 spacedim);
   }
 
 
@@ -600,7 +1075,13 @@ namespace python
   bool
   CellAccessorWrapper::at_boundary() const
   {
-    if ((dim == 2) && (spacedim == 2))
+    if ((dim == 1) && (spacedim == 1))
+      return internal::cell_cast<1, 1>(cell_accessor)->at_boundary();
+    else if ((dim == 1) && (spacedim == 2))
+      return internal::cell_cast<1, 2>(cell_accessor)->at_boundary();
+    else if ((dim == 1) && (spacedim == 3))
+      return internal::cell_cast<1, 3>(cell_accessor)->at_boundary();
+    else if ((dim == 2) && (spacedim == 2))
       return internal::cell_cast<2, 2>(cell_accessor)->at_boundary();
     else if ((dim == 2) && (spacedim == 3))
       return internal::cell_cast<2, 3>(cell_accessor)->at_boundary();
@@ -613,7 +1094,13 @@ namespace python
   bool
   CellAccessorWrapper::has_boundary_lines() const
   {
-    if ((dim == 2) && (spacedim == 2))
+    if ((dim == 1) && (spacedim == 1))
+      return internal::cell_cast<1, 1>(cell_accessor)->has_boundary_lines();
+    else if ((dim == 1) && (spacedim == 2))
+      return internal::cell_cast<1, 2>(cell_accessor)->has_boundary_lines();
+    else if ((dim == 1) && (spacedim == 3))
+      return internal::cell_cast<1, 3>(cell_accessor)->has_boundary_lines();
+    else if ((dim == 2) && (spacedim == 2))
       return internal::cell_cast<2, 2>(cell_accessor)->has_boundary_lines();
     else if ((dim == 2) && (spacedim == 3))
       return internal::cell_cast<2, 3>(cell_accessor)->has_boundary_lines();
@@ -628,7 +1115,13 @@ namespace python
   {
     AssertThrow(i < (2 * dim), ExcNeighborDoesNotExist(i, 2 * dim));
 
-    if ((dim == 2) && (spacedim == 2))
+    if ((dim == 1) && (spacedim == 1))
+      return construct_neighbor_wrapper<1, 1>(i);
+    else if ((dim == 1) && (spacedim == 2))
+      return construct_neighbor_wrapper<1, 2>(i);
+    else if ((dim == 1) && (spacedim == 3))
+      return construct_neighbor_wrapper<1, 3>(i);
+    else if ((dim == 2) && (spacedim == 2))
       return construct_neighbor_wrapper<2, 2>(i);
     else if ((dim == 2) && (spacedim == 3))
       return construct_neighbor_wrapper<2, 3>(i);
@@ -641,12 +1134,7 @@ namespace python
   PYSPACE::list
   CellAccessorWrapper::faces() const
   {
-    if ((dim == 2) && (spacedim == 2))
-      return internal::faces<2, 2>(cell_accessor);
-    else if ((dim == 2) && (spacedim == 3))
-      return internal::faces<2, 3>(cell_accessor);
-    else
-      return internal::faces<3, 3>(cell_accessor);
+    return internal::faces_wrapper<3, 3>(cell_accessor, dim, spacedim);
   }
 
 
@@ -654,7 +1142,13 @@ namespace python
   double
   CellAccessorWrapper::measure() const
   {
-    if ((dim == 2) && (spacedim == 2))
+    if ((dim == 1) && (spacedim == 1))
+      return internal::cell_cast<1, 1>(cell_accessor)->measure();
+    else if ((dim == 1) && (spacedim == 2))
+      return internal::cell_cast<1, 2>(cell_accessor)->measure();
+    else if ((dim == 1) && (spacedim == 3))
+      return internal::cell_cast<1, 3>(cell_accessor)->measure();
+    else if ((dim == 2) && (spacedim == 2))
       return internal::cell_cast<2, 2>(cell_accessor)->measure();
     else if ((dim == 2) && (spacedim == 3))
       return internal::cell_cast<2, 3>(cell_accessor)->measure();
@@ -667,7 +1161,13 @@ namespace python
   bool
   CellAccessorWrapper::active() const
   {
-    if ((dim == 2) && (spacedim == 2))
+    if ((dim == 1) && (spacedim == 1))
+      return internal::cell_cast<1, 1>(cell_accessor)->is_active();
+    else if ((dim == 1) && (spacedim == 2))
+      return internal::cell_cast<1, 2>(cell_accessor)->is_active();
+    else if ((dim == 1) && (spacedim == 3))
+      return internal::cell_cast<1, 3>(cell_accessor)->is_active();
+    else if ((dim == 2) && (spacedim == 2))
       return internal::cell_cast<2, 2>(cell_accessor)->is_active();
     else if ((dim == 2) && (spacedim == 3))
       return internal::cell_cast<2, 3>(cell_accessor)->is_active();
@@ -680,7 +1180,13 @@ namespace python
   int
   CellAccessorWrapper::level() const
   {
-    if ((dim == 2) && (spacedim == 2))
+    if ((dim == 1) && (spacedim == 1))
+      return internal::cell_cast<1, 1>(cell_accessor)->level();
+    else if ((dim == 1) && (spacedim == 2))
+      return internal::cell_cast<1, 2>(cell_accessor)->level();
+    else if ((dim == 1) && (spacedim == 3))
+      return internal::cell_cast<1, 3>(cell_accessor)->level();
+    else if ((dim == 2) && (spacedim == 2))
       return internal::cell_cast<2, 2>(cell_accessor)->level();
     else if ((dim == 2) && (spacedim == 3))
       return internal::cell_cast<2, 3>(cell_accessor)->level();
@@ -693,7 +1199,13 @@ namespace python
   int
   CellAccessorWrapper::index() const
   {
-    if ((dim == 2) && (spacedim == 2))
+    if ((dim == 1) && (spacedim == 1))
+      return internal::cell_cast<1, 1>(cell_accessor)->index();
+    else if ((dim == 1) && (spacedim == 2))
+      return internal::cell_cast<1, 2>(cell_accessor)->index();
+    else if ((dim == 1) && (spacedim == 3))
+      return internal::cell_cast<1, 3>(cell_accessor)->index();
+    else if ((dim == 2) && (spacedim == 2))
       return internal::cell_cast<2, 2>(cell_accessor)->index();
     else if ((dim == 2) && (spacedim == 3))
       return internal::cell_cast<2, 3>(cell_accessor)->index();
@@ -706,7 +1218,16 @@ namespace python
   bool
   CellAccessorWrapper::neighbor_is_coarser(const unsigned int neighbor) const
   {
-    if ((dim == 2) && (spacedim == 2))
+    if ((dim == 1) && (spacedim == 1))
+      return internal::cell_cast<1, 1>(cell_accessor)
+        ->neighbor_is_coarser(neighbor);
+    else if ((dim == 1) && (spacedim == 2))
+      return internal::cell_cast<1, 2>(cell_accessor)
+        ->neighbor_is_coarser(neighbor);
+    else if ((dim == 1) && (spacedim == 3))
+      return internal::cell_cast<1, 3>(cell_accessor)
+        ->neighbor_is_coarser(neighbor);
+    else if ((dim == 2) && (spacedim == 2))
       return internal::cell_cast<2, 2>(cell_accessor)
         ->neighbor_is_coarser(neighbor);
     else if ((dim == 2) && (spacedim == 3))
@@ -722,7 +1243,16 @@ namespace python
   unsigned int
   CellAccessorWrapper::neighbor_of_neighbor(const unsigned int neighbor) const
   {
-    if ((dim == 2) && (spacedim == 2))
+    if ((dim == 1) && (spacedim == 1))
+      return internal::cell_cast<1, 1>(cell_accessor)
+        ->neighbor_of_neighbor(neighbor);
+    else if ((dim == 1) && (spacedim == 2))
+      return internal::cell_cast<1, 2>(cell_accessor)
+        ->neighbor_of_neighbor(neighbor);
+    else if ((dim == 1) && (spacedim == 3))
+      return internal::cell_cast<1, 3>(cell_accessor)
+        ->neighbor_of_neighbor(neighbor);
+    else if ((dim == 2) && (spacedim == 2))
       return internal::cell_cast<2, 2>(cell_accessor)
         ->neighbor_of_neighbor(neighbor);
     else if ((dim == 2) && (spacedim == 3))
@@ -738,7 +1268,13 @@ namespace python
   unsigned int
   CellAccessorWrapper::vertex_index(const unsigned int i) const
   {
-    if ((dim == 2) && (spacedim == 2))
+    if ((dim == 1) && (spacedim == 1))
+      return internal::cell_cast<1, 1>(cell_accessor)->vertex_index(i);
+    else if ((dim == 1) && (spacedim == 2))
+      return internal::cell_cast<1, 2>(cell_accessor)->vertex_index(i);
+    else if ((dim == 1) && (spacedim == 3))
+      return internal::cell_cast<1, 3>(cell_accessor)->vertex_index(i);
+    else if ((dim == 2) && (spacedim == 2))
       return internal::cell_cast<2, 2>(cell_accessor)->vertex_index(i);
     else if ((dim == 2) && (spacedim == 3))
       return internal::cell_cast<2, 3>(cell_accessor)->vertex_index(i);
