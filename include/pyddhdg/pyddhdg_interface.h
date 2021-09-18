@@ -196,6 +196,12 @@ py::class_<BoundaryConditionHandler<DIM>>(m, "BoundaryConditionHandler")
                          Ddhdg::Component,
                          const std::string &>(
          &BoundaryConditionHandler<DIM>::add_boundary_condition))
+  .def("add_boundary_condition",
+       py::overload_cast<dealii::types::boundary_id,
+                         Ddhdg::BoundaryConditionType,
+                         Ddhdg::Component,
+                         const double>(
+         &BoundaryConditionHandler<DIM>::add_boundary_condition))
   .def("has_dirichlet_boundary_conditions",
        &BoundaryConditionHandler<DIM>::has_dirichlet_boundary_conditions)
   .def("has_neumann_boundary_conditions",
