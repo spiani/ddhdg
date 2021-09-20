@@ -1692,6 +1692,18 @@ namespace pyddhdg
 
   template <int dim>
   double
+  NPSolver<dim>::estimate_l2_error_on_trace(
+    const DealIIFunction<dim> expected_solution,
+    const Ddhdg::Component    c) const
+  {
+    return this->ddhdg_solver->estimate_l2_error_on_trace(
+      expected_solution.get_dealii_function(), c);
+  }
+
+
+
+  template <int dim>
+  double
   NPSolver<dim>::estimate_linfty_error_on_trace(
     const std::string     &expected_solution,
     const Ddhdg::Component c) const
@@ -1704,6 +1716,18 @@ namespace pyddhdg
       Ddhdg::Constants::constants);
     return this->ddhdg_solver->estimate_linfty_error_on_trace(
       expected_solution_f, c);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_linfty_error_on_trace(
+    const DealIIFunction<dim> expected_solution,
+    const Ddhdg::Component    c) const
+  {
+    return this->ddhdg_solver->estimate_linfty_error_on_trace(
+      expected_solution.get_dealii_function(), c);
   }
 
 

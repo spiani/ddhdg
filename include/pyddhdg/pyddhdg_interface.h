@@ -532,11 +532,27 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("solver"),
        py::arg("displacement"))
   .def("estimate_l2_error_on_trace",
-       &NPSolver<DIM>::estimate_l2_error_on_trace,
+       py::overload_cast<const std::string &, const Ddhdg::Component>(
+         &NPSolver<DIM>::estimate_l2_error_on_trace,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"))
+  .def("estimate_l2_error_on_trace",
+       py::overload_cast<DealIIFunction<DIM>, const Ddhdg::Component>(
+         &NPSolver<DIM>::estimate_l2_error_on_trace,
+         py::const_),
        py::arg("expected_solution"),
        py::arg("component"))
   .def("estimate_linfty_error_on_trace",
-       &NPSolver<DIM>::estimate_linfty_error_on_trace,
+       py::overload_cast<const std::string &, const Ddhdg::Component>(
+         &NPSolver<DIM>::estimate_linfty_error_on_trace,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"))
+  .def("estimate_linfty_error_on_trace",
+       py::overload_cast<DealIIFunction<DIM>, const Ddhdg::Component>(
+         &NPSolver<DIM>::estimate_linfty_error_on_trace,
+         py::const_),
        py::arg("expected_solution"),
        py::arg("component"))
   .def("get_solution", &NPSolver<DIM>::get_solution, py::arg("component"))

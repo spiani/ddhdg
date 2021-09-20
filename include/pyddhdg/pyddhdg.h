@@ -585,8 +585,16 @@ namespace pyddhdg
                                Ddhdg::Component   c) const;
 
     [[nodiscard]] double
+    estimate_l2_error_on_trace(DealIIFunction<dim> expected_solution,
+                               Ddhdg::Component    c) const;
+
+    [[nodiscard]] double
     estimate_linfty_error_on_trace(const std::string &expected_solution,
                                    Ddhdg::Component   c) const;
+
+    [[nodiscard]] double
+    estimate_linfty_error_on_trace(DealIIFunction<dim> expected_solution,
+                                   Ddhdg::Component    c) const;
 
     [[nodiscard]] DealIIFunction<dim>
     get_solution(Ddhdg::Component c) const;
