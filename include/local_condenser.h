@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deal.II/fe/fe.h>
+
 #include <deal.II/lac/lapack_full_matrix.h>
 
 #include "components.h"

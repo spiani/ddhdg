@@ -59,6 +59,7 @@ namespace Ddhdg
       this->triangulation = std::make_unique<dealii::Triangulation<dim>>();
       this->triangulation->copy_triangulation(*(other.triangulation));
 
+#if DEAL_II_VERSION_GTE(9, 3, 0)
       this->dof_handler_cell.reinit(*(this->triangulation));
       this->dof_handler_cell.distribute_dofs(*(this->fe_cell));
 
@@ -66,8 +67,16 @@ namespace Ddhdg
       this->dof_handler_trace.distribute_dofs(*(this->fe_trace));
 
       this->dof_handler_trace_restricted.reinit(*(this->triangulation));
-      this->dof_handler_trace_restricted.distribute_dofs(*(this->fe_trace_restricted));
-
+      this->dof_handler_trace_restricted.distribute_dofs(
+        *(this->fe_trace_restricted));
+#else
+      this->dof_handler_cell.initialize(*(this->triangulation),
+                                        *(this->fe_cell));
+      this->dof_handler_trace.initialize(*(this->triangulation),
+                                         *(this->fe_trace));
+      this->dof_handler_trace_restricted.initialize(
+        *(this->triangulation), *(this->fe_trace_restricted));
+#endif
       this->initialized = false;
     }
 
