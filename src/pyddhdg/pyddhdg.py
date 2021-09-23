@@ -1,8 +1,10 @@
+from importlib import import_module
 import logging
 import numpy as np
-import pyddhdg.pyddhdg_common
 import warnings
-from importlib import import_module
+
+import pyddhdg.pyddhdg_common
+
 
 # We import the modules for the three dimensions and we put them
 # in a dictionary
@@ -48,7 +50,6 @@ EPS = 0.01
 
 class InvalidDimensionException(ValueError):
     pass
-
 
 class InvalidTypenameException(ValueError):
     pass
