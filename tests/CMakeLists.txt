@@ -33,6 +33,6 @@ add_executable(${_target} main.cpp ${_test_files})
 DEAL_II_SETUP_TARGET(${_target})
 target_link_libraries(${_target} DDHDG GTest::GTest)
 
-include(GoogleTest)
+# include(GoogleTest)
 # gtest_discover_tests(tests)
 gtest_add_tests(TARGET ${_target})
