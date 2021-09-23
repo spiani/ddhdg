@@ -13,8 +13,6 @@
 //
 // ---------------------------------------------------------------------
 
-#include <deal.II/base/std_cxx14/memory.h>
-
 #include <deal.II/grid/manifold_lib.h>
 
 #include <dealii-python-bindings/manifold_wrapper.h>
@@ -100,8 +98,8 @@ namespace python
                              PYSPACE::object &pull_back)
     {
       return new FunctionManifold<dim, spacedim>(
-        std_cxx14::make_unique<FunctionWrapper<dim>>(push_forward, spacedim),
-        std_cxx14::make_unique<FunctionWrapper<spacedim>>(pull_back, dim));
+        std::make_unique<FunctionWrapper<dim>>(push_forward, spacedim),
+        std::make_unique<FunctionWrapper<spacedim>>(pull_back, dim));
     }
 
 

@@ -10,7 +10,10 @@ namespace Ddhdg
     std::vector<Component> enabled_c_vector;
     enabled_c_vector.reserve(fe_map.size());
     for (const auto &[c, fe] : fe_map)
-      enabled_c_vector.push_back(c);
+      {
+        (void)fe;
+        enabled_c_vector.push_back(c);
+      }
     return enabled_c_vector;
   }
 
@@ -27,6 +30,7 @@ namespace Ddhdg
     unsigned int dofs_per_face;
     for (const auto &[c, fe] : fe_map)
       {
+        (void)c;
         dofs_per_face = 0;
         for (unsigned int i = 0; i < fe.dofs_per_cell; ++i)
           if (fe.has_support_on_face(i, 0))
@@ -51,6 +55,7 @@ namespace Ddhdg
     unsigned int dofs_per_face;
     for (const auto &[c, fe] : fe_map)
       {
+        (void)c;
         dofs_per_face = 0;
         for (unsigned int i = 0; i < fe.dofs_per_cell; ++i)
           if (fe.has_support_on_face(i, 0))
@@ -74,6 +79,7 @@ namespace Ddhdg
     unsigned int dofs_per_face;
     for (const auto &[c, fe] : fe_map)
       {
+        (void)c;
         dofs_per_face = 0;
         for (unsigned int i = 0; i < fe.dofs_per_cell; ++i)
           if (fe.has_support_on_face(i, 0))
@@ -93,7 +99,10 @@ namespace Ddhdg
   {
     unsigned int dofs_per_cell = 0;
     for (const auto &[c, fe] : fe_map)
-      dofs_per_cell += fe.dofs_per_cell;
+      {
+        (void)c;
+        dofs_per_cell += fe.dofs_per_cell;
+      }
     return std::vector<dtype>(dofs_per_cell);
   }
 
