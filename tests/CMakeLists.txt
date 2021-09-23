@@ -1,13 +1,16 @@
 set(_target tests)
 
-include(FetchContent)
-FetchContent_Declare(
-        googletest
-        GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG release-1.10.0
-)
+find_package(GTest)
 
-FetchContent_MakeAvailable(googletest)
+if (NOT GTest_FOUND)
+  include(FetchContent)
+  FetchContent_Declare(
+      googletest
+      GIT_REPOSITORY https://github.com/google/googletest.git
+      GIT_TAG release-1.10.0
+  )
+  FetchContent_MakeAvailable(googletest)
+endif()
 
 set(_test_files
         adimensionalizer.cpp
@@ -28,7 +31,8 @@ set(_test_files
 
 add_executable(${_target} main.cpp ${_test_files})
 DEAL_II_SETUP_TARGET(${_target})
-target_link_libraries(${_target} DDHDG gtest)
+target_link_libraries(${_target} DDHDG GTest::GTest)
 
 include(GoogleTest)
-gtest_discover_tests(tests)
+# gtest_discover_tests(tests)
+gtest_add_tests(TARGET ${_target})
