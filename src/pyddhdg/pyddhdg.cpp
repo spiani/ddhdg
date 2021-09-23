@@ -1534,6 +1534,27 @@ namespace pyddhdg
 
   template <int dim>
   double
+  NPSolver<dim>::estimate_l2_error(
+    const DealIIFunction<dim>                expected_solution,
+    const Ddhdg::Component                   c,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_l2_error(
+      expected_solution.get_dealii_function(), c, *quadrature_formula);
+  }
+
+
+
+  template <int dim>
+  double
   NPSolver<dim>::estimate_l2_error(const DealIIFunction<dim> expected_solution,
                                    const Ddhdg::Component    c) const
   {
@@ -1545,11 +1566,55 @@ namespace pyddhdg
 
   template <int dim>
   double
+  NPSolver<dim>::estimate_l2_error(
+    const DealIIFunction<dim>                expected_solution,
+    const Ddhdg::Displacement                d,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_l2_error(
+      expected_solution.get_dealii_function(), d, *quadrature_formula);
+  }
+
+
+
+  template <int dim>
+  double
   NPSolver<dim>::estimate_l2_error(const DealIIFunction<dim> expected_solution,
                                    const Ddhdg::Displacement d) const
   {
     return this->ddhdg_solver->estimate_l2_error(
       expected_solution.get_dealii_function(), d);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_l2_error(
+    const NPSolver<dim>                      solver,
+    const Ddhdg::Component                   c,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
+                                              c,
+                                              dealii::VectorTools::L2_norm,
+                                              *quadrature_formula);
   }
 
 
@@ -1568,12 +1633,56 @@ namespace pyddhdg
 
   template <int dim>
   double
+  NPSolver<dim>::estimate_l2_error(
+    const NPSolver<dim>                      solver,
+    const Ddhdg::Displacement                d,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
+                                              d,
+                                              dealii::VectorTools::L2_norm,
+                                              *quadrature_formula);
+  }
+
+
+
+  template <int dim>
+  double
   NPSolver<dim>::estimate_l2_error(const NPSolver<dim>       solver,
                                    const Ddhdg::Displacement d) const
   {
     return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
                                               d,
                                               dealii::VectorTools::L2_norm);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_h1_error(
+    const DealIIFunction<dim>                expected_solution,
+    const Ddhdg::Component                   c,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_h1_error(
+      expected_solution.get_dealii_function(), c, *quadrature_formula);
   }
 
 
@@ -1591,11 +1700,55 @@ namespace pyddhdg
 
   template <int dim>
   double
+  NPSolver<dim>::estimate_h1_error(
+    const DealIIFunction<dim>                expected_solution,
+    const Ddhdg::Displacement                d,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_h1_error(
+      expected_solution.get_dealii_function(), d, *quadrature_formula);
+  }
+
+
+
+  template <int dim>
+  double
   NPSolver<dim>::estimate_h1_error(const DealIIFunction<dim> expected_solution,
                                    const Ddhdg::Displacement d) const
   {
     return this->ddhdg_solver->estimate_h1_error(
       expected_solution.get_dealii_function(), d);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_h1_error(
+    const NPSolver<dim>                      solver,
+    const Ddhdg::Component                   c,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
+                                              c,
+                                              dealii::VectorTools::H1_norm,
+                                              *quadrature_formula);
   }
 
 
@@ -1608,6 +1761,29 @@ namespace pyddhdg
     return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
                                               c,
                                               dealii::VectorTools::H1_norm);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_h1_error(
+    const NPSolver<dim>                      solver,
+    const Ddhdg::Displacement                d,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
+                                              d,
+                                              dealii::VectorTools::H1_norm,
+                                              *quadrature_formula);
   }
 
 
@@ -1627,11 +1803,53 @@ namespace pyddhdg
   template <int dim>
   double
   NPSolver<dim>::estimate_linfty_error(
+    const DealIIFunction<dim>                expected_solution,
+    const Ddhdg::Component                   c,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_linfty_error(
+      expected_solution.get_dealii_function(), c, *quadrature_formula);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_linfty_error(
     const DealIIFunction<dim> expected_solution,
     const Ddhdg::Component    c) const
   {
     return this->ddhdg_solver->estimate_linfty_error(
       expected_solution.get_dealii_function(), c);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_linfty_error(
+    const DealIIFunction<dim>                expected_solution,
+    const Ddhdg::Displacement                d,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_linfty_error(
+      expected_solution.get_dealii_function(), d, *quadrature_formula);
   }
 
 
@@ -1650,6 +1868,29 @@ namespace pyddhdg
 
   template <int dim>
   double
+  NPSolver<dim>::estimate_linfty_error(
+    const NPSolver<dim>                      solver,
+    const Ddhdg::Component                   c,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
+                                              c,
+                                              dealii::VectorTools::Linfty_norm,
+                                              *quadrature_formula);
+  }
+
+
+
+  template <int dim>
+  double
   NPSolver<dim>::estimate_linfty_error(const NPSolver<dim>    solver,
                                        const Ddhdg::Component c) const
   {
@@ -1662,12 +1903,62 @@ namespace pyddhdg
 
   template <int dim>
   double
+  NPSolver<dim>::estimate_linfty_error(
+    const NPSolver<dim>                      solver,
+    const Ddhdg::Displacement                d,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim,
+      dealii::ExcMessage(
+        "Quadrature rule dimension and solver dimension are different"));
+    const dealii::Quadrature<dim> *quadrature_formula =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
+                                              d,
+                                              dealii::VectorTools::Linfty_norm,
+                                              *quadrature_formula);
+  }
+
+
+
+  template <int dim>
+  double
   NPSolver<dim>::estimate_linfty_error(const NPSolver<dim>       solver,
                                        const Ddhdg::Displacement d) const
   {
     return this->ddhdg_solver->estimate_error(*(solver.ddhdg_solver),
                                               d,
                                               dealii::VectorTools::Linfty_norm);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_l2_error_on_trace(
+    const std::string                       &expected_solution,
+    const Ddhdg::Component                   c,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim - 1,
+      dealii::ExcMessage(
+        "Quadrature rule dimension must be 1 less than the solver dimension"));
+    const dealii::Quadrature<dim - 1> *face_quadrature_formula =
+      static_cast<dealii::Quadrature<dim - 1> *>(q.get_quadrature());
+
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    expected_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_solution,
+      Ddhdg::Constants::constants);
+    return this->ddhdg_solver->estimate_l2_error_on_trace(
+      expected_solution_f, c, *face_quadrature_formula);
   }
 
 
@@ -1693,11 +1984,59 @@ namespace pyddhdg
   template <int dim>
   double
   NPSolver<dim>::estimate_l2_error_on_trace(
+    const DealIIFunction<dim>                expected_solution,
+    const Ddhdg::Component                   c,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim - 1,
+      dealii::ExcMessage(
+        "Quadrature rule dimension must be 1 less than the solver dimension"));
+    const dealii::Quadrature<dim - 1> *face_quadrature_formula =
+      static_cast<dealii::Quadrature<dim - 1> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_l2_error_on_trace(
+      expected_solution.get_dealii_function(), c, *face_quadrature_formula);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_l2_error_on_trace(
     const DealIIFunction<dim> expected_solution,
     const Ddhdg::Component    c) const
   {
     return this->ddhdg_solver->estimate_l2_error_on_trace(
       expected_solution.get_dealii_function(), c);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_linfty_error_on_trace(
+    const std::string                       &expected_solution,
+    const Ddhdg::Component                   c,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim - 1,
+      dealii::ExcMessage(
+        "Quadrature rule dimension must be 1 less than the solver dimension"));
+    const dealii::Quadrature<dim - 1> *face_quadrature_formula =
+      static_cast<dealii::Quadrature<dim - 1> *>(q.get_quadrature());
+
+    std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    expected_solution_f->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      expected_solution,
+      Ddhdg::Constants::constants);
+    return this->ddhdg_solver->estimate_linfty_error_on_trace(
+      expected_solution_f, c, *face_quadrature_formula);
   }
 
 
@@ -1716,6 +2055,27 @@ namespace pyddhdg
       Ddhdg::Constants::constants);
     return this->ddhdg_solver->estimate_linfty_error_on_trace(
       expected_solution_f, c);
+  }
+
+
+
+  template <int dim>
+  double
+  NPSolver<dim>::estimate_linfty_error_on_trace(
+    const DealIIFunction<dim>                expected_solution,
+    const Ddhdg::Component                   c,
+    const dealii::python::QuadratureWrapper &q) const
+  {
+    const int q_dim = q.get_dim();
+    AssertThrow(
+      q_dim == dim - 1,
+      dealii::ExcMessage(
+        "Quadrature rule dimension must be 1 less than the solver dimension"));
+    const dealii::Quadrature<dim - 1> *face_quadrature_formula =
+      static_cast<dealii::Quadrature<dim - 1> *>(q.get_quadrature());
+
+    return this->ddhdg_solver->estimate_linfty_error_on_trace(
+      expected_solution.get_dealii_function(), c, *face_quadrature_formula);
   }
 
 

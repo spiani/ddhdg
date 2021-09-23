@@ -493,11 +493,31 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("displacement"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_l2_error",
+       py::overload_cast<const DealIIFunction<DIM>,
+                         const Ddhdg::Component,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_l2_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"),
+       py::arg("quadrature"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_l2_error",
        py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_l2_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("component"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_l2_error",
+       py::overload_cast<const DealIIFunction<DIM>,
+                         const Ddhdg::Displacement,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_l2_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("displacement"),
+       py::arg("quadrature"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_l2_error",
        py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Displacement>(
@@ -507,11 +527,31 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("displacement"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_l2_error",
+       py::overload_cast<const NPSolver<DIM>,
+                         const Ddhdg::Component,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_l2_error,
+         py::const_),
+       py::arg("solver"),
+       py::arg("component"),
+       py::arg("quadrature"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_l2_error",
        py::overload_cast<const NPSolver<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_l2_error,
          py::const_),
        py::arg("solver"),
        py::arg("component"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_l2_error",
+       py::overload_cast<const NPSolver<DIM>,
+                         const Ddhdg::Displacement,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_l2_error,
+         py::const_),
+       py::arg("solver"),
+       py::arg("displacement"),
+       py::arg("quadrature"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_l2_error",
        py::overload_cast<const NPSolver<DIM>, const Ddhdg::Displacement>(
@@ -521,11 +561,31 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("displacement"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_h1_error",
+       py::overload_cast<const DealIIFunction<DIM>,
+                         const Ddhdg::Component,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_h1_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"),
+       py::arg("quadrature"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_h1_error",
        py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_h1_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("component"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_h1_error",
+       py::overload_cast<const DealIIFunction<DIM>,
+                         const Ddhdg::Displacement,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_h1_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("displacement"),
+       py::arg("quadrature"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_h1_error",
        py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Displacement>(
@@ -535,11 +595,31 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("displacement"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_h1_error",
+       py::overload_cast<const NPSolver<DIM>,
+                         const Ddhdg::Component,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_h1_error,
+         py::const_),
+       py::arg("solver"),
+       py::arg("component"),
+       py::arg("quadrature"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_h1_error",
        py::overload_cast<const NPSolver<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_h1_error,
          py::const_),
        py::arg("solver"),
        py::arg("component"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_h1_error",
+       py::overload_cast<const NPSolver<DIM>,
+                         const Ddhdg::Displacement,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_h1_error,
+         py::const_),
+       py::arg("solver"),
+       py::arg("displacement"),
+       py::arg("quadrature"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_h1_error",
        py::overload_cast<const NPSolver<DIM>, const Ddhdg::Displacement>(
@@ -549,11 +629,31 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("displacement"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_linfty_error",
+       py::overload_cast<const DealIIFunction<DIM>,
+                         const Ddhdg::Component,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_linfty_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"),
+       py::arg("quadrature"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_linfty_error",
        py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_linfty_error,
          py::const_),
        py::arg("expected_solution"),
        py::arg("component"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_linfty_error",
+       py::overload_cast<const DealIIFunction<DIM>,
+                         const Ddhdg::Displacement,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_linfty_error,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("displacement"),
+       py::arg("quadrature"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_linfty_error",
        py::overload_cast<const DealIIFunction<DIM>, const Ddhdg::Displacement>(
@@ -563,11 +663,31 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("displacement"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_linfty_error",
+       py::overload_cast<const NPSolver<DIM>,
+                         const Ddhdg::Component,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_linfty_error,
+         py::const_),
+       py::arg("solver"),
+       py::arg("component"),
+       py::arg("quadrature"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_linfty_error",
        py::overload_cast<const NPSolver<DIM>, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_linfty_error,
          py::const_),
        py::arg("solver"),
        py::arg("component"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_linfty_error",
+       py::overload_cast<const NPSolver<DIM>,
+                         const Ddhdg::Displacement,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_linfty_error,
+         py::const_),
+       py::arg("solver"),
+       py::arg("displacement"),
+       py::arg("quadrature"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_linfty_error",
        py::overload_cast<const NPSolver<DIM>, const Ddhdg::Displacement>(
@@ -577,11 +697,31 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("displacement"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_l2_error_on_trace",
+       py::overload_cast<const std::string &,
+                         const Ddhdg::Component,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_l2_error_on_trace,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"),
+       py::arg("quadrature"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_l2_error_on_trace",
        py::overload_cast<const std::string &, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_l2_error_on_trace,
          py::const_),
        py::arg("expected_solution"),
        py::arg("component"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_l2_error_on_trace",
+       py::overload_cast<DealIIFunction<DIM>,
+                         const Ddhdg::Component,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_l2_error_on_trace,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"),
+       py::arg("quadrature"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_l2_error_on_trace",
        py::overload_cast<DealIIFunction<DIM>, const Ddhdg::Component>(
@@ -591,11 +731,31 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("component"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_linfty_error_on_trace",
+       py::overload_cast<const std::string &,
+                         const Ddhdg::Component,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_linfty_error_on_trace,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"),
+       py::arg("quadrature"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_linfty_error_on_trace",
        py::overload_cast<const std::string &, const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_linfty_error_on_trace,
          py::const_),
        py::arg("expected_solution"),
        py::arg("component"),
+       py::call_guard<py::gil_scoped_release>())
+  .def("estimate_linfty_error_on_trace",
+       py::overload_cast<DealIIFunction<DIM>,
+                         const Ddhdg::Component,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::estimate_linfty_error_on_trace,
+         py::const_),
+       py::arg("expected_solution"),
+       py::arg("component"),
+       py::arg("quadrature"),
        py::call_guard<py::gil_scoped_release>())
   .def("estimate_linfty_error_on_trace",
        py::overload_cast<DealIIFunction<DIM>, const Ddhdg::Component>(

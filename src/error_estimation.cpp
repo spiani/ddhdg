@@ -11,7 +11,8 @@ namespace Ddhdg
                                         expected_solution,
     const Ddhdg::Component              c,
     const dealii::VectorTools::NormType norm,
-    dealii::Vector<float> &             error) const
+    const dealii::Quadrature<dim>      &q,
+    dealii::Vector<float>              &error) const
   {
     Assert(expected_solution->n_components == 1, FunctionMustBeScalar());
     AssertDimension(error.size(), this->triangulation->n_active_cells());
@@ -33,14 +34,29 @@ namespace Ddhdg
     FunctionByComponents<dim> expected_solution_multidim =
       FunctionByComponents<dim>(n_of_components, c_map);
 
-    VectorTools::integrate_difference(
-      this->dof_handler_cell,
-      this->current_solution_cell,
-      expected_solution_multidim,
-      error,
-      QGauss<dim>(this->get_number_of_quadrature_points() + 2),
-      norm,
-      &component_selection);
+    VectorTools::integrate_difference(this->dof_handler_cell,
+                                      this->current_solution_cell,
+                                      expected_solution_multidim,
+                                      error,
+                                      q,
+                                      norm,
+                                      &component_selection);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  void
+  NPSolver<dim, ProblemType>::estimate_error_per_cell(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                                        expected_solution,
+    const Ddhdg::Component              c,
+    const dealii::VectorTools::NormType norm,
+    dealii::Vector<float>              &error) const
+  {
+    const dealii::QGauss<dim> q =
+      QGauss<dim>(this->get_number_of_quadrature_points() + 2);
+    return this->estimate_error_per_cell(expected_solution, c, norm, q, error);
   }
 
 
@@ -52,7 +68,8 @@ namespace Ddhdg
                                         expected_solution,
     const Ddhdg::Displacement           d,
     const dealii::VectorTools::NormType norm,
-    dealii::Vector<float> &             error) const
+    const dealii::Quadrature<dim>      &q,
+    dealii::Vector<float>              &error) const
   {
     Assert(expected_solution->n_components == dim,
            FunctionMustHaveDimComponents());
@@ -85,14 +102,29 @@ namespace Ddhdg
     FunctionByComponents<dim> expected_solution_multidim =
       FunctionByComponents<dim>(n_of_components, c_map);
 
-    VectorTools::integrate_difference(
-      this->dof_handler_cell,
-      this->current_solution_cell,
-      expected_solution_multidim,
-      error,
-      QGauss<dim>(this->get_number_of_quadrature_points() + 2),
-      norm,
-      &component_selection);
+    VectorTools::integrate_difference(this->dof_handler_cell,
+                                      this->current_solution_cell,
+                                      expected_solution_multidim,
+                                      error,
+                                      q,
+                                      norm,
+                                      &component_selection);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  void
+  NPSolver<dim, ProblemType>::estimate_error_per_cell(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                                        expected_solution,
+    const Ddhdg::Displacement           d,
+    const dealii::VectorTools::NormType norm,
+    dealii::Vector<float>              &error) const
+  {
+    const dealii::QGauss<dim> q =
+      QGauss<dim>(this->get_number_of_quadrature_points() + 2);
+    return this->estimate_error_per_cell(expected_solution, d, norm, q, error);
   }
 
 
@@ -103,7 +135,8 @@ namespace Ddhdg
     const NPSolver<dim, ProblemType> &other,
     Component                         c,
     dealii::VectorTools::NormType     norm,
-    dealii::Vector<float> &           error) const
+    const dealii::Quadrature<dim>    &q,
+    dealii::Vector<float>            &error) const
   {
     AssertDimension(error.size(), this->triangulation->n_active_cells());
 
@@ -124,14 +157,29 @@ namespace Ddhdg
     const auto component_selection =
       dealii::ComponentSelectFunction<dim>(component_index, n_of_components);
 
-    VectorTools::integrate_difference(
-      this->dof_handler_cell,
-      tmp,
-      dealii::Functions::ZeroFunction<dim>(n_of_components),
-      error,
-      QGauss<dim>(this->get_number_of_quadrature_points() + 2),
-      norm,
-      &component_selection);
+    VectorTools::integrate_difference(this->dof_handler_cell,
+                                      tmp,
+                                      dealii::Functions::ZeroFunction<dim>(
+                                        n_of_components),
+                                      error,
+                                      q,
+                                      norm,
+                                      &component_selection);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  void
+  NPSolver<dim, ProblemType>::estimate_error_per_cell(
+    const NPSolver<dim, ProblemType> &other,
+    Component                         c,
+    dealii::VectorTools::NormType     norm,
+    dealii::Vector<float>            &error) const
+  {
+    const dealii::QGauss<dim> q =
+      QGauss<dim>(this->get_number_of_quadrature_points() + 2);
+    return this->estimate_error_per_cell(other, c, norm, q, error);
   }
 
 
@@ -142,7 +190,8 @@ namespace Ddhdg
     const NPSolver<dim, ProblemType> &other,
     Displacement                      d,
     dealii::VectorTools::NormType     norm,
-    dealii::Vector<float> &           error) const
+    const dealii::Quadrature<dim>    &q,
+    dealii::Vector<float>            &error) const
   {
     AssertDimension(error.size(), this->triangulation->n_active_cells());
 
@@ -166,14 +215,53 @@ namespace Ddhdg
     const auto component_selection =
       dealii::ComponentSelectFunction<dim>(selection_interval, n_of_components);
 
-    VectorTools::integrate_difference(
-      this->dof_handler_cell,
-      tmp,
-      dealii::Functions::ZeroFunction<dim>(n_of_components),
-      error,
-      QGauss<dim>(this->get_number_of_quadrature_points() + 2),
-      norm,
-      &component_selection);
+    VectorTools::integrate_difference(this->dof_handler_cell,
+                                      tmp,
+                                      dealii::Functions::ZeroFunction<dim>(
+                                        n_of_components),
+                                      error,
+                                      q,
+                                      norm,
+                                      &component_selection);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  void
+  NPSolver<dim, ProblemType>::estimate_error_per_cell(
+    const NPSolver<dim, ProblemType> &other,
+    Displacement                      d,
+    dealii::VectorTools::NormType     norm,
+    dealii::Vector<float>            &error) const
+  {
+    const dealii::QGauss<dim> q =
+      QGauss<dim>(this->get_number_of_quadrature_points() + 2);
+    return this->estimate_error_per_cell(other, d, norm, q, error);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                                        expected_solution,
+    const Ddhdg::Component              c,
+    const dealii::VectorTools::NormType norm,
+    const dealii::Quadrature<dim>      &q) const
+  {
+    Assert(expected_solution->n_components == 1, FunctionMustBeScalar());
+    Vector<float> difference_per_cell(triangulation->n_active_cells());
+
+    this->estimate_error_per_cell(
+      expected_solution, c, norm, q, difference_per_cell);
+
+    const double global_error =
+      VectorTools::compute_global_error(*(this->triangulation),
+                                        difference_per_cell,
+                                        norm);
+    return global_error;
   }
 
 
@@ -186,13 +274,28 @@ namespace Ddhdg
     const Ddhdg::Component              c,
     const dealii::VectorTools::NormType norm) const
   {
-    Assert(expected_solution->n_components == 1, FunctionMustBeScalar());
+    const dealii::QGauss<dim> q =
+      QGauss<dim>(this->get_number_of_quadrature_points() + 2);
+    return this->estimate_error(expected_solution, c, norm, q);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                                        expected_solution,
+    const Ddhdg::Displacement           d,
+    const dealii::VectorTools::NormType norm,
+    const dealii::Quadrature<dim>      &q) const
+  {
+    Assert(expected_solution->n_components == dim,
+           FunctionMustHaveDimComponents());
     Vector<float> difference_per_cell(triangulation->n_active_cells());
 
-    this->estimate_error_per_cell(expected_solution,
-                                  c,
-                                  norm,
-                                  difference_per_cell);
+    this->estimate_error_per_cell(
+      expected_solution, d, norm, q, difference_per_cell);
 
     const double global_error =
       VectorTools::compute_global_error(*(this->triangulation),
@@ -211,20 +314,9 @@ namespace Ddhdg
     const Ddhdg::Displacement           d,
     const dealii::VectorTools::NormType norm) const
   {
-    Assert(expected_solution->n_components == dim,
-           FunctionMustHaveDimComponents());
-    Vector<float> difference_per_cell(triangulation->n_active_cells());
-
-    this->estimate_error_per_cell(expected_solution,
-                                  d,
-                                  norm,
-                                  difference_per_cell);
-
-    const double global_error =
-      VectorTools::compute_global_error(*(this->triangulation),
-                                        difference_per_cell,
-                                        norm);
-    return global_error;
+    const dealii::QGauss<dim> q =
+      QGauss<dim>(this->get_number_of_quadrature_points() + 2);
+    return this->estimate_error(expected_solution, d, norm, q);
   }
 
 
@@ -235,7 +327,8 @@ namespace Ddhdg
     const std::shared_ptr<const dealii::Function<dim, double>>
                                         expected_solution,
     const Ddhdg::Component              c,
-    const dealii::VectorTools::NormType norm) const
+    const dealii::VectorTools::NormType norm,
+    const dealii::Quadrature<dim - 1>  &face_quadrature_formula) const
   {
     Assert(expected_solution->n_components == 1, FunctionMustBeScalar());
     Assert(norm == VectorTools::L2_norm || norm == VectorTools::Linfty_norm,
@@ -248,8 +341,6 @@ namespace Ddhdg
       this->adimensionalizer->template adimensionalize_component_function<dim>(
         expected_solution, c);
 
-    const QGauss<dim - 1> face_quadrature_formula(
-      this->get_number_of_quadrature_points() + 2);
     const UpdateFlags flags(update_values | update_quadrature_points |
                             update_JxW_values);
 
@@ -397,6 +488,40 @@ namespace Ddhdg
 
   template <int dim, typename ProblemType>
   double
+  NPSolver<dim, ProblemType>::estimate_error_on_trace(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                                        expected_solution,
+    const Ddhdg::Component              c,
+    const dealii::VectorTools::NormType norm) const
+  {
+    const dealii::QGauss<dim - 1> face_quadrature_formula =
+      QGauss<dim - 1>(this->get_number_of_quadrature_points() + 2);
+    return this->estimate_error_on_trace(expected_solution,
+                                         c,
+                                         norm,
+                                         face_quadrature_formula);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_l2_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                                   expected_solution,
+    const Ddhdg::Component         c,
+    const dealii::Quadrature<dim> &q) const
+  {
+    return this->estimate_error(expected_solution,
+                                c,
+                                dealii::VectorTools::L2_norm,
+                                q);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
   NPSolver<dim, ProblemType>::estimate_l2_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
                            expected_solution,
@@ -405,6 +530,22 @@ namespace Ddhdg
     return this->estimate_error(expected_solution,
                                 c,
                                 dealii::VectorTools::L2_norm);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_l2_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                                   expected_solution,
+    const Ddhdg::Displacement      d,
+    const dealii::Quadrature<dim> &q) const
+  {
+    return this->estimate_error(expected_solution,
+                                d,
+                                dealii::VectorTools::L2_norm,
+                                q);
   }
 
 
@@ -427,6 +568,22 @@ namespace Ddhdg
   double
   NPSolver<dim, ProblemType>::estimate_l2_error_on_trace(
     const std::shared_ptr<const dealii::Function<dim, double>>
+                                       expected_solution,
+    const Ddhdg::Component             c,
+    const dealii::Quadrature<dim - 1> &face_quadrature_formula) const
+  {
+    return this->estimate_error_on_trace(expected_solution,
+                                         c,
+                                         dealii::VectorTools::L2_norm,
+                                         face_quadrature_formula);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_l2_error_on_trace(
+    const std::shared_ptr<const dealii::Function<dim, double>>
                            expected_solution,
     const Ddhdg::Component c) const
   {
@@ -441,12 +598,44 @@ namespace Ddhdg
   double
   NPSolver<dim, ProblemType>::estimate_h1_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
+                                   expected_solution,
+    const Ddhdg::Component         c,
+    const dealii::Quadrature<dim> &q) const
+  {
+    return this->estimate_error(expected_solution,
+                                c,
+                                dealii::VectorTools::H1_norm,
+                                q);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_h1_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
                            expected_solution,
     const Ddhdg::Component c) const
   {
     return this->estimate_error(expected_solution,
                                 c,
                                 dealii::VectorTools::H1_norm);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_h1_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                                   expected_solution,
+    const Ddhdg::Displacement      d,
+    const dealii::Quadrature<dim> &q) const
+  {
+    return this->estimate_error(expected_solution,
+                                d,
+                                dealii::VectorTools::H1_norm,
+                                q);
   }
 
 
@@ -469,6 +658,22 @@ namespace Ddhdg
   double
   NPSolver<dim, ProblemType>::estimate_linfty_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
+                                   expected_solution,
+    const Ddhdg::Component         c,
+    const dealii::Quadrature<dim> &q) const
+  {
+    return this->estimate_error(expected_solution,
+                                c,
+                                dealii::VectorTools::Linfty_norm,
+                                q);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_linfty_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
                            expected_solution,
     const Ddhdg::Component c) const
   {
@@ -483,12 +688,44 @@ namespace Ddhdg
   double
   NPSolver<dim, ProblemType>::estimate_linfty_error(
     const std::shared_ptr<const dealii::Function<dim, double>>
+                                   expected_solution,
+    const Ddhdg::Displacement      d,
+    const dealii::Quadrature<dim> &q) const
+  {
+    return this->estimate_error(expected_solution,
+                                d,
+                                dealii::VectorTools::Linfty_norm,
+                                q);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_linfty_error(
+    const std::shared_ptr<const dealii::Function<dim, double>>
                               expected_solution,
     const Ddhdg::Displacement d) const
   {
     return this->estimate_error(expected_solution,
                                 d,
                                 dealii::VectorTools::Linfty_norm);
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_linfty_error_on_trace(
+    const std::shared_ptr<const dealii::Function<dim, double>>
+                                       expected_solution,
+    const Ddhdg::Component             c,
+    const dealii::Quadrature<dim - 1> &face_quadrature_formula) const
+  {
+    return this->estimate_error_on_trace(expected_solution,
+                                         c,
+                                         dealii::VectorTools::Linfty_norm,
+                                         face_quadrature_formula);
   }
 
 
@@ -512,11 +749,53 @@ namespace Ddhdg
   NPSolver<dim, ProblemType>::estimate_error(
     const NPSolver<dim, ProblemType> &other,
     Component                         c,
+    dealii::VectorTools::NormType     norm,
+    const dealii::Quadrature<dim>    &q) const
+  {
+    Vector<float> difference_per_cell(triangulation->n_active_cells());
+
+    this->estimate_error_per_cell(other, c, norm, q, difference_per_cell);
+
+    const double global_error =
+      VectorTools::compute_global_error(*(this->triangulation),
+                                        difference_per_cell,
+                                        norm);
+    return global_error;
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_error(
+    const NPSolver<dim, ProblemType> &other,
+    Component                         c,
     dealii::VectorTools::NormType     norm) const
   {
     Vector<float> difference_per_cell(triangulation->n_active_cells());
 
     this->estimate_error_per_cell(other, c, norm, difference_per_cell);
+
+    const double global_error =
+      VectorTools::compute_global_error(*(this->triangulation),
+                                        difference_per_cell,
+                                        norm);
+    return global_error;
+  }
+
+
+
+  template <int dim, typename ProblemType>
+  double
+  NPSolver<dim, ProblemType>::estimate_error(
+    const NPSolver<dim, ProblemType> &other,
+    Displacement                      d,
+    dealii::VectorTools::NormType     norm,
+    const dealii::Quadrature<dim>    &q) const
+  {
+    Vector<float> difference_per_cell(triangulation->n_active_cells());
+
+    this->estimate_error_per_cell(other, d, norm, q, difference_per_cell);
 
     const double global_error =
       VectorTools::compute_global_error(*(this->triangulation),
@@ -550,7 +829,7 @@ namespace Ddhdg
   template <int dim, typename ProblemType>
   void
   NPSolver<dim, ProblemType>::estimate_error_per_cell(
-    dealii::Vector<float> &      error,
+    dealii::Vector<float>       &error,
     const dealii::ComponentMask &cmp_mask) const
   {
     auto quadrature =

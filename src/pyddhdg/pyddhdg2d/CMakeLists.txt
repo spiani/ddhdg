@@ -15,5 +15,6 @@ add_dependencies(pyddhdg2d dealii-python-bindings pyddhdg_common)
 target_link_libraries(pyddhdg2d PRIVATE pybind11::module)
 target_link_libraries(pyddhdg2d PRIVATE DDHDG)
 target_link_libraries(pyddhdg2d PRIVATE pyddhdg)
+target_link_libraries(pyddhdg2d PRIVATE dealii-python-bindings-symbols)
 set_target_properties(pyddhdg2d PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}"
         SUFFIX "${PYTHON_MODULE_EXTENSION}")

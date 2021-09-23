@@ -118,8 +118,6 @@ namespace python
           }
         else if (dim == 2)
           {
-            // We cannot call delete on a void pointer so cast the void pointer
-            // back first.
             Quadrature<2> *tmp = static_cast<Quadrature<2> *>(quadrature_ptr);
             delete tmp;
           }
@@ -141,14 +139,29 @@ namespace python
   {
     if (dim == 1)
       {
+        if (quadrature_ptr != nullptr)
+          {
+            Quadrature<1> *tmp = static_cast<Quadrature<1> *>(quadrature_ptr);
+            delete tmp;
+          }
         quadrature_ptr = new QGauss<1>(n);
       }
     else if (dim == 2)
       {
+        if (quadrature_ptr != nullptr)
+          {
+            Quadrature<2> *tmp = static_cast<Quadrature<2> *>(quadrature_ptr);
+            delete tmp;
+          }
         quadrature_ptr = new QGauss<2>(n);
       }
     else if (dim == 3)
       {
+        if (quadrature_ptr != nullptr)
+          {
+            Quadrature<3> *tmp = static_cast<Quadrature<3> *>(quadrature_ptr);
+            delete tmp;
+          }
         quadrature_ptr = new QGauss<3>(n);
       }
     else
@@ -162,14 +175,29 @@ namespace python
   {
     if (dim == 1)
       {
+        if (quadrature_ptr != nullptr)
+          {
+            Quadrature<1> *tmp = static_cast<Quadrature<1> *>(quadrature_ptr);
+            delete tmp;
+          }
         quadrature_ptr = new QGaussLobatto<1>(n);
       }
     else if (dim == 2)
       {
+        if (quadrature_ptr != nullptr)
+          {
+            Quadrature<2> *tmp = static_cast<Quadrature<2> *>(quadrature_ptr);
+            delete tmp;
+          }
         quadrature_ptr = new QGaussLobatto<2>(n);
       }
     else if (dim == 3)
       {
+        if (quadrature_ptr != nullptr)
+          {
+            Quadrature<3> *tmp = static_cast<Quadrature<3> *>(quadrature_ptr);
+            delete tmp;
+          }
         quadrature_ptr = new QGaussLobatto<3>(n);
       }
     else

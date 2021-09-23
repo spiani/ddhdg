@@ -176,30 +176,59 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c,
       dealii::VectorTools::NormType                norm,
-      dealii::Vector<float> &                      error) const;
+      const Quadrature<dim>                       &q,
+      dealii::Vector<float>                       &error) const;
+
+    void
+    estimate_error_per_cell(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      dealii::VectorTools::NormType                norm,
+      dealii::Vector<float>                       &error) const;
 
     void
     estimate_error_per_cell(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Displacement                                 d,
       dealii::VectorTools::NormType                norm,
-      dealii::Vector<float> &                      error) const;
+      const Quadrature<dim>                       &q,
+      dealii::Vector<float>                       &error) const;
+
+    void
+    estimate_error_per_cell(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d,
+      dealii::VectorTools::NormType                norm,
+      dealii::Vector<float>                       &error) const;
 
     void
     estimate_error_per_cell(const NPSolver<dim, ProblemType> &other,
                             Component                         c,
                             dealii::VectorTools::NormType     norm,
-                            dealii::Vector<float> &           error) const;
+                            const Quadrature<dim>            &q,
+                            dealii::Vector<float>            &error) const;
+
+    void
+    estimate_error_per_cell(const NPSolver<dim, ProblemType> &other,
+                            Component                         c,
+                            dealii::VectorTools::NormType     norm,
+                            dealii::Vector<float>            &error) const;
 
     void
     estimate_error_per_cell(const NPSolver<dim, ProblemType> &other,
                             Displacement                      d,
                             dealii::VectorTools::NormType     norm,
-                            dealii::Vector<float> &           error) const;
+                            const Quadrature<dim>            &q,
+                            dealii::Vector<float>            &error) const;
+    void
+    estimate_error_per_cell(const NPSolver<dim, ProblemType> &other,
+                            Displacement                      d,
+                            dealii::VectorTools::NormType     norm,
+                            dealii::Vector<float>            &error) const;
 
     void
     estimate_error_per_cell(
-      dealii::Vector<float> &      error,
+      dealii::Vector<float>       &error,
       const dealii::ComponentMask &cmp_mask =
         dealii::ComponentMask(all_primary_components().size() * (dim + 1),
                               true)) const;
@@ -214,7 +243,21 @@ namespace Ddhdg
     estimate_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c,
+      dealii::VectorTools::NormType                norm,
+      const Quadrature<dim>                       &q) const override;
+
+    double
+    estimate_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
       dealii::VectorTools::NormType                norm) const override;
+
+    double
+    estimate_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d,
+      dealii::VectorTools::NormType                norm,
+      const Quadrature<dim>                       &q) const override;
 
     double
     estimate_error(
@@ -226,12 +269,31 @@ namespace Ddhdg
     estimate_error_on_trace(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c,
+      dealii::VectorTools::NormType                norm,
+      const Quadrature<dim - 1> &face_quadrature_formula) const override;
+
+    double
+    estimate_error_on_trace(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
       dealii::VectorTools::NormType                norm) const override;
 
     double
     estimate_l2_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      const dealii::Quadrature<dim>               &q) const override;
+
+    double
+    estimate_l2_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const override;
+
+    double
+    estimate_l2_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d,
+      const dealii::Quadrature<dim>               &q) const override;
 
     double
     estimate_l2_error(
@@ -241,12 +303,31 @@ namespace Ddhdg
     double
     estimate_l2_error_on_trace(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      const dealii::Quadrature<dim - 1>           &face_quadrature_formula)
+      const override;
+
+    double
+    estimate_l2_error_on_trace(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const override;
 
     double
     estimate_h1_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      const dealii::Quadrature<dim>               &q) const override;
+
+    double
+    estimate_h1_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const override;
+
+    double
+    estimate_h1_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d,
+      const dealii::Quadrature<dim>               &q) const override;
 
     double
     estimate_h1_error(
@@ -256,7 +337,19 @@ namespace Ddhdg
     double
     estimate_linfty_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      const dealii::Quadrature<dim>               &q) const override;
+
+    double
+    estimate_linfty_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const override;
+
+    double
+    estimate_linfty_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d,
+      const dealii::Quadrature<dim>               &q) const override;
 
     double
     estimate_linfty_error(
@@ -266,12 +359,31 @@ namespace Ddhdg
     double
     estimate_linfty_error_on_trace(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      const dealii::Quadrature<dim - 1>           &face_quadrature_formula)
+      const override;
+
+    double
+    estimate_linfty_error_on_trace(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const override;
 
     double
     estimate_error(const NPSolver<dim, ProblemType> &other,
                    Component                         c,
+                   dealii::VectorTools::NormType     norm,
+                   const dealii::Quadrature<dim>    &q) const;
+
+    double
+    estimate_error(const NPSolver<dim, ProblemType> &other,
+                   Component                         c,
                    dealii::VectorTools::NormType     norm) const;
+
+    double
+    estimate_error(const NPSolver<dim, ProblemType> &other,
+                   Displacement                      d,
+                   dealii::VectorTools::NormType     norm,
+                   const dealii::Quadrature<dim>    &q) const;
 
     double
     estimate_error(const NPSolver<dim, ProblemType> &other,
@@ -295,17 +407,17 @@ namespace Ddhdg
     template <Component cmp>
     void
     compute_current(const dealii::DoFHandler<dim> &dof,
-                    dealii::Vector<double> &       data,
+                    dealii::Vector<double>        &data,
                     bool redimensionalize = true) const;
 
     template <Component cmp>
     void
     compute_qf_potential(const dealii::DoFHandler<dim> &dof,
-                         dealii::Vector<double> &       data) const;
+                         dealii::Vector<double>        &data) const;
 
     void
     compute_recombination_term(const dealii::DoFHandler<dim> &dof,
-                               dealii::Vector<double> &       data,
+                               dealii::Vector<double>        &data,
                                bool redimensionalize = true) const;
 
     void
@@ -327,7 +439,7 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Function<dim>>    expected_p_solution,
       unsigned int                                    n_cycles,
       unsigned int                                    initial_refinements,
-      std::ostream &                                  out) override;
+      std::ostream                                   &out) override;
 
     void
     print_convergence_table(
@@ -340,7 +452,7 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Function<dim>>    initial_p_function,
       unsigned int                                    n_cycles,
       unsigned int                                    initial_refinements,
-      std::ostream &                                  out) override;
+      std::ostream                                   &out) override;
 
     IteratorRange<typename dealii::Triangulation<dim>::cell_iterator>
     get_cell_iterator() const override;
@@ -400,7 +512,7 @@ namespace Ddhdg
 
     void
     generate_dof_to_component_map(std::vector<Component> &dof_to_component_map,
-                                  std::vector<DofType> &  dof_to_dof_type,
+                                  std::vector<DofType>   &dof_to_dof_type,
                                   bool                    for_trace,
                                   bool restricted = false) const;
 
@@ -419,8 +531,8 @@ namespace Ddhdg
     void
     project_component_one_cell(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
-      PCScratchData &                                       scratch,
-      PCCopyData &                                          copy_data) const;
+      PCScratchData                                        &scratch,
+      PCCopyData                                           &copy_data) const;
 
     template <typename PCCopyData>
     void
@@ -435,20 +547,20 @@ namespace Ddhdg
     void
     derivative_quantities_project_on_one_cell(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
-      DQScratchData &                                       scratch,
-      DQCopyData &                                          copy_data) const;
+      DQScratchData                                        &scratch,
+      DQCopyData                                           &copy_data) const;
 
 
     template <typename DQCopyData>
     void
-    derivative_quantities_copier(const DQCopyData &      copy_data,
+    derivative_quantities_copier(const DQCopyData       &copy_data,
                                  dealii::Vector<double> &data) const;
 
     template <typename quantity>
     void
     derivative_quantities_compute_derived_quantity(
       const dealii::DoFHandler<dim> &dof,
-      dealii::Vector<double> &       data) const;
+      dealii::Vector<double>        &data) const;
 
     unsigned int
     get_dofs_constrained_by_dirichlet_conditions(
@@ -481,14 +593,14 @@ namespace Ddhdg
     void
     assemble_system_one_cell_internal(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
-      ScratchData &                                         scratch,
-      PerTaskData &                                         task_data);
+      ScratchData                                          &scratch,
+      PerTaskData                                          &task_data);
 
     typedef void (
       NPSolver<dim, ProblemType>::*assemble_system_one_cell_pointer)(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
-      ScratchData &                                         scratch,
-      PerTaskData &                                         task_data);
+      ScratchData                                          &scratch,
+      PerTaskData                                          &task_data);
 
     assemble_system_one_cell_pointer
     get_assemble_system_one_cell_function(
@@ -498,17 +610,17 @@ namespace Ddhdg
     void
     assemble_system_one_cell(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
-      ScratchData &                                         scratch,
-      PerTaskData &                                         task_data);
+      ScratchData                                          &scratch,
+      PerTaskData                                          &task_data);
 
     template <Component cmp,
               bool      on_face      = true,
               class ScratchDataClass = ScratchData>
     inline void
-    apply_einstein_diffusion_coefficient(const ScratchDataClass &      scratch,
+    apply_einstein_diffusion_coefficient(const ScratchDataClass       &scratch,
                                          unsigned int                  q,
                                          const dealii::Tensor<1, dim> &v,
-                                         dealii::Tensor<1, dim> &      w) const;
+                                         dealii::Tensor<1, dim>       &w) const;
 
     void
     prepare_data_on_cell_quadrature_points(ScratchData &scratch);
@@ -524,7 +636,7 @@ namespace Ddhdg
     template <typename TauComputerClass>
     void
     prepare_data_on_face_quadrature_points(
-      ScratchData &                                         scratch,
+      ScratchData                                          &scratch,
       const typename DoFHandler<dim>::active_cell_iterator &cell,
       unsigned int                                          face);
 
@@ -553,7 +665,7 @@ namespace Ddhdg
     template <typename prm, Component c, DDFluxType dd_flux_type>
     inline void
     add_tc_matrix_terms_to_tt_rhs(
-      ScratchData &                                   scratch,
+      ScratchData                                    &scratch,
       Ddhdg::NPSolver<dim, ProblemType>::PerTaskData &task_data,
       unsigned int                                    face);
 
@@ -566,28 +678,28 @@ namespace Ddhdg
     template <typename prm, Component c>
     inline void
     add_tt_matrix_terms_to_tt_rhs(
-      ScratchData &                                   scratch,
+      ScratchData                                    &scratch,
       Ddhdg::NPSolver<dim, ProblemType>::PerTaskData &task_data,
       unsigned int                                    face);
 
     template <typename prm, Component c>
     inline void
-    apply_dbc_on_face(ScratchData &                          scratch,
-                      PerTaskData &                          task_data,
+    apply_dbc_on_face(ScratchData                           &scratch,
+                      PerTaskData                           &task_data,
                       const DirichletBoundaryCondition<dim> &dbc,
                       unsigned int                           face);
 
     template <Component c>
     inline void
-    apply_nbc_on_face(ScratchData &                        scratch,
-                      PerTaskData &                        task_data,
+    apply_nbc_on_face(ScratchData                         &scratch,
+                      PerTaskData                         &task_data,
                       const NeumannBoundaryCondition<dim> &nbc,
                       unsigned int                         face);
 
     template <typename prm, Component c>
     inline void
-    assemble_flux_conditions(ScratchData &      scratch,
-                             PerTaskData &      task_data,
+    assemble_flux_conditions(ScratchData       &scratch,
+                             PerTaskData       &task_data,
                              bool               has_dirichlet_conditions,
                              bool               has_neumann_conditions,
                              types::boundary_id face_boundary_id,
@@ -640,7 +752,7 @@ namespace Ddhdg
     compute_local_charge_neutrality_on_a_point(
       const std::vector<double> &evaluated_doping,
       const std::vector<double> &evaluated_temperature,
-      std::vector<double> &      evaluated_potentials);
+      std::vector<double>       &evaluated_potentials);
 
     void
     compute_local_charge_neutrality_on_cells();
@@ -654,7 +766,7 @@ namespace Ddhdg
 
     template <typename CTScratchData>
     inline void
-    copy_trace_assemble_rhs(CTScratchData &         scratch,
+    copy_trace_assemble_rhs(CTScratchData          &scratch,
                             unsigned int            face_number,
                             TraceProjectionStrategy strategy,
                             bool                    regular_face) const;
@@ -664,22 +776,22 @@ namespace Ddhdg
               typename CTScratchData,
               typename CTCopyData>
     void
-    copy_trace_face_worker(const IteratorType1 &   cell1,
+    copy_trace_face_worker(const IteratorType1    &cell1,
                            unsigned int            face1,
-                           const IteratorType2 &   cell2,
+                           const IteratorType2    &cell2,
                            unsigned int            face2,
-                           CTScratchData &         scratch,
-                           CTCopyData &            copy_data,
+                           CTScratchData          &scratch,
+                           CTCopyData             &copy_data,
                            TraceProjectionStrategy strategy) const;
 
     template <typename IteratorType,
               typename CTScratchData,
               typename CTCopyData>
     void
-    copy_trace_boundary_worker(const IteratorType &    cell,
+    copy_trace_boundary_worker(const IteratorType     &cell,
                                unsigned int            face,
-                               CTScratchData &         scratch,
-                               CTCopyData &            copy_data,
+                               CTScratchData          &scratch,
+                               CTCopyData             &copy_data,
                                TraceProjectionStrategy strategy) const;
 
     template <typename CTCopyData>
@@ -692,8 +804,8 @@ namespace Ddhdg
               TraceProjectionStrategy strategy>
     void
     copy_trace_cell_worker(const IteratorType &cell,
-                           CTScratchData &     scratch,
-                           CTCopyData &        copy_data);
+                           CTScratchData      &scratch,
+                           CTCopyData         &copy_data);
 
     std::unique_ptr<Triangulation<dim>>       triangulation;
     const std::shared_ptr<NPSolverParameters> parameters;
@@ -821,12 +933,12 @@ namespace Ddhdg
 
     static std::vector<unsigned int>
     check_dofs_on_enabled_components(
-      const FiniteElement<dim> & fe_cell,
+      const FiniteElement<dim>  &fe_cell,
       const std::set<Component> &enabled_components);
 
     static std::vector<std::vector<unsigned int>>
     check_dofs_on_faces_for_cells(
-      const FiniteElement<dim> &       fe_cell,
+      const FiniteElement<dim>        &fe_cell,
       const std::vector<unsigned int> &enabled_component_indices);
 
     static std::vector<std::vector<unsigned int>>
@@ -837,17 +949,17 @@ namespace Ddhdg
       const FiniteElement<dim> &fe_trace_restricted,
       const FiniteElement<dim> &fe_trace,
       const FiniteElement<dim> &fe_cell,
-      const QGauss<dim> &       quadrature_formula,
-      const QGauss<dim - 1> &   face_quadrature_formula,
+      const QGauss<dim>        &quadrature_formula,
+      const QGauss<dim - 1>    &face_quadrature_formula,
       UpdateFlags               cell_flags,
       UpdateFlags               cell_face_flags,
       UpdateFlags               trace_flags,
       UpdateFlags               trace_restricted_flags,
       const typename Permittivity::PermittivityComputer &permittivity,
-      const typename NMobility::MobilityComputer &       n_mobility,
-      const typename PMobility::MobilityComputer &       p_mobility,
-      std::unique_ptr<TauComputer> &&                    tau_computer,
-      const std::set<Component> &                        enabled_components,
+      const typename NMobility::MobilityComputer        &n_mobility,
+      const typename PMobility::MobilityComputer        &p_mobility,
+      std::unique_ptr<TauComputer>                     &&tau_computer,
+      const std::set<Component>                         &enabled_components,
       const std::map<Component, const dealii::FiniteElement<dim> &> &fe_map);
 
     ScratchData(const ScratchData &sd);
@@ -857,10 +969,10 @@ namespace Ddhdg
   template <Component cmp, bool on_face, class ScratchDataClass>
   void
   NPSolver<dim, ProblemType>::apply_einstein_diffusion_coefficient(
-    const ScratchDataClass &      scratch,
+    const ScratchDataClass       &scratch,
     const unsigned int            q,
     const dealii::Tensor<1, dim> &v,
-    dealii::Tensor<1, dim> &      w) const
+    dealii::Tensor<1, dim>       &w) const
   {
     if constexpr (on_face)
       {

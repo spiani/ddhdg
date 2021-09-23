@@ -118,7 +118,21 @@ namespace Ddhdg
     estimate_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c,
+      dealii::VectorTools::NormType                norm,
+      const dealii::Quadrature<dim>               &q) const = 0;
+
+    virtual double
+    estimate_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
       dealii::VectorTools::NormType                norm) const = 0;
+
+    virtual double
+    estimate_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d,
+      dealii::VectorTools::NormType                norm,
+      const dealii::Quadrature<dim>               &q) const = 0;
 
     virtual double
     estimate_error(
@@ -130,12 +144,31 @@ namespace Ddhdg
     estimate_error_on_trace(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c,
+      dealii::VectorTools::NormType                norm,
+      const dealii::Quadrature<dim - 1> &face_quadrature_formula) const = 0;
+
+    virtual double
+    estimate_error_on_trace(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
       dealii::VectorTools::NormType                norm) const = 0;
 
     virtual double
     estimate_l2_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      const dealii::Quadrature<dim>               &q) const = 0;
+
+    virtual double
+    estimate_l2_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const = 0;
+
+    virtual double
+    estimate_l2_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d,
+      const dealii::Quadrature<dim>               &q) const = 0;
 
     virtual double
     estimate_l2_error(
@@ -145,7 +178,19 @@ namespace Ddhdg
     virtual double
     estimate_l2_error_on_trace(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      const dealii::Quadrature<dim - 1> &face_quadrature_formula) const = 0;
+
+    virtual double
+    estimate_l2_error_on_trace(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Component                                    c) const = 0;
+
+    virtual double
+    estimate_h1_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      const dealii::Quadrature<dim>               &q) const = 0;
 
     virtual double
     estimate_h1_error(
@@ -155,7 +200,19 @@ namespace Ddhdg
     virtual double
     estimate_h1_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d,
+      const dealii::Quadrature<dim>               &q) const = 0;
+
+    virtual double
+    estimate_h1_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Displacement                                 d) const = 0;
+
+    virtual double
+    estimate_linfty_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      const dealii::Quadrature<dim>               &q) const = 0;
 
     virtual double
     estimate_linfty_error(
@@ -165,7 +222,19 @@ namespace Ddhdg
     virtual double
     estimate_linfty_error(
       std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Displacement                                 d,
+      const dealii::Quadrature<dim>               &q) const = 0;
+
+    virtual double
+    estimate_linfty_error(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
       Displacement                                 d) const = 0;
+
+    virtual double
+    estimate_linfty_error_on_trace(
+      std::shared_ptr<const dealii::Function<dim>> expected_solution,
+      Component                                    c,
+      const dealii::Quadrature<dim - 1> &face_quadrature_formula) const = 0;
 
     virtual double
     estimate_linfty_error_on_trace(
@@ -220,7 +289,7 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Function<dim>>    expected_p_solution,
       unsigned int                                    n_cycles,
       unsigned int                                    initial_refinements,
-      std::ostream &                                  out) = 0;
+      std::ostream                                   &out) = 0;
 
     virtual void
     print_convergence_table(
@@ -233,7 +302,7 @@ namespace Ddhdg
       std::shared_ptr<const dealii::Function<dim>>    initial_p_function,
       unsigned int                                    n_cycles,
       unsigned int                                    initial_refinements,
-      std::ostream &                                  out) = 0;
+      std::ostream                                   &out) = 0;
 
     virtual IteratorRange<typename dealii::Triangulation<dim>::cell_iterator>
     get_cell_iterator() const = 0;
