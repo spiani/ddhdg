@@ -79,7 +79,7 @@ namespace Ddhdg
   {
   public:
     FixedTauComputer(const std::map<Component, double> &tau_vals,
-                     const Adimensionalizer &           adimensionalizer);
+                     const Adimensionalizer            &adimensionalizer);
 
     FixedTauComputer(const FixedTauComputer &fixed_tau_computer) = default;
 
@@ -95,7 +95,7 @@ namespace Ddhdg
       const std::vector<dealii::Point<dim>> quadrature_points,
       const typename dealii::DoFHandler<dim, dim>::cell_iterator &cell,
       unsigned int                                                face,
-      std::vector<double> &                                       tau) const
+      std::vector<double>                                        &tau) const
     {
       Assert(c == Component::V || c == Component::n || c == Component::p,
              InvalidComponent());
@@ -121,7 +121,7 @@ namespace Ddhdg
       const typename dealii::DoFHandler<dim, dim>::cell_iterator &cell,
       unsigned int                                                face,
       Component                                                   c,
-      std::vector<double> &                                       tau) const;
+      std::vector<double>                                        &tau) const;
 
     const double V_tau;
     const double n_tau;
@@ -142,7 +142,7 @@ namespace Ddhdg
     CellFaceTauComputer(std::shared_ptr<cell_face_tau_map> V_tau,
                         std::shared_ptr<cell_face_tau_map> n_tau,
                         std::shared_ptr<cell_face_tau_map> p_tau,
-                        const Adimensionalizer &           adimensionalizer);
+                        const Adimensionalizer            &adimensionalizer);
 
     CellFaceTauComputer(const CellFaceTauComputer &fixed_tau_computer) =
       default;
@@ -159,7 +159,7 @@ namespace Ddhdg
       const std::vector<dealii::Point<dim>> quadrature_points,
       const typename dealii::DoFHandler<dim, dim>::cell_iterator &cell,
       unsigned int                                                face,
-      std::vector<double> &                                       tau)
+      std::vector<double>                                        &tau)
     {
       Assert(c == Component::V || c == Component::n || c == Component::p,
              InvalidComponent());
@@ -232,7 +232,7 @@ namespace Ddhdg
       const typename dealii::DoFHandler<dim, dim>::cell_iterator &cell,
       unsigned int                                                face,
       Component                                                   c,
-      std::vector<double> &                                       tau);
+      std::vector<double>                                        &tau);
 
   private:
     std::shared_ptr<cell_face_tau_map> V_tau;

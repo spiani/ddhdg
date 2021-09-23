@@ -28,22 +28,22 @@ namespace Ddhdg
 
     virtual void
     compute_multiple_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       bool                                   clear_vector,
-      std::vector<double> &                  r);
+      std::vector<double>                   &r);
 
     virtual void
     compute_multiple_derivatives_of_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
-      std::vector<double> &                  r);
+      std::vector<double>                   &r);
 
     virtual std::unique_ptr<RecombinationTerm<dim>>
     copy() const = 0;
@@ -101,22 +101,22 @@ namespace Ddhdg
 
     void
     compute_multiple_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     void
     compute_multiple_derivatives_of_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     std::unique_ptr<RecombinationTerm<dim>>
     copy() const override
@@ -167,22 +167,22 @@ namespace Ddhdg
 
     void
     compute_multiple_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     void
     compute_multiple_derivatives_of_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     std::unique_ptr<RecombinationTerm<dim>>
     copy() const override
@@ -243,22 +243,22 @@ namespace Ddhdg
 
     void
     compute_multiple_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     void
     compute_multiple_derivatives_of_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     std::unique_ptr<RecombinationTerm<dim>>
     copy() const override
@@ -318,22 +318,22 @@ namespace Ddhdg
 
     void
     compute_multiple_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     void
     compute_multiple_derivatives_of_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     std::unique_ptr<RecombinationTerm<dim>>
     copy() const override
@@ -378,22 +378,22 @@ namespace Ddhdg
 
     void
     compute_multiple_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     void
     compute_multiple_derivatives_of_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     std::unique_ptr<RecombinationTerm<dim>>
     copy() const override
@@ -445,22 +445,22 @@ namespace Ddhdg
 
     void
     compute_multiple_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     void
     compute_multiple_derivatives_of_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       double                                 rescaling_factor,
       Component                              c,
       bool                                   clear_vector,
-      std::vector<double> &                  r) override;
+      std::vector<double>                   &r) override;
 
     std::unique_ptr<RecombinationTerm<dim>>
     copy() const override

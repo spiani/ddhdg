@@ -10,12 +10,12 @@ namespace Ddhdg
   template <int dim>
   void
   RecombinationTerm<dim>::compute_multiple_recombination_terms(
-    const std::vector<double> &            n,
-    const std::vector<double> &            p,
+    const std::vector<double>             &n,
+    const std::vector<double>             &p,
     const std::vector<dealii::Point<dim>> &P,
     const double                           rescaling_factor,
     bool                                   clear_vector,
-    std::vector<double> &                  r)
+    std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -39,13 +39,13 @@ namespace Ddhdg
   template <int dim>
   void
   RecombinationTerm<dim>::compute_multiple_derivatives_of_recombination_terms(
-    const std::vector<double> &            n,
-    const std::vector<double> &            p,
+    const std::vector<double>             &n,
+    const std::vector<double>             &p,
     const std::vector<dealii::Point<dim>> &P,
     const double                           rescaling_factor,
     const Component                        c,
     bool                                   clear_vector,
-    std::vector<double> &                  r)
+    std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -166,12 +166,12 @@ namespace Ddhdg
   template <int dim>
   void
   LinearRecombinationTerm<dim>::compute_multiple_recombination_terms(
-    const std::vector<double> &            n,
-    const std::vector<double> &            p,
+    const std::vector<double>             &n,
+    const std::vector<double>             &p,
     const std::vector<dealii::Point<dim>> &P,
     const double                           rescaling_factor,
     bool                                   clear_vector,
-    std::vector<double> &                  r)
+    std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -205,13 +205,13 @@ namespace Ddhdg
   void
   LinearRecombinationTerm<dim>::
     compute_multiple_derivatives_of_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       const double                           rescaling_factor,
       const Component                        c,
       bool                                   clear_vector,
-      std::vector<double> &                  r)
+      std::vector<double>                   &r)
   {
     (void)n;
     (void)p;
@@ -337,12 +337,12 @@ namespace Ddhdg
   template <int dim>
   void
   SuperimposedRecombinationTerm<dim>::compute_multiple_recombination_terms(
-    const std::vector<double> &            n,
-    const std::vector<double> &            p,
+    const std::vector<double>             &n,
+    const std::vector<double>             &p,
     const std::vector<dealii::Point<dim>> &P,
     const double                           rescaling_factor,
     bool                                   clear_vector,
-    std::vector<double> &                  r)
+    std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -368,13 +368,13 @@ namespace Ddhdg
   void
   SuperimposedRecombinationTerm<dim>::
     compute_multiple_derivatives_of_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       const double                           rescaling_factor,
       const Component                        c,
       bool                                   clear_vector,
-      std::vector<double> &                  r)
+      std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -484,12 +484,12 @@ namespace Ddhdg
   template <int dim>
   void
   ShockleyReadHallFixedTemperature<dim>::compute_multiple_recombination_terms(
-    const std::vector<double> &            n,
-    const std::vector<double> &            p,
+    const std::vector<double>             &n,
+    const std::vector<double>             &p,
     const std::vector<dealii::Point<dim>> &P,
     const double                           rescaling_factor,
     bool                                   clear_vector,
-    std::vector<double> &                  r)
+    std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -522,13 +522,13 @@ namespace Ddhdg
   void
   ShockleyReadHallFixedTemperature<dim>::
     compute_multiple_derivatives_of_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       const double                           rescaling_factor,
       const Component                        c,
       bool                                   clear_vector,
-      std::vector<double> &                  r)
+      std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -657,12 +657,12 @@ namespace Ddhdg
   template <int dim>
   void
   AugerFixedTemperature<dim>::compute_multiple_recombination_terms(
-    const std::vector<double> &            n,
-    const std::vector<double> &            p,
+    const std::vector<double>             &n,
+    const std::vector<double>             &p,
     const std::vector<dealii::Point<dim>> &P,
     const double                           rescaling_factor,
     bool                                   clear_vector,
-    std::vector<double> &                  r)
+    std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -694,13 +694,13 @@ namespace Ddhdg
   void
   AugerFixedTemperature<dim>::
     compute_multiple_derivatives_of_recombination_terms(
-      const std::vector<double> &            n,
-      const std::vector<double> &            p,
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
       const std::vector<dealii::Point<dim>> &P,
       const double                           rescaling_factor,
       const Component                        c,
       bool                                   clear_vector,
-      std::vector<double> &                  r)
+      std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -828,12 +828,12 @@ namespace Ddhdg
   template <int dim>
   void
   ShockleyReadHall<dim>::compute_multiple_recombination_terms(
-    const std::vector<double> &            n,
-    const std::vector<double> &            p,
+    const std::vector<double>             &n,
+    const std::vector<double>             &p,
     const std::vector<dealii::Point<dim>> &P,
     const double                           rescaling_factor,
     bool                                   clear_vector,
-    std::vector<double> &                  r)
+    std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -874,13 +874,13 @@ namespace Ddhdg
   template <int dim>
   void
   ShockleyReadHall<dim>::compute_multiple_derivatives_of_recombination_terms(
-    const std::vector<double> &            n,
-    const std::vector<double> &            p,
+    const std::vector<double>             &n,
+    const std::vector<double>             &p,
     const std::vector<dealii::Point<dim>> &P,
     const double                           rescaling_factor,
     const Component                        c,
     bool                                   clear_vector,
-    std::vector<double> &                  r)
+    std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -1017,12 +1017,12 @@ namespace Ddhdg
   template <int dim>
   void
   Auger<dim>::compute_multiple_recombination_terms(
-    const std::vector<double> &            n,
-    const std::vector<double> &            p,
+    const std::vector<double>             &n,
+    const std::vector<double>             &p,
     const std::vector<dealii::Point<dim>> &P,
     const double                           rescaling_factor,
     bool                                   clear_vector,
-    std::vector<double> &                  r)
+    std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 
@@ -1061,13 +1061,13 @@ namespace Ddhdg
   template <int dim>
   void
   Auger<dim>::compute_multiple_derivatives_of_recombination_terms(
-    const std::vector<double> &            n,
-    const std::vector<double> &            p,
+    const std::vector<double>             &n,
+    const std::vector<double>             &p,
     const std::vector<dealii::Point<dim>> &P,
     const double                           rescaling_factor,
     const Component                        c,
     bool                                   clear_vector,
-    std::vector<double> &                  r)
+    std::vector<double>                   &r)
   {
     const std::size_t n_of_points = P.size();
 

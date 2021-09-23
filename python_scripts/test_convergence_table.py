@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from parameter_file import *
 from run_ddhdg import run_ddhdg
 
 V_FUNCTION = '-2 * log(x)'

@@ -62,7 +62,7 @@ namespace Ddhdg
     BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", severity_level)
 
     inline void
-    log_formatter(const boost::log::record_view & view,
+    log_formatter(const boost::log::record_view  &view,
                   boost::log::formatting_ostream &os)
     {
       const auto level_ref =
@@ -226,7 +226,7 @@ namespace Ddhdg
 
     template <typename Element>
     inline void
-    write_log(const std::string &  log_message,
+    write_log(const std::string   &log_message,
               const Element        n,
               const severity_level level)
     {
@@ -301,7 +301,7 @@ namespace Ddhdg
 
     template <typename Element1, typename Element2>
     inline void
-    write_log(const std::string &  log_message,
+    write_log(const std::string   &log_message,
               const Element1       n1,
               const Element2       n2,
               const severity_level level)

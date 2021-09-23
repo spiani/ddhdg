@@ -66,7 +66,7 @@ namespace Ddhdg
     inline void
     mu_operator_on_cell(const unsigned int,
                         const dealii::Tensor<1, dim> &v,
-                        dealii::Tensor<1, dim> &      w) const
+                        dealii::Tensor<1, dim>       &w) const
     {
       for (unsigned int i = 0; i < dim; i++)
         w[i] = v[i] * this->rescaled_mu;
@@ -75,7 +75,7 @@ namespace Ddhdg
     inline void
     mu_operator_on_face(const unsigned int,
                         const dealii::Tensor<1, dim> &v,
-                        dealii::Tensor<1, dim> &      w) const
+                        dealii::Tensor<1, dim>       &w) const
     {
       for (unsigned int i = 0; i < dim; i++)
         w[i] = v[i] * this->rescaled_mu;

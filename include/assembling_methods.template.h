@@ -225,14 +225,14 @@ namespace Ddhdg
 
     if (this->parameters->phi_linearize)
       {
-        const auto & V_values = scratch.previous_c_cell.at(Component::V);
+        const auto  &V_values = scratch.previous_c_cell.at(Component::V);
         const double V_rescaling_factor =
           this->adimensionalizer
             ->template get_component_rescaling_factor<Component::V>();
 
         if (this->is_enabled(Component::n))
           {
-            auto &      phi_n    = scratch.phi.at(Component::n);
+            auto       &phi_n    = scratch.phi.at(Component::n);
             const auto &n_values = scratch.previous_c_cell.at(Component::n);
             double      n_rescaling_factor =
               this->adimensionalizer
@@ -246,7 +246,7 @@ namespace Ddhdg
           }
         if (this->is_enabled(Component::p))
           {
-            auto &      phi_p    = scratch.phi.at(Component::p);
+            auto       &phi_p    = scratch.phi.at(Component::p);
             const auto &p_values = scratch.previous_c_cell.at(Component::p);
             double      p_rescaling_factor =
               this->adimensionalizer
@@ -762,7 +762,7 @@ namespace Ddhdg
   template <typename TauComputerClass>
   void
   NPSolver<dim, ProblemType>::prepare_data_on_face_quadrature_points(
-    Ddhdg::NPSolver<dim, ProblemType>::ScratchData &      scratch,
+    Ddhdg::NPSolver<dim, ProblemType>::ScratchData       &scratch,
     const typename DoFHandler<dim>::active_cell_iterator &cell,
     const unsigned int                                    face)
   {
@@ -1592,7 +1592,7 @@ namespace Ddhdg
   NPSolver<dim, ProblemType>::apply_dbc_on_face(
     Ddhdg::NPSolver<dim, ProblemType>::ScratchData &scratch,
     Ddhdg::NPSolver<dim, ProblemType>::PerTaskData &task_data,
-    const Ddhdg::DirichletBoundaryCondition<dim> &  dbc,
+    const Ddhdg::DirichletBoundaryCondition<dim>   &dbc,
     unsigned int                                    face)
   {
     if constexpr (c != Component::V && c != Component::n && c != Component::p)
@@ -1695,7 +1695,7 @@ namespace Ddhdg
   NPSolver<dim, ProblemType>::apply_nbc_on_face(
     Ddhdg::NPSolver<dim, ProblemType>::ScratchData &scratch,
     Ddhdg::NPSolver<dim, ProblemType>::PerTaskData &task_data,
-    const Ddhdg::NeumannBoundaryCondition<dim> &    nbc,
+    const Ddhdg::NeumannBoundaryCondition<dim>     &nbc,
     unsigned int                                    face)
   {
     if constexpr (c != Component::V && c != Component::n && c != Component::p)
@@ -2162,8 +2162,8 @@ namespace Ddhdg
   template <typename prm, Component c>
   void
   NPSolver<dim, ProblemType>::assemble_flux_conditions(
-    ScratchData &            scratch,
-    PerTaskData &            task_data,
+    ScratchData             &scratch,
+    PerTaskData             &task_data,
     const bool               has_dirichlet_conditions,
     const bool               has_neumann_conditions,
     const types::boundary_id face_boundary_id,
@@ -2240,8 +2240,8 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::assemble_flux_conditions_wrapper(
     const Component          c,
-    ScratchData &            scratch,
-    PerTaskData &            task_data,
+    ScratchData             &scratch,
+    PerTaskData             &task_data,
     const bool               has_dirichlet_conditions,
     const bool               has_neumann_conditions,
     const types::boundary_id face_boundary_id,
@@ -2288,8 +2288,8 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::assemble_system_one_cell_internal(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
-    ScratchData &                                         scratch,
-    PerTaskData &                                         task_data)
+    ScratchData                                          &scratch,
+    PerTaskData                                          &task_data)
   {
     typename DoFHandler<dim>::active_cell_iterator loc_cell(&(*triangulation),
                                                             cell->level(),
@@ -2694,8 +2694,8 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::assemble_system_one_cell(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
-    ScratchData &                                         scratch,
-    PerTaskData &                                         task_data)
+    ScratchData                                          &scratch,
+    PerTaskData                                          &task_data)
   {
     // First of all, we want to check if any boundary condition is set for this
     // cell

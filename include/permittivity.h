@@ -42,7 +42,7 @@ namespace Ddhdg
   public:
     HomogeneousPermittivityComputer(
       const HomogeneousPermittivity<dim> &permittivity,
-      const Adimensionalizer &            adimensionalizer)
+      const Adimensionalizer             &adimensionalizer)
       : epsilon(permittivity.epsilon)
       , rescaling_factor(adimensionalizer.get_permittivity_rescaling_factor())
       , rescaled_epsilon(epsilon / rescaling_factor)
@@ -67,7 +67,7 @@ namespace Ddhdg
     inline void
     epsilon_operator_on_cell(const unsigned int,
                              const dealii::Tensor<1, dim> &v,
-                             dealii::Tensor<1, dim> &      w)
+                             dealii::Tensor<1, dim>       &w)
     {
       for (unsigned int i = 0; i < dim; i++)
         w[i] = v[i] * this->rescaled_epsilon;
@@ -76,7 +76,7 @@ namespace Ddhdg
     inline void
     epsilon_operator_on_face(const unsigned int,
                              const dealii::Tensor<1, dim> &v,
-                             dealii::Tensor<1, dim> &      w)
+                             dealii::Tensor<1, dim>       &w)
     {
       for (unsigned int i = 0; i < dim; i++)
         w[i] = v[i] * this->rescaled_epsilon;

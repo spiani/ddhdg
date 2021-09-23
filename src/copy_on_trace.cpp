@@ -40,7 +40,7 @@ namespace Ddhdg
 
       static std::map<Component, std::vector<std::vector<unsigned int>>>
       check_dofs_on_faces(
-        const FiniteElement<dim> & fe,
+        const FiniteElement<dim>  &fe,
         const std::set<Component> &components = all_primary_components());
 
       static std::map<Component, unsigned int>
@@ -62,20 +62,20 @@ namespace Ddhdg
       CTScratchData(
         const dealii::FiniteElement<dim> &fe_cell,
         const dealii::FiniteElement<dim> &fe_trace,
-        const std::set<Component> &       active_components,
+        const std::set<Component>        &active_components,
         const std::map<Component, dealii::FEValuesExtractors::Scalar>
           &trace_extractors,
         const std::map<Component,
                        std::pair<dealii::FEValuesExtractors::Scalar,
                                  dealii::FEValuesExtractors::Vector>>
-          &                            cell_extractors,
+                                      &cell_extractors,
         const dealii::QGauss<dim - 1> &face_quadrature_formula,
         dealii::UpdateFlags            cell_flags,
         dealii::UpdateFlags            trace_flags,
-        const Permittivity &           permittivity,
-        const NMobility &              n_mobility,
-        const PMobility &              p_mobility,
-        const TauComputerClass &       tau_computer);
+        const Permittivity            &permittivity,
+        const NMobility               &n_mobility,
+        const PMobility               &p_mobility,
+        const TauComputerClass        &tau_computer);
 
       CTScratchData(const CTScratchData<dim, ProblemType, TauComputerClass>
                       &ct_scratch_data);
@@ -95,29 +95,29 @@ namespace Ddhdg
       template <class CellIteratorType>
       inline void
       copy_data_for_cell_regular(
-        const CellIteratorType &      cell,
+        const CellIteratorType       &cell,
         unsigned int                  face,
-        const ProblemType &           problem,
-        const Adimensionalizer &      adimensionalizer,
+        const ProblemType            &problem,
+        const Adimensionalizer       &adimensionalizer,
         const dealii::Vector<double> &current_solution);
 
       template <class CellIteratorType>
       inline void
       copy_data_for_cell_local_ref(
-        const CellIteratorType &      cell,
+        const CellIteratorType       &cell,
         unsigned int                  face,
         unsigned int                  subface,
-        const ProblemType &           problem,
-        const Adimensionalizer &      adimensionalizer,
+        const ProblemType            &problem,
+        const Adimensionalizer       &adimensionalizer,
         const dealii::Vector<double> &current_solution);
 
       template <class CellIteratorType>
       inline void
-      copy_data_for_cell(const CellIteratorType &      cell,
+      copy_data_for_cell(const CellIteratorType       &cell,
                          unsigned int                  face,
                          unsigned int                  subface,
-                         const ProblemType &           problem,
-                         const Adimensionalizer &      adimensionalizer,
+                         const ProblemType            &problem,
+                         const Adimensionalizer       &adimensionalizer,
                          const dealii::Vector<double> &current_solution);
 
       inline void
@@ -173,7 +173,7 @@ namespace Ddhdg
     template <int dim, typename ProblemType, typename TauComputerClass>
     std::map<Component, std::vector<std::vector<unsigned int>>>
     CTScratchData<dim, ProblemType, TauComputerClass>::check_dofs_on_faces(
-      const FiniteElement<dim> & fe,
+      const FiniteElement<dim>  &fe,
       const std::set<Component> &components)
     {
       const unsigned int faces_per_cell = GeometryInfo<dim>::faces_per_cell;
@@ -243,20 +243,20 @@ namespace Ddhdg
     CTScratchData<dim, ProblemType, TauComputerClass>::CTScratchData(
       const dealii::FiniteElement<dim> &fe_cell,
       const dealii::FiniteElement<dim> &fe_trace,
-      const std::set<Component> &       active_components,
+      const std::set<Component>        &active_components,
       const std::map<Component, dealii::FEValuesExtractors::Scalar>
         &trace_extractors,
       const std::map<Component,
                      std::pair<dealii::FEValuesExtractors::Scalar,
                                dealii::FEValuesExtractors::Vector>>
-        &                            cell_extractors,
+                                    &cell_extractors,
       const dealii::QGauss<dim - 1> &face_quadrature_formula,
       dealii::UpdateFlags            cell_flags,
       dealii::UpdateFlags            trace_flags,
-      const Permittivity &           permittivity,
-      const NMobility &              n_mobility,
-      const PMobility &              p_mobility,
-      const TauComputerClass &       tau_computer)
+      const Permittivity            &permittivity,
+      const NMobility               &n_mobility,
+      const PMobility               &p_mobility,
+      const TauComputerClass        &tau_computer)
       : fe_face_values_cell(fe_cell, face_quadrature_formula, cell_flags)
       , fe_face_values_trace(fe_trace, face_quadrature_formula, trace_flags)
       , fe_subface_values_cell(fe_cell, face_quadrature_formula, cell_flags)
@@ -346,7 +346,7 @@ namespace Ddhdg
       for (const auto &element : this->matrix)
         {
           const auto component = element.first;
-          auto &     c_matrix  = this->matrix.at(component);
+          auto      &c_matrix  = this->matrix.at(component);
           c_matrix             = 0.;
         }
     }
@@ -358,7 +358,7 @@ namespace Ddhdg
       for (const auto &element : this->rhs)
         {
           const auto component = element.first;
-          auto &     c_rhs     = this->rhs.at(component);
+          auto      &c_rhs     = this->rhs.at(component);
           c_rhs                = 0.;
         }
     }
@@ -380,8 +380,8 @@ namespace Ddhdg
           const auto &dofs_per_face_indices =
             this->fe_trace_support_on_face.at(cmp)[face_number];
           const auto c_extractor = this->trace_extractors.at(cmp);
-          auto &     tr_cmp      = this->tr_c.at(cmp);
-          auto &     c_matrix    = this->matrix.at(cmp);
+          auto      &tr_cmp      = this->tr_c.at(cmp);
+          auto      &c_matrix    = this->matrix.at(cmp);
           for (unsigned int q = 0; q < q_points; q++)
             {
               const double JxW = this->fe_face_values_trace.JxW(q);
@@ -402,10 +402,10 @@ namespace Ddhdg
     template <class CellIteratorType>
     void
     CTScratchData<dim, ProblemType, TauComputerClass>::
-      copy_data_for_cell_regular(const CellIteratorType &      cell,
+      copy_data_for_cell_regular(const CellIteratorType       &cell,
                                  unsigned int                  face,
-                                 const ProblemType &           problem,
-                                 const Adimensionalizer &      adimensionalizer,
+                                 const ProblemType            &problem,
+                                 const Adimensionalizer       &adimensionalizer,
                                  const dealii::Vector<double> &current_solution)
     {
       this->fe_face_values_cell.reinit(cell, face);
@@ -479,11 +479,11 @@ namespace Ddhdg
     void
     CTScratchData<dim, ProblemType, TauComputerClass>::
       copy_data_for_cell_local_ref(
-        const CellIteratorType &      cell,
+        const CellIteratorType       &cell,
         unsigned int                  face,
         unsigned int                  subface,
-        const ProblemType &           problem,
-        const Adimensionalizer &      adimensionalizer,
+        const ProblemType            &problem,
+        const Adimensionalizer       &adimensionalizer,
         const dealii::Vector<double> &current_solution)
     {
       this->fe_subface_values_cell.reinit(cell, face, subface);
@@ -553,11 +553,11 @@ namespace Ddhdg
     template <class CellIteratorType>
     void
     CTScratchData<dim, ProblemType, TauComputerClass>::copy_data_for_cell(
-      const CellIteratorType &      cell,
+      const CellIteratorType       &cell,
       unsigned int                  face,
       unsigned int                  subface,
-      const ProblemType &           problem,
-      const Adimensionalizer &      adimensionalizer,
+      const ProblemType            &problem,
+      const Adimensionalizer       &adimensionalizer,
       const dealii::Vector<double> &current_solution)
     {
       if (subface == dealii::numbers::invalid_unsigned_int)
@@ -600,7 +600,7 @@ namespace Ddhdg
     void
     CTScratchData<dim, ProblemType, TauComputerClass>::copy_solution(
       const unsigned int face_number,
-      CTCopyData<dim> &  copy_data)
+      CTCopyData<dim>   &copy_data)
     {
       Assert(copy_data.examined_faces[face_number] == false,
              ExcInternalError());
@@ -610,7 +610,7 @@ namespace Ddhdg
         {
           const auto &dofs_indices =
             this->fe_trace_support_on_face.at(cmp)[face_number];
-          const auto &       c_rhs     = this->rhs.at(cmp);
+          const auto        &c_rhs     = this->rhs.at(cmp);
           const unsigned int n_of_dofs = dofs_indices.size();
           for (unsigned int j = 0; j < n_of_dofs; j++)
             {
@@ -632,7 +632,7 @@ namespace Ddhdg
             bool                    regular_face>
   void
   NPSolver<dim, ProblemType>::copy_trace_assemble_rhs(
-    CTScratchData &    scratch,
+    CTScratchData     &scratch,
     const unsigned int face_number) const
   {
     if (strategy != TraceProjectionStrategy::l2_average &&
@@ -653,9 +653,9 @@ namespace Ddhdg
       {
         const auto &V     = scratch.c.at(Component::V);
         const auto &E     = scratch.d.at(Component::V);
-        auto &      tr_V  = scratch.tr_c.at(Component::V);
+        auto       &tr_V  = scratch.tr_c.at(Component::V);
         const auto &tau   = scratch.tau.at(Component::V);
-        auto &      V_rhs = scratch.rhs.at(Component::V);
+        auto       &V_rhs = scratch.rhs.at(Component::V);
 
         dealii::Tensor<1, dim> epsilon_times_E;
         double                 epsilon_times_E_times_normal;
@@ -710,9 +710,9 @@ namespace Ddhdg
         const auto &E     = scratch.d.at(Component::V);
         const auto &n     = scratch.c.at(Component::n);
         const auto &Wn    = scratch.d.at(Component::n);
-        auto &      tr_n  = scratch.tr_c.at(Component::n);
+        auto       &tr_n  = scratch.tr_c.at(Component::n);
         const auto &tau   = scratch.tau.at(Component::n);
-        auto &      n_rhs = scratch.rhs.at(Component::n);
+        auto       &n_rhs = scratch.rhs.at(Component::n);
 
         double n_rhs_term = 0.;
 
@@ -776,9 +776,9 @@ namespace Ddhdg
         const auto &E     = scratch.d.at(Component::V);
         const auto &p     = scratch.c.at(Component::p);
         const auto &Wp    = scratch.d.at(Component::p);
-        auto &      tr_p  = scratch.tr_c.at(Component::p);
+        auto       &tr_p  = scratch.tr_c.at(Component::p);
         const auto &tau   = scratch.tau.at(Component::p);
-        auto &      p_rhs = scratch.rhs.at(Component::p);
+        auto       &p_rhs = scratch.rhs.at(Component::p);
 
         double p_rhs_term = 0.;
 
@@ -842,7 +842,7 @@ namespace Ddhdg
   template <typename CTScratchData>
   void
   NPSolver<dim, ProblemType>::copy_trace_assemble_rhs(
-    CTScratchData &               scratch,
+    CTScratchData                &scratch,
     const unsigned int            face_number,
     const TraceProjectionStrategy strategy,
     const bool                    regular_face) const
@@ -883,12 +883,12 @@ namespace Ddhdg
             typename CTCopyData>
   void
   NPSolver<dim, ProblemType>::copy_trace_face_worker(
-    const IteratorType1 &         cell1,
+    const IteratorType1          &cell1,
     const unsigned int            face1,
-    const IteratorType2 &         cell2,
+    const IteratorType2          &cell2,
     const unsigned int            face2,
-    CTScratchData &               scratch,
-    CTCopyData &                  copy_data,
+    CTScratchData                &scratch,
+    CTCopyData                   &copy_data,
     const TraceProjectionStrategy strategy) const
   {
     // Initialize the fe_face_values for the trace; it will be
@@ -950,10 +950,10 @@ namespace Ddhdg
   template <typename IteratorType, typename CTScratchData, typename CTCopyData>
   void
   NPSolver<dim, ProblemType>::copy_trace_boundary_worker(
-    const IteratorType &          cell,
+    const IteratorType           &cell,
     const unsigned int            face,
-    CTScratchData &               scratch,
-    CTCopyData &                  copy_data,
+    CTScratchData                &scratch,
+    CTCopyData                   &copy_data,
     const TraceProjectionStrategy strategy) const
   {
     typename DoFHandler<dim>::active_cell_iterator trace_cell(
@@ -1010,7 +1010,7 @@ namespace Ddhdg
 
             for (const Component cmp : scratch.active_components)
               {
-                auto & c_rhs = scratch.rhs.at(cmp);
+                auto  &c_rhs = scratch.rhs.at(cmp);
                 double bc_value;
 
                 unsigned int dofs_per_face =
@@ -1126,7 +1126,7 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::copy_trace_cell_worker(const IteratorType &cell,
                                                      CTScratchData &scratch,
-                                                     CTCopyData &   copy_data)
+                                                     CTCopyData    &copy_data)
   {
     const unsigned int faces_per_cell =
       dealii::GeometryInfo<dim>::faces_per_cell;
@@ -1279,7 +1279,7 @@ namespace Ddhdg
     typedef void (NPSolver<dim, ProblemType>::*copy_trace_worker_pointer_type)(
       const ActiveCellIteratorType &cell,
       CopyTraceInternalTools::CTScratchData<dim, ProblemType, TauComputerClass>
-        &                                      scratch,
+                                              &scratch,
       CopyTraceInternalTools::CTCopyData<dim> &task_data);
 
     copy_trace_worker_pointer_type copy_trace_worker_pointer;

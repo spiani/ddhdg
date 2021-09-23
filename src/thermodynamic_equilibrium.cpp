@@ -11,7 +11,7 @@ namespace Ddhdg
   NPSolver<dim, Problem>::compute_local_charge_neutrality_on_a_point(
     const std::vector<double> &evaluated_doping,
     const std::vector<double> &evaluated_temperature,
-    std::vector<double> &      evaluated_potentials)
+    std::vector<double>       &evaluated_potentials)
   {
     AssertDimension(evaluated_doping.size(), evaluated_temperature.size());
     AssertDimension(evaluated_doping.size(), evaluated_potentials.size());
@@ -61,8 +61,8 @@ namespace Ddhdg
                                   update_quadrature_points | update_JxW_values);
 
     FEValues<dim>     fe_values_cell(*(this->fe_cell),
-                                 quadrature_formula,
-                                 flags_cell);
+                                     quadrature_formula,
+                                     flags_cell);
     FEFaceValues<dim> fe_face_values(*(this->fe_cell),
                                      face_quadrature_formula,
                                      flags_trace);
@@ -226,11 +226,11 @@ namespace Ddhdg
 
     const unsigned int V_index = get_component_index(Component::V);
     const UpdateFlags  flags(update_values | update_normal_vectors |
-                            update_quadrature_points | update_JxW_values);
+                             update_quadrature_points | update_JxW_values);
 
     FEFaceValues<dim>  fe_face_trace_values(*(this->fe_trace),
-                                           face_quadrature_formula,
-                                           flags);
+                                            face_quadrature_formula,
+                                            flags);
     const unsigned int n_face_q_points =
       fe_face_trace_values.get_quadrature().size();
 

@@ -26,22 +26,22 @@ namespace Ddhdg
     {
       template <bool for_displacement = false>
       static std::vector<unsigned int>
-      check_dofs_on_current_component(const FiniteElement<dim> &   fe,
+      check_dofs_on_current_component(const FiniteElement<dim>    &fe,
                                       unsigned int                 c_index,
                                       const dealii::ComponentMask &c_mask);
 
       static std::vector<std::vector<unsigned int>>
       check_displacement_dofs_on_face(
-        const FiniteElement<dim> &       fe,
+        const FiniteElement<dim>        &fe,
         const std::vector<unsigned int> &displacement_dofs_indices);
 
       PCScratchData(std::shared_ptr<const dealii::Function<dim>> c_function,
-                    const dealii::FiniteElement<dim> &           fe_cell,
+                    const dealii::FiniteElement<dim>            &fe_cell,
                     unsigned int                                 c_index,
-                    const dealii::ComponentMask &                c_mask,
-                    const FEValuesExtractors::Scalar &           c_extractor,
-                    const FEValuesExtractors::Vector &           d_extractor,
-                    const dealii::QGauss<dim> &    quadrature_formula,
+                    const dealii::ComponentMask                 &c_mask,
+                    const FEValuesExtractors::Scalar            &c_extractor,
+                    const FEValuesExtractors::Vector            &d_extractor,
+                    const dealii::QGauss<dim>     &quadrature_formula,
                     const dealii::QGauss<dim - 1> &face_quadrature_formula,
                     dealii::UpdateFlags            fe_values_flags,
                     dealii::UpdateFlags            fe_face_values_flags);
@@ -88,14 +88,14 @@ namespace Ddhdg
     template <bool for_displacement>
     std::vector<unsigned int>
     PCScratchData<dim>::check_dofs_on_current_component(
-      const FiniteElement<dim> &   fe,
+      const FiniteElement<dim>    &fe,
       const unsigned int           c_index,
       const dealii::ComponentMask &c_mask)
     {
       std::vector<unsigned int> current_component_dofs;
       for (unsigned int i = 0; i < fe.dofs_per_cell; ++i)
         {
-          const auto &       local_fe         = fe.get_sub_fe(c_mask);
+          const auto        &local_fe         = fe.get_sub_fe(c_mask);
           const unsigned int l_c_index        = (for_displacement) ? 0 : 1;
           const auto         local_block_info = fe.system_to_block_index(i);
           const unsigned int local_block      = local_block_info.first;
@@ -110,7 +110,7 @@ namespace Ddhdg
     template <int dim>
     std::vector<std::vector<unsigned int>>
     PCScratchData<dim>::check_displacement_dofs_on_face(
-      const FiniteElement<dim> &       fe,
+      const FiniteElement<dim>        &fe,
       const std::vector<unsigned int> &displacement_dofs_indices)
     {
       std::vector<std::vector<unsigned int>> component_support_on_face(
@@ -130,12 +130,12 @@ namespace Ddhdg
     template <int dim>
     PCScratchData<dim>::PCScratchData(
       const std::shared_ptr<const dealii::Function<dim>> c_function,
-      const dealii::FiniteElement<dim> &                 fe_cell,
+      const dealii::FiniteElement<dim>                  &fe_cell,
       const unsigned int                                 c_index,
-      const dealii::ComponentMask &                      c_mask,
-      const FEValuesExtractors::Scalar &                 c_extractor,
-      const FEValuesExtractors::Vector &                 d_extractor,
-      const dealii::QGauss<dim> &                        quadrature_formula,
+      const dealii::ComponentMask                       &c_mask,
+      const FEValuesExtractors::Scalar                  &c_extractor,
+      const FEValuesExtractors::Vector                  &d_extractor,
+      const dealii::QGauss<dim>                         &quadrature_formula,
       const dealii::QGauss<dim - 1> &face_quadrature_formula,
       dealii::UpdateFlags            fe_values_flags,
       dealii::UpdateFlags            fe_face_values_flags)
@@ -201,13 +201,13 @@ namespace Ddhdg
     {
       PCQuasiFermiPotentialScratchData(
         std::shared_ptr<const dealii::Function<dim>> c_function,
-        const dealii::FiniteElement<dim> &           fe_cell,
+        const dealii::FiniteElement<dim>            &fe_cell,
         unsigned int                                 c_index,
-        const dealii::ComponentMask &                c_mask,
-        const FEValuesExtractors::Scalar &           c_extractor,
-        const FEValuesExtractors::Vector &           d_extractor,
-        const dealii::QGauss<dim> &                  quadrature_formula,
-        const dealii::QGauss<dim - 1> &              face_quadrature_formula,
+        const dealii::ComponentMask                 &c_mask,
+        const FEValuesExtractors::Scalar            &c_extractor,
+        const FEValuesExtractors::Vector            &d_extractor,
+        const dealii::QGauss<dim>                   &quadrature_formula,
+        const dealii::QGauss<dim - 1>               &face_quadrature_formula,
         dealii::UpdateFlags                          fe_values_flags,
         dealii::UpdateFlags                          fe_face_values_flags);
 
@@ -233,12 +233,12 @@ namespace Ddhdg
     template <int dim>
     PCQuasiFermiPotentialScratchData<dim>::PCQuasiFermiPotentialScratchData(
       const std::shared_ptr<const dealii::Function<dim>> c_function,
-      const dealii::FiniteElement<dim> &                 fe_cell,
+      const dealii::FiniteElement<dim>                  &fe_cell,
       const unsigned int                                 c_index,
-      const dealii::ComponentMask &                      c_mask,
-      const FEValuesExtractors::Scalar &                 c_extractor,
-      const FEValuesExtractors::Vector &                 d_extractor,
-      const dealii::QGauss<dim> &                        quadrature_formula,
+      const dealii::ComponentMask                       &c_mask,
+      const FEValuesExtractors::Scalar                  &c_extractor,
+      const FEValuesExtractors::Vector                  &d_extractor,
+      const dealii::QGauss<dim>                         &quadrature_formula,
       const dealii::QGauss<dim - 1> &face_quadrature_formula,
       dealii::UpdateFlags            fe_values_flags,
       dealii::UpdateFlags            fe_face_values_flags)
@@ -281,8 +281,8 @@ namespace Ddhdg
   void
   NPSolver<dim, Problem>::project_component_one_cell(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
-    PCScratchData &                                       scratch,
-    PCCopyData &                                          copy_data) const
+    PCScratchData                                        &scratch,
+    PCCopyData                                           &copy_data) const
   {
     constexpr bool c_is_primal =
       c == Component::V || c == Component::n || c == Component::p;

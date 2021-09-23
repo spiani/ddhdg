@@ -35,11 +35,11 @@ namespace Ddhdg
 
     void
     vector_value(const dealii::Point<dim> &p,
-                 dealii::Vector<double> &  values) const override;
+                 dealii::Vector<double>   &values) const override;
 
     void
     value_list(const std::vector<dealii::Point<dim>> &p,
-               std::vector<double> &                  values,
+               std::vector<double>                   &values,
                unsigned int component = 0) const override;
 
     dealii::Tensor<1, dim>
@@ -47,12 +47,12 @@ namespace Ddhdg
              unsigned int              component = 0) const override;
 
     void
-    vector_gradient(const dealii::Point<dim> &           p,
+    vector_gradient(const dealii::Point<dim>            &p,
                     std::vector<dealii::Tensor<1, dim>> &values) const override;
 
     void
     gradient_list(const std::vector<dealii::Point<dim>> &p,
-                  std::vector<dealii::Tensor<1, dim>> &  values,
+                  std::vector<dealii::Tensor<1, dim>>   &values,
                   unsigned int component = 0) const override;
 
   private:
@@ -73,23 +73,23 @@ namespace Ddhdg
 
     void
     vector_value(const dealii::Point<dim> &p,
-                 dealii::Vector<double> &  values) const override;
+                 dealii::Vector<double>   &values) const override;
 
     void
     value_list(const std::vector<dealii::Point<dim>> &p,
-               std::vector<double> &                  values,
+               std::vector<double>                   &values,
                unsigned int component = 0) const override;
 
     dealii::Tensor<1, dim>
     gradient(const dealii::Point<dim> &p, unsigned int cmp = 0) const override;
 
     void
-    vector_gradient(const dealii::Point<dim> &           p,
+    vector_gradient(const dealii::Point<dim>            &p,
                     std::vector<dealii::Tensor<1, dim>> &values) const override;
 
     void
     gradient_list(const std::vector<dealii::Point<dim>> &p,
-                  std::vector<dealii::Tensor<1, dim>> &  values,
+                  std::vector<dealii::Tensor<1, dim>>   &values,
                   unsigned int component = 0) const override;
 
   private:
@@ -123,11 +123,11 @@ namespace Ddhdg
 
     void
     vector_value(const dealii::Point<dim> &p,
-                 dealii::Vector<double> &  values) const override;
+                 dealii::Vector<double>   &values) const override;
 
     void
     value_list(const std::vector<dealii::Point<dim>> &p,
-               std::vector<double> &                  values,
+               std::vector<double>                   &values,
                unsigned int component = 0) const override;
 
     dealii::Tensor<1, dim>
@@ -135,12 +135,12 @@ namespace Ddhdg
              unsigned int              component = 0) const override;
 
     void
-    vector_gradient(const dealii::Point<dim> &           p,
+    vector_gradient(const dealii::Point<dim>            &p,
                     std::vector<dealii::Tensor<1, dim>> &values) const override;
 
     void
     gradient_list(const std::vector<dealii::Point<dim>> &p,
-                  std::vector<dealii::Tensor<1, dim>> &  values,
+                  std::vector<dealii::Tensor<1, dim>>   &values,
                   unsigned int component = 0) const override;
 
   private:
@@ -161,11 +161,11 @@ namespace Ddhdg
 
     void
     vector_value(const dealii::Point<dim> &p,
-                 dealii::Vector<double> &  values) const override;
+                 dealii::Vector<double>   &values) const override;
 
     void
     value_list(const std::vector<dealii::Point<dim>> &p,
-               std::vector<double> &                  values,
+               std::vector<double>                   &values,
                unsigned int component = 0) const override;
 
     dealii::Tensor<1, dim>
@@ -173,12 +173,12 @@ namespace Ddhdg
              unsigned int              component = 0) const override;
 
     void
-    vector_gradient(const dealii::Point<dim> &           p,
+    vector_gradient(const dealii::Point<dim>            &p,
                     std::vector<dealii::Tensor<1, dim>> &values) const override;
 
     void
     gradient_list(const std::vector<dealii::Point<dim>> &p,
-                  std::vector<dealii::Tensor<1, dim>> &  values,
+                  std::vector<dealii::Tensor<1, dim>>   &values,
                   unsigned int component = 0) const override;
 
   private:
@@ -200,11 +200,11 @@ namespace Ddhdg
 
     void
     vector_value(const dealii::Point<dim> &p,
-                 dealii::Vector<double> &  values) const override;
+                 dealii::Vector<double>   &values) const override;
 
     void
     value_list(const std::vector<dealii::Point<dim>> &p,
-               std::vector<double> &                  values,
+               std::vector<double>                   &values,
                unsigned int component = 0) const override;
 
     dealii::Tensor<1, dim>
@@ -212,12 +212,12 @@ namespace Ddhdg
              unsigned int              component = 0) const override;
 
     void
-    vector_gradient(const dealii::Point<dim> &           p,
+    vector_gradient(const dealii::Point<dim>            &p,
                     std::vector<dealii::Tensor<1, dim>> &values) const override;
 
     void
     gradient_list(const std::vector<dealii::Point<dim>> &p,
-                  std::vector<dealii::Tensor<1, dim>> &  values,
+                  std::vector<dealii::Tensor<1, dim>>   &values,
                   unsigned int component = 0) const override;
 
   private:

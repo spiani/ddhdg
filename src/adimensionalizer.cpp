@@ -88,7 +88,7 @@ namespace Ddhdg
   void
   Adimensionalizer::redimensionalize_component(
     const std::vector<double> &source,
-    std::vector<double> &      dest) const
+    std::vector<double>       &dest) const
   {
     AssertDimension(source.size(), dest.size());
     if constexpr (c != Component::V && c != Component::n && c != Component::p)
@@ -169,7 +169,7 @@ namespace Ddhdg
   Adimensionalizer::redimensionalize_component(
     const std::vector<double> &source,
     Component                  c,
-    std::vector<double> &      dest) const
+    std::vector<double>       &dest) const
   {
     switch (c)
       {
@@ -239,7 +239,7 @@ namespace Ddhdg
   Adimensionalizer::adimensionalize_displacement(
     const std::vector<dealii::Tensor<1, dim>> &source,
     const Displacement                         d,
-    std::vector<dealii::Tensor<1, dim>> &      dest) const
+    std::vector<dealii::Tensor<1, dim>>       &dest) const
   {
     AssertDimension(source.size(), dest.size());
     if (d != Displacement::E && d != Displacement::Wn && d != Displacement::Wp)
@@ -261,7 +261,7 @@ namespace Ddhdg
   Adimensionalizer::redimensionalize_displacement(
     const std::vector<dealii::Tensor<1, dim>> &source,
     const Displacement                         d,
-    std::vector<dealii::Tensor<1, dim>> &      dest) const
+    std::vector<dealii::Tensor<1, dim>>       &dest) const
   {
     AssertDimension(source.size(), dest.size());
     if (d != Displacement::E && d != Displacement::Wn && d != Displacement::Wp)
@@ -322,8 +322,8 @@ namespace Ddhdg
   Adimensionalizer::adimensionalize_dof_vector(
     const dealii::Vector<double> &dof_vector,
     const std::vector<Component> &dof_to_component_map,
-    const std::vector<DofType> &  dof_to_dof_type,
-    dealii::Vector<double> &      rescaled_vector) const
+    const std::vector<DofType>   &dof_to_dof_type,
+    dealii::Vector<double>       &rescaled_vector) const
   {
     AssertDimension(dof_vector.size(), dof_to_component_map.size());
     AssertDimension(dof_vector.size(), dof_to_dof_type.size());
@@ -367,8 +367,8 @@ namespace Ddhdg
   Adimensionalizer::redimensionalize_dof_vector(
     const dealii::Vector<double> &dof_vector,
     const std::vector<Component> &dof_to_component_map,
-    const std::vector<DofType> &  dof_to_dof_type,
-    dealii::Vector<double> &      rescaled_vector) const
+    const std::vector<DofType>   &dof_to_dof_type,
+    dealii::Vector<double>       &rescaled_vector) const
   {
     AssertDimension(dof_vector.size(), dof_to_component_map.size());
     AssertDimension(dof_vector.size(), dof_to_dof_type.size());

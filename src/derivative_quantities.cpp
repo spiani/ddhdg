@@ -34,7 +34,7 @@ namespace Ddhdg
       template <int dim>
       static constexpr void
       generate_mu_n_input(const dealii::Tensor<1, dim> &E,
-                          dealii::Tensor<1, dim> &      mu_n_input)
+                          dealii::Tensor<1, dim>       &mu_n_input)
       {
         (void)E;
         (void)mu_n_input;
@@ -43,7 +43,7 @@ namespace Ddhdg
       template <int dim>
       static constexpr void
       generate_mu_p_input(const dealii::Tensor<1, dim> &E,
-                          dealii::Tensor<1, dim> &      mu_p_input)
+                          dealii::Tensor<1, dim>       &mu_p_input)
       {
         (void)E;
         (void)mu_p_input;
@@ -54,7 +54,7 @@ namespace Ddhdg
       generate_D_n_input(const dealii::Tensor<1, dim> &E,
                          const dealii::Tensor<1, dim> &Wn,
                          const dealii::Tensor<1, dim> &Wp,
-                         dealii::Tensor<1, dim> &      D_n_input)
+                         dealii::Tensor<1, dim>       &D_n_input)
       {
         (void)E;
         (void)Wn;
@@ -67,7 +67,7 @@ namespace Ddhdg
       generate_D_p_input(const dealii::Tensor<1, dim> &E,
                          const dealii::Tensor<1, dim> &Wn,
                          const dealii::Tensor<1, dim> &Wp,
-                         dealii::Tensor<1, dim> &      D_p_input)
+                         dealii::Tensor<1, dim>       &D_p_input)
       {
         (void)E;
         (void)Wn;
@@ -89,7 +89,7 @@ namespace Ddhdg
               dealii::Tensor<1, dim>          D_n_output,
               dealii::Tensor<1, dim>          D_p_output,
               double                          T,
-              const dealii::Point<dim> &      q,
+              const dealii::Point<dim>       &q,
               const Solver<dim, ProblemType> &solver,
               unsigned int                    dimension = 0)
       {
@@ -146,7 +146,7 @@ namespace Ddhdg
       template <int dim>
       static constexpr void
       generate_mu_n_input(const dealii::Tensor<1, dim> &E,
-                          dealii::Tensor<1, dim> &      mu_n_input)
+                          dealii::Tensor<1, dim>       &mu_n_input)
       {
         (void)E;
         (void)mu_n_input;
@@ -155,7 +155,7 @@ namespace Ddhdg
       template <int dim>
       static constexpr void
       generate_mu_p_input(const dealii::Tensor<1, dim> &E,
-                          dealii::Tensor<1, dim> &      mu_p_input)
+                          dealii::Tensor<1, dim>       &mu_p_input)
       {
         (void)E;
         (void)mu_p_input;
@@ -166,7 +166,7 @@ namespace Ddhdg
       generate_D_n_input(const dealii::Tensor<1, dim> &E,
                          const dealii::Tensor<1, dim> &Wn,
                          const dealii::Tensor<1, dim> &Wp,
-                         dealii::Tensor<1, dim> &      D_n_input)
+                         dealii::Tensor<1, dim>       &D_n_input)
       {
         (void)E;
         (void)Wn;
@@ -179,7 +179,7 @@ namespace Ddhdg
       generate_D_p_input(const dealii::Tensor<1, dim> &E,
                          const dealii::Tensor<1, dim> &Wn,
                          const dealii::Tensor<1, dim> &Wp,
-                         dealii::Tensor<1, dim> &      D_p_input)
+                         dealii::Tensor<1, dim>       &D_p_input)
       {
         (void)E;
         (void)Wn;
@@ -201,7 +201,7 @@ namespace Ddhdg
               dealii::Tensor<1, dim>          D_n_output,
               dealii::Tensor<1, dim>          D_p_output,
               double                          T,
-              const dealii::Point<dim> &      q,
+              const dealii::Point<dim>       &q,
               const Solver<dim, ProblemType> &solver,
               unsigned int                    dimension = 0)
       {
@@ -253,7 +253,7 @@ namespace Ddhdg
       template <int dim>
       static constexpr void
       generate_mu_n_input(const dealii::Tensor<1, dim> &E,
-                          dealii::Tensor<1, dim> &      mu_n_input)
+                          dealii::Tensor<1, dim>       &mu_n_input)
       {
         mu_n_input = E;
       }
@@ -261,7 +261,7 @@ namespace Ddhdg
       template <int dim>
       static constexpr void
       generate_mu_p_input(const dealii::Tensor<1, dim> &E,
-                          dealii::Tensor<1, dim> &      mu_p_input)
+                          dealii::Tensor<1, dim>       &mu_p_input)
       {
         mu_p_input = E;
       }
@@ -271,7 +271,7 @@ namespace Ddhdg
       generate_D_n_input(const dealii::Tensor<1, dim> &E,
                          const dealii::Tensor<1, dim> &Wn,
                          const dealii::Tensor<1, dim> &Wp,
-                         dealii::Tensor<1, dim> &      D_n_input)
+                         dealii::Tensor<1, dim>       &D_n_input)
       {
         (void)E;
         (void)Wp;
@@ -283,7 +283,7 @@ namespace Ddhdg
       generate_D_p_input(const dealii::Tensor<1, dim> &E,
                          const dealii::Tensor<1, dim> &Wn,
                          const dealii::Tensor<1, dim> &Wp,
-                         dealii::Tensor<1, dim> &      D_p_input)
+                         dealii::Tensor<1, dim>       &D_p_input)
       {
         (void)E;
         (void)Wn;
@@ -305,7 +305,7 @@ namespace Ddhdg
               dealii::Tensor<1, dim>          D_n_output,
               dealii::Tensor<1, dim>          D_p_output,
               double                          T,
-              const dealii::Point<dim> &      q,
+              const dealii::Point<dim>       &q,
               const Solver<dim, ProblemType> &solver,
               unsigned int                    dimension = 0)
       {
@@ -354,7 +354,7 @@ namespace Ddhdg
       template <int dim>
       static constexpr void
       generate_mu_n_input(const dealii::Tensor<1, dim> &E,
-                          dealii::Tensor<1, dim> &      mu_n_input)
+                          dealii::Tensor<1, dim>       &mu_n_input)
       {
         mu_n_input = E;
       }
@@ -362,7 +362,7 @@ namespace Ddhdg
       template <int dim>
       static constexpr void
       generate_mu_p_input(const dealii::Tensor<1, dim> &E,
-                          dealii::Tensor<1, dim> &      mu_p_input)
+                          dealii::Tensor<1, dim>       &mu_p_input)
       {
         mu_p_input = E;
       }
@@ -372,7 +372,7 @@ namespace Ddhdg
       generate_D_n_input(const dealii::Tensor<1, dim> &E,
                          const dealii::Tensor<1, dim> &Wn,
                          const dealii::Tensor<1, dim> &Wp,
-                         dealii::Tensor<1, dim> &      D_n_input)
+                         dealii::Tensor<1, dim>       &D_n_input)
       {
         (void)E;
         (void)Wn;
@@ -385,7 +385,7 @@ namespace Ddhdg
       generate_D_p_input(const dealii::Tensor<1, dim> &E,
                          const dealii::Tensor<1, dim> &Wn,
                          const dealii::Tensor<1, dim> &Wp,
-                         dealii::Tensor<1, dim> &      D_p_input)
+                         dealii::Tensor<1, dim>       &D_p_input)
       {
         (void)E;
         (void)Wn;
@@ -406,7 +406,7 @@ namespace Ddhdg
               dealii::Tensor<1, dim>          D_n_output,
               dealii::Tensor<1, dim>          D_p_output,
               double                          T,
-              const dealii::Point<dim> &      q,
+              const dealii::Point<dim>       &q,
               const Solver<dim, ProblemType> &solver,
               unsigned int                    dimension = 0)
       {
@@ -455,7 +455,7 @@ namespace Ddhdg
       template <int dim>
       static constexpr void
       generate_mu_n_input(const dealii::Tensor<1, dim> &E,
-                          dealii::Tensor<1, dim> &      mu_n_input)
+                          dealii::Tensor<1, dim>       &mu_n_input)
       {
         (void)E;
         (void)mu_n_input;
@@ -464,7 +464,7 @@ namespace Ddhdg
       template <int dim>
       static constexpr void
       generate_mu_p_input(const dealii::Tensor<1, dim> &E,
-                          dealii::Tensor<1, dim> &      mu_p_input)
+                          dealii::Tensor<1, dim>       &mu_p_input)
       {
         (void)E;
         (void)mu_p_input;
@@ -475,7 +475,7 @@ namespace Ddhdg
       generate_D_n_input(const dealii::Tensor<1, dim> &E,
                          const dealii::Tensor<1, dim> &Wn,
                          const dealii::Tensor<1, dim> &Wp,
-                         dealii::Tensor<1, dim> &      D_n_input)
+                         dealii::Tensor<1, dim>       &D_n_input)
       {
         (void)E;
         (void)Wn;
@@ -488,7 +488,7 @@ namespace Ddhdg
       generate_D_p_input(const dealii::Tensor<1, dim> &E,
                          const dealii::Tensor<1, dim> &Wn,
                          const dealii::Tensor<1, dim> &Wp,
-                         dealii::Tensor<1, dim> &      D_p_input)
+                         dealii::Tensor<1, dim>       &D_p_input)
       {
         (void)E;
         (void)Wn;
@@ -510,7 +510,7 @@ namespace Ddhdg
               dealii::Tensor<1, dim>            D_n_output,
               dealii::Tensor<1, dim>            D_p_output,
               double                            T,
-              const dealii::Point<dim> &        q,
+              const dealii::Point<dim>         &q,
               const NPSolver<dim, ProblemType> &solver,
               unsigned int                      dimension = 0)
       {
@@ -559,11 +559,11 @@ namespace Ddhdg
       DQScratchData(
         const dealii::FiniteElement<dim> &fe_quantity,
         const dealii::FiniteElement<dim> &fe_cell,
-        const dealii::QGauss<dim> &       quadrature_formula,
+        const dealii::QGauss<dim>        &quadrature_formula,
         dealii::UpdateFlags               fe_values_flags,
         dealii::UpdateFlags               fe_values_cell_flags,
         const typename Problem::PermittivityClass::PermittivityComputer
-          &                                                       permittivity,
+                                                                 &permittivity,
         const typename Problem::NMobilityClass::MobilityComputer &n_mobility,
         const typename Problem::PMobilityClass::MobilityComputer &p_mobility);
 
@@ -639,11 +639,11 @@ namespace Ddhdg
     DQScratchData<dim, quantity, Problem>::DQScratchData(
       const dealii::FiniteElement<dim> &fe_quantity,
       const dealii::FiniteElement<dim> &fe_cell,
-      const dealii::QGauss<dim> &       quadrature_formula,
+      const dealii::QGauss<dim>        &quadrature_formula,
       const dealii::UpdateFlags         fe_values_flags,
       const dealii::UpdateFlags         fe_values_cell_flags,
       const typename Problem::PermittivityClass::PermittivityComputer
-        &                                                       permittivity,
+                                                               &permittivity,
       const typename Problem::NMobilityClass::MobilityComputer &n_mobility,
       const typename Problem::PMobilityClass::MobilityComputer &p_mobility)
       : fe_values_quantity(fe_quantity, quadrature_formula, fe_values_flags)
@@ -731,8 +731,8 @@ namespace Ddhdg
   void
   NPSolver<dim, Problem>::derivative_quantities_project_on_one_cell(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
-    DQScratchData &                                       scratch,
-    DQCopyData &                                          copy_data) const
+    DQScratchData                                        &scratch,
+    DQCopyData                                           &copy_data) const
   {
     typename DoFHandler<dim>::active_cell_iterator system_cell(
       &(*(this->triangulation)),
@@ -1009,7 +1009,7 @@ namespace Ddhdg
   template <typename DQCopyData>
   void
   NPSolver<dim, Problem>::derivative_quantities_copier(
-    const DQCopyData &      copy_data,
+    const DQCopyData       &copy_data,
     dealii::Vector<double> &data) const
   {
     for (unsigned int i = 0; i < copy_data.dof_indices.size(); ++i)
@@ -1023,7 +1023,7 @@ namespace Ddhdg
   void
   NPSolver<dim, Problem>::derivative_quantities_compute_derived_quantity(
     const dealii::DoFHandler<dim> &dof,
-    dealii::Vector<double> &       data) const
+    dealii::Vector<double>        &data) const
   {
     typedef DerivativeQuantitiesInternalTools::
       DQScratchData<dim, quantity, Problem>
@@ -1084,7 +1084,7 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::compute_current(
     const dealii::DoFHandler<dim> &dof,
-    dealii::Vector<double> &       data,
+    dealii::Vector<double>        &data,
     const bool                     redimensionalize) const
   {
     switch (cmp)
@@ -1122,7 +1122,7 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::compute_qf_potential(
     const dealii::DoFHandler<dim> &dof,
-    dealii::Vector<double> &       data) const
+    dealii::Vector<double>        &data) const
   {
     switch (cmp)
       {
@@ -1150,7 +1150,7 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::compute_recombination_term(
     const dealii::DoFHandler<dim> &dof,
-    dealii::Vector<double> &       data,
+    dealii::Vector<double>        &data,
     const bool                     redimensionalize) const
   {
     this->derivative_quantities_compute_derived_quantity<
@@ -1165,72 +1165,72 @@ namespace Ddhdg
   template void
   NPSolver<1, HomogeneousProblem<1>>::compute_qf_potential<Component::n>(
     const dealii::DoFHandler<1> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double>      &data) const;
   template void
   NPSolver<2, HomogeneousProblem<2>>::compute_qf_potential<Component::n>(
     const dealii::DoFHandler<2> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double>      &data) const;
   template void
   NPSolver<3, HomogeneousProblem<3>>::compute_qf_potential<Component::n>(
     const dealii::DoFHandler<3> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double>      &data) const;
   template void
   NPSolver<1, HomogeneousProblem<1>>::compute_qf_potential<Component::p>(
     const dealii::DoFHandler<1> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double>      &data) const;
   template void
   NPSolver<2, HomogeneousProblem<2>>::compute_qf_potential<Component::p>(
     const dealii::DoFHandler<2> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double>      &data) const;
   template void
   NPSolver<3, HomogeneousProblem<3>>::compute_qf_potential<Component::p>(
     const dealii::DoFHandler<3> &dof,
-    dealii::Vector<double> &     data) const;
+    dealii::Vector<double>      &data) const;
 
   template void
   NPSolver<1, HomogeneousProblem<1>>::compute_current<Component::n>(
     const dealii::DoFHandler<1> &dof,
-    dealii::Vector<double> &     data,
+    dealii::Vector<double>      &data,
     bool                         redimensionalize) const;
   template void
   NPSolver<2, HomogeneousProblem<2>>::compute_current<Component::n>(
     const dealii::DoFHandler<2> &dof,
-    dealii::Vector<double> &     data,
+    dealii::Vector<double>      &data,
     bool                         redimensionalize) const;
   template void
   NPSolver<3, HomogeneousProblem<3>>::compute_current<Component::n>(
     const dealii::DoFHandler<3> &dof,
-    dealii::Vector<double> &     data,
+    dealii::Vector<double>      &data,
     bool                         redimensionalize) const;
   template void
   NPSolver<1, HomogeneousProblem<1>>::compute_current<Component::p>(
     const dealii::DoFHandler<1> &dof,
-    dealii::Vector<double> &     data,
+    dealii::Vector<double>      &data,
     bool                         redimensionalize) const;
   template void
   NPSolver<2, HomogeneousProblem<2>>::compute_current<Component::p>(
     const dealii::DoFHandler<2> &dof,
-    dealii::Vector<double> &     data,
+    dealii::Vector<double>      &data,
     bool                         redimensionalize) const;
   template void
   NPSolver<3, HomogeneousProblem<3>>::compute_current<Component::p>(
     const dealii::DoFHandler<3> &dof,
-    dealii::Vector<double> &     data,
+    dealii::Vector<double>      &data,
     bool                         redimensionalize) const;
 
   template void
   NPSolver<1, HomogeneousProblem<1>>::compute_recombination_term(
     const dealii::DoFHandler<1> &dof,
-    dealii::Vector<double> &     data,
+    dealii::Vector<double>      &data,
     bool                         redimensionalize) const;
   template void
   NPSolver<2, HomogeneousProblem<2>>::compute_recombination_term(
     const dealii::DoFHandler<2> &dof,
-    dealii::Vector<double> &     data,
+    dealii::Vector<double>      &data,
     bool                         redimensionalize) const;
   template void
   NPSolver<3, HomogeneousProblem<3>>::compute_recombination_term(
     const dealii::DoFHandler<3> &dof,
-    dealii::Vector<double> &     data,
+    dealii::Vector<double>      &data,
     bool                         redimensionalize) const;
 } // namespace Ddhdg

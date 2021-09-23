@@ -105,7 +105,7 @@ namespace Ddhdg
   void
   FunctionByComponents<dim>::value_list(
     const std::vector<dealii::Point<dim>> &p,
-    std::vector<double> &                  values,
+    std::vector<double>                   &values,
     const unsigned int                     component) const
   {
     Assert(values.size() == p.size(),
@@ -148,7 +148,7 @@ namespace Ddhdg
   template <int dim>
   void
   FunctionByComponents<dim>::vector_gradient(
-    const dealii::Point<dim> &           p,
+    const dealii::Point<dim>            &p,
     std::vector<dealii::Tensor<1, dim>> &values) const
   {
     Assert(values.size() == this->n_components,
@@ -170,7 +170,7 @@ namespace Ddhdg
   void
   FunctionByComponents<dim>::gradient_list(
     const std::vector<dealii::Point<dim>> &p,
-    std::vector<dealii::Tensor<1, dim>> &  values,
+    std::vector<dealii::Tensor<1, dim>>   &values,
     const unsigned int                     component) const
   {
     Assert(values.size() == p.size(),
@@ -217,7 +217,7 @@ namespace Ddhdg
   template <int dim>
   void
   ComponentFunction<dim>::vector_value(const dealii::Point<dim> &p,
-                                       dealii::Vector<double> &  values) const
+                                       dealii::Vector<double>   &values) const
   {
     Assert(values.size() == this->n_components,
            dealii::ExcDimensionMismatch(values.size(), this->n_components));
@@ -257,7 +257,7 @@ namespace Ddhdg
   template <int dim>
   void
   ComponentFunction<dim>::vector_gradient(
-    const dealii::Point<dim> &           p,
+    const dealii::Point<dim>            &p,
     std::vector<dealii::Tensor<1, dim>> &values) const
   {
     Assert(values.size() == this->n_components,
@@ -271,7 +271,7 @@ namespace Ddhdg
   void
   ComponentFunction<dim>::gradient_list(
     const std::vector<dealii::Point<dim>> &p,
-    std::vector<dealii::Tensor<1, dim>> &  values,
+    std::vector<dealii::Tensor<1, dim>>   &values,
     const unsigned int                     component) const
   {
     (void)component;
@@ -333,7 +333,7 @@ namespace Ddhdg
   template <int dim>
   void
   Opposite<dim>::vector_value(const dealii::Point<dim> &p,
-                              dealii::Vector<double> &  values) const
+                              dealii::Vector<double>   &values) const
   {
     Assert(values.size() == this->n_components,
            dealii::ExcDimensionMismatch(values.size(), this->n_components));
@@ -347,7 +347,7 @@ namespace Ddhdg
   template <int dim>
   void
   Opposite<dim>::value_list(const std::vector<dealii::Point<dim>> &p,
-                            std::vector<double> &                  values,
+                            std::vector<double>                   &values,
                             const unsigned int component) const
   {
     Assert(values.size() == p.size(),
@@ -376,7 +376,7 @@ namespace Ddhdg
   template <int dim>
   void
   Opposite<dim>::vector_gradient(
-    const dealii::Point<dim> &           p,
+    const dealii::Point<dim>            &p,
     std::vector<dealii::Tensor<1, dim>> &values) const
   {
     Assert(values.size() == this->n_components,
@@ -391,7 +391,7 @@ namespace Ddhdg
   template <int dim>
   void
   Opposite<dim>::gradient_list(const std::vector<dealii::Point<dim>> &p,
-                               std::vector<dealii::Tensor<1, dim>> &  values,
+                               std::vector<dealii::Tensor<1, dim>>   &values,
                                const unsigned int component) const
   {
     Assert(values.size() == p.size(),
@@ -441,7 +441,7 @@ namespace Ddhdg
   template <int dim>
   void
   PiecewiseFunction<dim>::vector_value(const dealii::Point<dim> &p,
-                                       dealii::Vector<double> &  values) const
+                                       dealii::Vector<double>   &values) const
   {
     Assert(values.size() == this->n_components,
            dealii::ExcDimensionMismatch(values.size(), this->n_components));
@@ -498,7 +498,7 @@ namespace Ddhdg
   template <int dim>
   void
   PiecewiseFunction<dim>::vector_gradient(
-    const dealii::Point<dim> &           p,
+    const dealii::Point<dim>            &p,
     std::vector<dealii::Tensor<1, dim>> &values) const
   {
     Assert(values.size() == this->n_components,
@@ -516,7 +516,7 @@ namespace Ddhdg
   void
   PiecewiseFunction<dim>::gradient_list(
     const std::vector<dealii::Point<dim>> &p,
-    std::vector<dealii::Tensor<1, dim>> &  values,
+    std::vector<dealii::Tensor<1, dim>>   &values,
     const unsigned int                     component) const
   {
     Assert(values.size() == p.size(),
@@ -565,7 +565,7 @@ namespace Ddhdg
   template <int dim>
   void
   FunctionTimesScalar<dim>::vector_value(const dealii::Point<dim> &p,
-                                         dealii::Vector<double> &  values) const
+                                         dealii::Vector<double>   &values) const
   {
     Assert(values.size() == this->n_components,
            dealii::ExcDimensionMismatch(values.size(), this->n_components));
@@ -614,7 +614,7 @@ namespace Ddhdg
   template <int dim>
   void
   FunctionTimesScalar<dim>::vector_gradient(
-    const dealii::Point<dim> &           p,
+    const dealii::Point<dim>            &p,
     std::vector<dealii::Tensor<1, dim>> &values) const
   {
     Assert(values.size() == this->n_components,
@@ -631,7 +631,7 @@ namespace Ddhdg
   void
   FunctionTimesScalar<dim>::gradient_list(
     const std::vector<dealii::Point<dim>> &p,
-    std::vector<dealii::Tensor<1, dim>> &  values,
+    std::vector<dealii::Tensor<1, dim>>   &values,
     const unsigned int                     component) const
   {
     Assert(values.size() == p.size(),

@@ -131,7 +131,7 @@ namespace Ddhdg
   template <int dim>
   void
   LocalCondenser<dim>::condense_ct_matrix(dealii::FullMatrix<double> &ct_matrix,
-                                          dealii::Vector<double> &    cc_rhs)
+                                          dealii::Vector<double>     &cc_rhs)
   {
     const unsigned int n_rows = ct_matrix.n_rows();
 

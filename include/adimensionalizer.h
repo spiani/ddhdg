@@ -91,12 +91,12 @@ namespace Ddhdg
     template <Component c>
     void
     adimensionalize_component(const std::vector<double> &source,
-                              std::vector<double> &      dest) const;
+                              std::vector<double>       &dest) const;
 
     template <Component c>
     void
     redimensionalize_component(const std::vector<double> &source,
-                               std::vector<double> &      dest) const;
+                               std::vector<double>       &dest) const;
 
     template <Component c>
     void
@@ -109,12 +109,12 @@ namespace Ddhdg
     void
     adimensionalize_component(const std::vector<double> &source,
                               Component                  c,
-                              std::vector<double> &      dest) const;
+                              std::vector<double>       &dest) const;
 
     void
     redimensionalize_component(const std::vector<double> &source,
                                Component                  c,
-                               std::vector<double> &      dest) const;
+                               std::vector<double>       &dest) const;
 
     void
     inplace_adimensionalize_component(std::vector<double> &data,
@@ -129,14 +129,14 @@ namespace Ddhdg
     adimensionalize_displacement(
       const std::vector<dealii::Tensor<1, dim>> &source,
       Displacement                               d,
-      std::vector<dealii::Tensor<1, dim>> &      dest) const;
+      std::vector<dealii::Tensor<1, dim>>       &dest) const;
 
     template <int dim>
     void
     redimensionalize_displacement(
       const std::vector<dealii::Tensor<1, dim>> &source,
       Displacement                               d,
-      std::vector<dealii::Tensor<1, dim>> &      dest) const;
+      std::vector<dealii::Tensor<1, dim>>       &dest) const;
 
     template <int dim>
     void
@@ -154,15 +154,15 @@ namespace Ddhdg
     adimensionalize_dof_vector(
       const dealii::Vector<double> &dof_vector,
       const std::vector<Component> &dof_to_component_map,
-      const std::vector<DofType> &  dof_to_dof_type,
-      dealii::Vector<double> &      rescaled_vector) const;
+      const std::vector<DofType>   &dof_to_dof_type,
+      dealii::Vector<double>       &rescaled_vector) const;
 
     void
     redimensionalize_dof_vector(
       const dealii::Vector<double> &dof_vector,
       const std::vector<Component> &dof_to_component_map,
-      const std::vector<DofType> &  dof_to_dof_type,
-      dealii::Vector<double> &      rescaled_vector) const;
+      const std::vector<DofType>   &dof_to_dof_type,
+      dealii::Vector<double>       &rescaled_vector) const;
 
     template <int dim>
     std::shared_ptr<dealii::Function<dim>>

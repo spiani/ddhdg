@@ -169,7 +169,7 @@ namespace pyddhdg
            py::arg("linearize_on_phi")        = false)
       .def(
         "set_face",
-        [](Ddhdg::CellFaceTauNPSolverParameters &     parameters,
+        [](Ddhdg::CellFaceTauNPSolverParameters      &parameters,
            const dealii::python::CellAccessorWrapper &cell,
            const unsigned int                         face,
            const double                               V_tau,

@@ -110,8 +110,8 @@ namespace python
      */
     void
     generate_subdivided_hyper_rectangle(PYSPACE::list &repetitions,
-                                        PointWrapper & p1,
-                                        PointWrapper & p2,
+                                        PointWrapper  &p1,
+                                        PointWrapper  &p2,
                                         const bool     colorize = false);
 
     /**
@@ -124,8 +124,8 @@ namespace python
      */
     void
     generate_subdivided_steps_hyper_rectangle(PYSPACE::list &step_sizes,
-                                              PointWrapper & p1,
-                                              PointWrapper & p2,
+                                              PointWrapper  &p1,
+                                              PointWrapper  &p2,
                                               const bool     colorize = false);
 
     /**
@@ -138,7 +138,7 @@ namespace python
      */
     void
     generate_subdivided_material_hyper_rectangle(PYSPACE::list &spacing,
-                                                 PointWrapper & p,
+                                                 PointWrapper  &p,
                                                  PYSPACE::list &material_id,
                                                  const bool colorize = false);
 
@@ -177,7 +177,7 @@ namespace python
      */
     void
     generate_fixed_subdivided_parallelepiped(const unsigned int n_subdivisions,
-                                             PYSPACE::list &    corners,
+                                             PYSPACE::list     &corners,
                                              const bool colorize = false);
 
     /**
@@ -221,7 +221,7 @@ namespace python
     /*! @copydoc GridGenerator::hyper_shell
      */
     void
-    generate_hyper_shell(PointWrapper & center,
+    generate_hyper_shell(PointWrapper  &center,
                          const double   inner_radius,
                          const double   outer_radius,
                          const unsigned n_cells  = 0,
@@ -269,13 +269,13 @@ namespace python
      */
     CellAccessorWrapper
     find_active_cell_around_point(
-      PointWrapper &         p,
+      PointWrapper          &p,
       MappingQGenericWrapper mapping = MappingQGenericWrapper());
 
 #ifdef USE_PYBIND11
     CellAccessorWrapper
     find_active_cell_around_point_wrapper(
-      PointWrapper &                        p,
+      PointWrapper                         &p,
       std::optional<MappingQGenericWrapper> mapping = MappingQGenericWrapper());
 #endif
 
@@ -325,7 +325,7 @@ namespace python
      */
     PYSPACE::list
     compute_aspect_ratio_of_cells(const MappingQGenericWrapper &mapping,
-                                  const QuadratureWrapper &     quadrature);
+                                  const QuadratureWrapper      &quadrature);
 
     /**
      * Write mesh to the output file @filename according to the given data

@@ -41,7 +41,7 @@ namespace Ddhdg
 
     void
     condense_ct_matrix(dealii::FullMatrix<double> &ct_matrix,
-                       dealii::Vector<double> &    cc_rhs);
+                       dealii::Vector<double>     &cc_rhs);
 
     unsigned int
     get_component_index(Component c);

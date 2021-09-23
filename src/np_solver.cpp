@@ -86,20 +86,20 @@ namespace Ddhdg
 
   template <int dim, typename ProblemType>
   NPSolver<dim, ProblemType>::ScratchData::ScratchData(
-    const FiniteElement<dim> &                         fe_trace_restricted,
-    const FiniteElement<dim> &                         fe_trace,
-    const FiniteElement<dim> &                         fe_cell,
-    const QGauss<dim> &                                quadrature_formula,
-    const QGauss<dim - 1> &                            face_quadrature_formula,
+    const FiniteElement<dim>                          &fe_trace_restricted,
+    const FiniteElement<dim>                          &fe_trace,
+    const FiniteElement<dim>                          &fe_cell,
+    const QGauss<dim>                                 &quadrature_formula,
+    const QGauss<dim - 1>                             &face_quadrature_formula,
     const UpdateFlags                                  cell_flags,
     const UpdateFlags                                  cell_face_flags,
     const UpdateFlags                                  trace_flags,
     const UpdateFlags                                  trace_restricted_flags,
     const typename Permittivity::PermittivityComputer &permittivity,
-    const typename NMobility::MobilityComputer &       n_mobility,
-    const typename PMobility::MobilityComputer &       p_mobility,
-    std::unique_ptr<TauComputer> &&                    tau_computer,
-    const std::set<Component> &                        enabled_components,
+    const typename NMobility::MobilityComputer        &n_mobility,
+    const typename PMobility::MobilityComputer        &p_mobility,
+    std::unique_ptr<TauComputer>                     &&tau_computer,
+    const std::set<Component>                         &enabled_components,
     const std::map<Component, const dealii::FiniteElement<dim> &> &fe_map)
     : fe_values_cell(fe_cell, quadrature_formula, cell_flags)
     , fe_face_values_cell(fe_cell, face_quadrature_formula, cell_face_flags)
@@ -162,7 +162,7 @@ namespace Ddhdg
   template <int dim, typename ProblemType>
   std::vector<unsigned int>
   NPSolver<dim, ProblemType>::ScratchData::check_dofs_on_enabled_components(
-    const FiniteElement<dim> & fe_cell,
+    const FiniteElement<dim>  &fe_cell,
     const std::set<Component> &enabled_components)
   {
     const unsigned int dofs_per_cell = fe_cell.dofs_per_cell;
@@ -188,7 +188,7 @@ namespace Ddhdg
   template <int dim, typename ProblemType>
   std::vector<std::vector<unsigned int>>
   NPSolver<dim, ProblemType>::ScratchData::check_dofs_on_faces_for_cells(
-    const FiniteElement<dim> &       fe_cell,
+    const FiniteElement<dim>        &fe_cell,
     const std::vector<unsigned int> &enabled_component_indices)
   {
     const unsigned int faces_per_cell     = GeometryInfo<dim>::faces_per_cell;
@@ -910,8 +910,8 @@ namespace Ddhdg
     const UpdateFlags flags(update_values | update_quadrature_points);
 
     FEFaceValues<dim>  fe_face_trace_values(*(this->fe_trace),
-                                           face_quadrature_formula,
-                                           flags);
+                                            face_quadrature_formula,
+                                            flags);
     const unsigned int n_face_q_points =
       fe_face_trace_values.get_quadrature().size();
     Assert(n_face_q_points == 1, ExcDimensionMismatch(n_face_q_points, 1));
@@ -1163,7 +1163,7 @@ namespace Ddhdg
   void
   NPSolver<dim, ProblemType>::generate_dof_to_component_map(
     std::vector<Component> &dof_to_component,
-    std::vector<DofType> &  dof_to_dof_type,
+    std::vector<DofType>   &dof_to_dof_type,
     const bool              for_trace,
     const bool              restricted) const
   {
@@ -2037,7 +2037,7 @@ namespace Ddhdg
     std::shared_ptr<const dealii::Function<dim>>    expected_p_solution,
     unsigned int                                    n_cycles,
     unsigned int                                    initial_refinements,
-    std::ostream &                                  out)
+    std::ostream                                   &out)
   {
     const std::shared_ptr<const dealii::Function<dim>> initial_V_function =
       std::make_shared<const dealii::Functions::ZeroFunction<dim>>();
@@ -2072,7 +2072,7 @@ namespace Ddhdg
     std::shared_ptr<const dealii::Function<dim>>    initial_p_function,
     unsigned int                                    n_cycles,
     unsigned int                                    initial_refinements,
-    std::ostream &                                  out)
+    std::ostream                                   &out)
   {
     this->refine_grid(initial_refinements, false);
 
