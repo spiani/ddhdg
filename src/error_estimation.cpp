@@ -444,11 +444,11 @@ namespace Ddhdg
               {
                 for (unsigned int q = 0; q < n_face_q_points; ++q)
                   {
-                    double difference_on_q =
+                    const double difference_on_q =
                       current_solution_on_q[q] - expected_solution_on_q[q];
-                    double abs_difference = (difference_on_q > 0) ?
-                                              difference_on_q :
-                                              -difference_on_q;
+                    const double abs_difference = (difference_on_q > 0) ?
+                                                    difference_on_q :
+                                                    -difference_on_q;
                     if (abs_difference > difference_norm)
                       difference_norm = abs_difference;
                   }

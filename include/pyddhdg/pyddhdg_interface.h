@@ -349,15 +349,16 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("n_enabled"),
        py::arg("p_enabled"),
        py::call_guard<py::gil_scoped_release>())
-  .def("assemble_system", &NPSolver<DIM>::assemble_system)
+  .def("assemble_system",
+       &NPSolver<DIM>::assemble_system,
+       py::call_guard<py::gil_scoped_release>())
   .def("get_dirichlet_boundary_dofs",
        &NPSolver<DIM>::get_dirichlet_boundary_dofs)
-  .def("get_residual",
-       &NPSolver<DIM>::get_residual,
-       py::call_guard<py::gil_scoped_release>())
-  .def("get_jacobian",
-       &NPSolver<DIM>::get_jacobian,
-       py::call_guard<py::gil_scoped_release>())
+  .def("get_residual", &NPSolver<DIM>::get_residual)
+  .def("get_linear_system_solution_vector",
+       &NPSolver<DIM>::get_linear_system_solution_vector)
+  .def("get_current_trace_vector", &NPSolver<DIM>::get_current_trace_vector)
+  .def("get_jacobian", &NPSolver<DIM>::get_jacobian)
   .def("run",
        py::overload_cast<>(&NPSolver<DIM>::run),
        py::call_guard<py::gil_scoped_release>())

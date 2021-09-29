@@ -1141,6 +1141,149 @@ namespace pyddhdg
 
 
   template <int dim>
+  std::map<Ddhdg::Component,
+           pybind11::array_t<double, pybind11::array::c_style>>
+  NPSolver<dim>::get_linear_system_solution_vector()
+  {
+    if (!this->ddhdg_solver->initialized)
+      this->ddhdg_solver->setup_overall_system();
+
+    std::map<Ddhdg::Component,
+             pybind11::array_t<double, pybind11::array::c_style>>
+      ls_solution_map;
+
+    const unsigned int n_dofs =
+      this->ddhdg_solver->dof_handler_trace_restricted.n_dofs();
+
+    std::vector<Ddhdg::Component> dof_to_component_map(n_dofs);
+    std::vector<Ddhdg::DofType>   dof_to_dof_type_map(n_dofs);
+
+    this->ddhdg_solver->generate_dof_to_component_map(dof_to_component_map,
+                                                      dof_to_dof_type_map,
+                                                      true,
+                                                      true);
+    for (const auto c : this->ddhdg_solver->enabled_components)
+      {
+        unsigned int n_of_component_dofs = 0;
+        for (unsigned int i = 0; i < n_dofs; ++i)
+          if (dof_to_component_map[i] == c)
+            n_of_component_dofs += 1;
+
+        Assert(n_of_component_dofs > 0,
+               dealii::ExcMessage("No dofs for current component"));
+
+        auto *component_ls_solution_data = new double[n_of_component_dofs];
+
+        unsigned int k = 0;
+        for (unsigned int i = 0; i < n_dofs; ++i)
+          if (dof_to_component_map[i] == c)
+            component_ls_solution_data[k++] =
+              this->ddhdg_solver->system_solution[i];
+
+        Assert(
+          k == n_of_component_dofs,
+          dealii::ExcMessage(
+            "Copied a number of elements that is different from n_of_component_dofs"));
+
+        const auto vector_shape  = std::vector<long>{n_of_component_dofs};
+        const auto vector_stride = std::vector<long>{8};
+
+        // Create a Python object that will free the allocated
+        // memory when destroyed:
+        pybind11::capsule free_when_done(component_ls_solution_data,
+                                         [](void *f) {
+                                           auto *data =
+                                             reinterpret_cast<double *>(f);
+                                           delete[] data;
+                                         });
+
+        auto component_ls_solution =
+          pybind11::array_t<double, pybind11::array::c_style>(
+            vector_shape,
+            vector_stride,
+            component_ls_solution_data,
+            free_when_done);
+
+        ls_solution_map.insert({c, component_ls_solution});
+      }
+
+    return ls_solution_map;
+  }
+
+
+
+  template <int dim>
+  std::map<Ddhdg::Component,
+           pybind11::array_t<double, pybind11::array::c_style>>
+  NPSolver<dim>::get_current_trace_vector()
+  {
+    if (!this->ddhdg_solver->initialized)
+      this->ddhdg_solver->setup_overall_system();
+
+    std::map<Ddhdg::Component,
+             pybind11::array_t<double, pybind11::array::c_style>>
+      trace_vector_map;
+
+    const unsigned int n_dofs = this->ddhdg_solver->dof_handler_trace.n_dofs();
+
+    std::vector<Ddhdg::Component> dof_to_component_map(n_dofs);
+    std::vector<Ddhdg::DofType>   dof_to_dof_type_map(n_dofs);
+
+    this->ddhdg_solver->generate_dof_to_component_map(dof_to_component_map,
+                                                      dof_to_dof_type_map,
+                                                      true,
+                                                      false);
+    for (const auto c : Ddhdg::all_primary_components())
+      {
+        unsigned int n_of_component_dofs = 0;
+        for (unsigned int i = 0; i < n_dofs; ++i)
+          if (dof_to_component_map[i] == c)
+            n_of_component_dofs += 1;
+
+        Assert(n_of_component_dofs > 0,
+               dealii::ExcMessage("No dofs for current component"));
+
+        auto *component_trace_vector_data = new double[n_of_component_dofs];
+
+        unsigned int k = 0;
+        for (unsigned int i = 0; i < n_dofs; ++i)
+          if (dof_to_component_map[i] == c)
+            component_trace_vector_data[k++] =
+              this->ddhdg_solver->current_solution_trace[i];
+
+        Assert(
+          k == n_of_component_dofs,
+          dealii::ExcMessage(
+            "Copied a number of elements that is different from n_of_component_dofs"));
+
+        const auto vector_shape  = std::vector<long>{n_of_component_dofs};
+        const auto vector_stride = std::vector<long>{8};
+
+        // Create a Python object that will free the allocated
+        // memory when destroyed:
+        pybind11::capsule free_when_done(component_trace_vector_data,
+                                         [](void *f) {
+                                           auto *data =
+                                             reinterpret_cast<double *>(f);
+                                           delete[] data;
+                                         });
+
+        auto component_trace_vector =
+          pybind11::array_t<double, pybind11::array::c_style>(
+            vector_shape,
+            vector_stride,
+            component_trace_vector_data,
+            free_when_done);
+
+        trace_vector_map.insert({c, component_trace_vector});
+      }
+
+    return trace_vector_map;
+  }
+
+
+
+  template <int dim>
   std::map<std::pair<Ddhdg::Component, Ddhdg::Component>,
            Eigen::SparseMatrix<double>>
   NPSolver<dim>::get_jacobian()

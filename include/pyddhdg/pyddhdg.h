@@ -459,6 +459,14 @@ namespace pyddhdg
              pybind11::array_t<double, pybind11::array::c_style>>
     get_residual();
 
+    std::map<Ddhdg::Component,
+             pybind11::array_t<double, pybind11::array::c_style>>
+    get_linear_system_solution_vector();
+
+    std::map<Ddhdg::Component,
+             pybind11::array_t<double, pybind11::array::c_style>>
+    get_current_trace_vector();
+
     std::map<std::pair<Ddhdg::Component, Ddhdg::Component>,
              Eigen::SparseMatrix<double>>
     get_jacobian();

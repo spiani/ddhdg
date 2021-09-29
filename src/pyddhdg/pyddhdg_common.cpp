@@ -202,8 +202,9 @@ namespace pyddhdg
 
     py::class_<Ddhdg::Adimensionalizer>(m, "Adimensionalizer")
       .def(py::init<double, double, double, double>(),
-           py::arg("scale_length")                = 1.,
-           py::arg("temperature_magnitude")       = 1.,
+           py::arg("scale_length") = 1.,
+           py::arg("temperature_magnitude") =
+             Ddhdg::Constants::Q / Ddhdg::Constants::KB,
            py::arg("doping_magnitude")            = 1.,
            py::arg("electron_mobility_magnitude") = 1.)
       .def_readonly("scale_length", &Ddhdg::Adimensionalizer::scale_length)
