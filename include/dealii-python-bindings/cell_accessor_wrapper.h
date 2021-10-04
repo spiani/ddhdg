@@ -163,6 +163,11 @@ namespace python
     double
     measure() const;
 
+    /*! @copydoc CellAccessor::diameter
+     */
+    double
+    diameter() const;
+
     /*! @copydoc CellAccessor::active
      */
     bool

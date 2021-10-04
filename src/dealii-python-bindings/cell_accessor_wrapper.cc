@@ -1125,8 +1125,10 @@ namespace python
       return construct_neighbor_wrapper<2, 2>(i);
     else if ((dim == 2) && (spacedim == 3))
       return construct_neighbor_wrapper<2, 3>(i);
-    else
+    else if ((dim == 3) && (spacedim == 3))
       return construct_neighbor_wrapper<3, 3>(i);
+    else
+      AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
   }
 
 
@@ -1152,8 +1154,31 @@ namespace python
       return internal::cell_cast<2, 2>(cell_accessor)->measure();
     else if ((dim == 2) && (spacedim == 3))
       return internal::cell_cast<2, 3>(cell_accessor)->measure();
-    else
+    else if ((dim == 3) && (spacedim == 3))
       return internal::cell_cast<3, 3>(cell_accessor)->measure();
+    else
+      AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
+  }
+
+
+
+  double
+  CellAccessorWrapper::diameter() const
+  {
+    if ((dim == 1) && (spacedim == 1))
+      return internal::cell_cast<1, 1>(cell_accessor)->diameter();
+    else if ((dim == 1) && (spacedim == 2))
+      return internal::cell_cast<1, 2>(cell_accessor)->diameter();
+    else if ((dim == 1) && (spacedim == 3))
+      return internal::cell_cast<1, 3>(cell_accessor)->diameter();
+    else if ((dim == 2) && (spacedim == 2))
+      return internal::cell_cast<2, 2>(cell_accessor)->diameter();
+    else if ((dim == 2) && (spacedim == 3))
+      return internal::cell_cast<2, 3>(cell_accessor)->diameter();
+    else if ((dim == 3) && (spacedim == 3))
+      return internal::cell_cast<3, 3>(cell_accessor)->diameter();
+    else
+      AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
   }
 
 

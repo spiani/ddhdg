@@ -125,6 +125,11 @@ namespace python
 
 
 
+  const char diameter_docstring[] =
+    " Compute the diameter of the object.                                \n";
+
+
+
   const char vertex_index_docstring[] =
     " Return the global index of i-th vertex of a cell.                  \n";
 
@@ -225,6 +230,10 @@ namespace python
            &CellAccessorWrapper::measure,
            measure_docstring,
            boost::python::args("self"))
+      .def("diameter",
+           &CellAccessorWrapper::diameter,
+           diameter_docstring,
+           boost::python::args("self"))
       .def("active",
            &CellAccessorWrapper::active,
            active_docstring,
@@ -307,6 +316,7 @@ namespace python
            pybind11::arg("i"))
       .def("faces", &CellAccessorWrapper::faces, faces_docstring)
       .def("measure", &CellAccessorWrapper::measure, measure_docstring)
+      .def("diameter", &CellAccessorWrapper::diameter, diameter_docstring)
       .def("active", &CellAccessorWrapper::active, active_docstring)
       .def("level", &CellAccessorWrapper::level, level_docstring)
       .def("index", &CellAccessorWrapper::index, index_docstring)
