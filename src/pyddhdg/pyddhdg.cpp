@@ -70,7 +70,9 @@ namespace pyddhdg
   std::shared_ptr<dealii::FunctionParser<dim>>
   AnalyticFunction<dim>::get_function_from_string(const std::string &f_expr)
   {
-    auto f = std::make_shared<dealii::FunctionParser<dim>>();
+    const unsigned int n_of_components =
+      dealii::Utilities::split_string_list(f_expr, ';').size();
+    auto f = std::make_shared<dealii::FunctionParser<dim>>(n_of_components);
     f->initialize(dealii::FunctionParser<dim>::default_variable_names(),
                   f_expr,
                   Ddhdg::Constants::constants);
