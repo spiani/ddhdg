@@ -196,6 +196,60 @@ namespace pyddhdg
         py::arg("face"),
         py::arg("V_tau_value"),
         py::arg("n_tau_value"),
+        py::arg("p_tau_value"))
+      .def(
+        "set_multiple_faces",
+        [](Ddhdg::CellFaceTauNPSolverParameters &parameters,
+           const unsigned int                    dim,
+           const pybind11::list                 &cell_levels,
+           const pybind11::list                 &cell_indices,
+           const pybind11::list                 &faces,
+           const pybind11::list                 &V_tau,
+           const pybind11::list                 &n_tau,
+           const pybind11::list                 &p_tau) {
+          const unsigned int n_of_elements = cell_levels.size();
+
+          AssertThrow(
+            cell_indices.size() == n_of_elements,
+            dealii::ExcMessage(
+              "The list passed to this function must have the same size"));
+          AssertThrow(
+            faces.size() == n_of_elements,
+            dealii::ExcMessage(
+              "The list passed to this function must have the same size"));
+          AssertThrow(
+            V_tau.size() == n_of_elements,
+            dealii::ExcMessage(
+              "The list passed to this function must have the same size"));
+          AssertThrow(
+            n_tau.size() == n_of_elements,
+            dealii::ExcMessage(
+              "The list passed to this function must have the same size"));
+          AssertThrow(
+            p_tau.size() == n_of_elements,
+            dealii::ExcMessage(
+              "The list passed to this function must have the same size"));
+
+          const unsigned int faces_per_cell =
+            (dim == 1) ? dealii::GeometryInfo<1>::faces_per_cell :
+            (dim == 2) ? dealii::GeometryInfo<2>::faces_per_cell :
+                         dealii::GeometryInfo<3>::faces_per_cell;
+
+          for (unsigned int i = 0; i < n_of_elements; ++i)
+            parameters.set_face(pybind11::cast<unsigned int>(cell_levels[i]),
+                                pybind11::cast<unsigned int>(cell_indices[i]),
+                                faces_per_cell,
+                                pybind11::cast<unsigned int>(faces[i]),
+                                pybind11::cast<double>(V_tau[i]),
+                                pybind11::cast<double>(n_tau[i]),
+                                pybind11::cast<double>(p_tau[i]));
+        },
+        py::arg("dim"),
+        py::arg("cell_levels"),
+        py::arg("cell_indices"),
+        py::arg("faces"),
+        py::arg("V_tau_value"),
+        py::arg("n_tau_value"),
         py::arg("p_tau_value"));
 
 
