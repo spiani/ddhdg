@@ -2,7 +2,9 @@ set(_target tests)
 
 find_package(GTest)
 
+set(gtest_library_name "GTest:GTest")
 if (NOT GTest_FOUND)
+    set(gtest_library_name "gtest")
     include(FetchContent)
     FetchContent_Declare(
             googletest
@@ -10,6 +12,7 @@ if (NOT GTest_FOUND)
             GIT_TAG release-1.10.0
     )
     FetchContent_MakeAvailable(googletest)
+    include(GoogleTest)
 endif ()
 
 set(_test_files
@@ -31,8 +34,7 @@ set(_test_files
 
 add_executable(${_target} main.cpp ${_test_files})
 DEAL_II_SETUP_TARGET(${_target})
-target_link_libraries(${_target} DDHDG GTest::GTest)
+target_link_libraries(${_target} DDHDG ${gtest_library_name})
 
-# include(GoogleTest)
 # gtest_discover_tests(tests)
 gtest_add_tests(TARGET ${_target})
