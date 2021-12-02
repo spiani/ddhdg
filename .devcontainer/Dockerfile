@@ -3,9 +3,20 @@ FROM dealii/dealii:latest
 USER root
 
 RUN apt-get update && \
-    apt-get install -y libboost-log1.71-dev libgtest-dev python3-dev python3-distutils python3-matplotlib python3-pybind11 python3-scipy && \
+    apt-get install -y \
+        libboost-log1.71-dev \
+        libgtest-dev \
+        python3-dev \
+        python3-distutils \
+        python3-h5py \
+        python3-matplotlib \
+        python3-pip \
+        python3-pybind11 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Install python packages for dask
+RUN pip3 install bokeh dask distributed jupyter-server-proxy scipy
 
 USER dealii
 
@@ -53,15 +64,3 @@ RUN mkdir /home/dealii/.ssh && \
     chmod 600 /home/dealii/.ssh/id_rsa && \
     echo github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ== > /home/dealii/.ssh/known_hosts && \
     chmod 644 /home/dealii/.ssh/known_hosts
-
-# RUN ["/bin/bash", "-c", "git clone git@github.com:spiani/ddhdg.git && \
-#                          mv ddhdg ddhdg_source && \
-#                          mkdir ddhdg_build_debug && \
-#                          cd ddhdg_build_debug && \
-#                          cmake -DCMAKE_BUILD_TYPE=Debug -DWITH_PYTHON_INTERFACE=on ~/ddhdg_source && \
-#                          make && \
-#                          cd .. && \
-#                          mkdir ddhdg_build_release && \
-#                          cd ddhdg_build_release && \
-#                          cmake -DCMAKE_BUILD_TYPE=Release -DWITH_PYTHON_INTERFACE=on ~/ddhdg_source && \
-#                          make "]
