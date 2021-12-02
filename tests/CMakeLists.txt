@@ -2,7 +2,7 @@ set(_target tests)
 
 find_package(GTest)
 
-set(gtest_library_name "GTest:GTest")
+set(gtest_library_name "gtest")
 if (NOT GTest_FOUND)
     set(gtest_library_name "gtest")
     include(FetchContent)
