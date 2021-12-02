@@ -16,15 +16,17 @@ on:
 jobs:
   # Build and run in debug mode
   debug:
-    runs-on: ubuntu-latest
+    defaults:
+        run:
+          working-directory: /home/dealii
     container: heltai/ddhdg
     
     steps:          
       - name: Checkout code
-        working-directory: /home/dealii
         uses: actions/checkout@v2
 
       - name: Build Debug
+        working-directory: /home/dealii/ddhdg
         run: |
           mkdir build_debug
           cd build_debug
@@ -35,6 +37,6 @@ jobs:
           ninja
 
       - name: Run tests in debug mode
+        working-directory: /home/dealii/build_debug
         run: |
-          cd build_debug
           ./tests/tests 
