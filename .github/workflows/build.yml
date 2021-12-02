@@ -18,6 +18,8 @@ jobs:
   debug:
     runs-on: ubuntu-latest
     container: heltai/ddhdg
+    working-directory: /home/dealii
+    
     steps:          
       - name: Checkout code
         uses: actions/checkout@v2
