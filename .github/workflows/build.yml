@@ -19,9 +19,15 @@ jobs:
     defaults:
         run:
           working-directory: /home/dealii
+    runs-on: ubuntu-latest
     container: heltai/ddhdg
     
     steps:          
+      - name: Prepare directories
+        run: |
+          sudo mkdir /__w/
+          sudo chown dealii /__w/
+           
       - name: Checkout code
         uses: actions/checkout@v2
 
