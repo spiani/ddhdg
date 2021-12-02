@@ -36,3 +36,26 @@ jobs:
       - name: Run tests in debug mode
         run: |
           ./build_debug/tests/tests 
+
+  # Build and run in debug mode
+  release:
+    runs-on: ubuntu-latest
+    container: heltai/ddhdg
+    
+    steps:          
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build Release
+        run: |
+          mkdir build_release
+          cd build_release
+          cmake -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DWITH_PYTHON_INTERFACE=on -DSERIALIZE_OPENBLAS=off \
+            ..
+          ninja
+
+      - name: Run tests in debug mode
+        run: |
+          ./build_release/tests/tests 
