@@ -1306,13 +1306,16 @@ namespace pyddhdg
 
     for (const auto in_vector : trace_vector_map)
       {
-        const auto & c      = in_vector.first;
-        const auto & vector = in_vector.second;
-        unsigned int k      = 0;
+        const auto &  c      = in_vector.first;
+        const auto    buffer = in_vector.second.request();
+        const double *vector = static_cast<const double *>(buffer.ptr);
+        unsigned int  k      = 0;
         for (unsigned int i = 0; i < n_dofs; ++i)
           if (dof_to_component_map[i] == c)
-            this->ddhdg_solver->current_solution_trace[i] =
-              ((const double *)vector.ptr())[k++];
+            {
+              AssertIndexRange(k, buffer.shape[0]);
+              this->ddhdg_solver->current_solution_trace[i] = vector[k++];
+            }
       }
   }
 
