@@ -292,13 +292,13 @@ namespace pyddhdg
     add_boundary_condition(dealii::types::boundary_id   id,
                            Ddhdg::BoundaryConditionType bc_type,
                            Ddhdg::Component             c,
-                           const DealIIFunction<dim>   &f);
+                           const DealIIFunction<dim> &  f);
 
     void
     add_boundary_condition(dealii::types::boundary_id   id,
                            Ddhdg::BoundaryConditionType bc_type,
                            Ddhdg::Component             c,
-                           const std::string           &f);
+                           const std::string &          f);
     void
     add_boundary_condition(dealii::types::boundary_id   id,
                            Ddhdg::BoundaryConditionType bc_type,
@@ -321,12 +321,12 @@ namespace pyddhdg
   public:
     Problem(double                         left,
             double                         right,
-            HomogeneousPermittivity<dim>  &permittivity,
-            HomogeneousMobility<dim>      &electron_mobility,
-            HomogeneousMobility<dim>      &hole_mobility,
-            RecombinationTerm<dim>        &recombination_term,
-            DealIIFunction<dim>           &temperature,
-            DealIIFunction<dim>           &doping,
+            HomogeneousPermittivity<dim> & permittivity,
+            HomogeneousMobility<dim> &     electron_mobility,
+            HomogeneousMobility<dim> &     hole_mobility,
+            RecombinationTerm<dim> &       recombination_term,
+            DealIIFunction<dim> &          temperature,
+            DealIIFunction<dim> &          doping,
             BoundaryConditionHandler<dim> &bc_handler,
             double                         conduction_band_density,
             double                         valence_band_density,
@@ -334,13 +334,13 @@ namespace pyddhdg
             double                         valence_band_edge_energy);
 
     Problem(const dealii::python::TriangulationWrapper &triangulation,
-            HomogeneousPermittivity<dim>               &permittivity,
-            HomogeneousMobility<dim>                   &electron_mobility,
-            HomogeneousMobility<dim>                   &hole_mobility,
-            RecombinationTerm<dim>                     &recombination_term,
-            DealIIFunction<dim>                        &temperature,
-            DealIIFunction<dim>                        &doping,
-            BoundaryConditionHandler<dim>              &bc_handler,
+            HomogeneousPermittivity<dim> &              permittivity,
+            HomogeneousMobility<dim> &                  electron_mobility,
+            HomogeneousMobility<dim> &                  hole_mobility,
+            RecombinationTerm<dim> &                    recombination_term,
+            DealIIFunction<dim> &                       temperature,
+            DealIIFunction<dim> &                       doping,
+            BoundaryConditionHandler<dim> &             bc_handler,
             double                                      conduction_band_density,
             double                                      valence_band_density,
             double conduction_band_edge_energy,
@@ -376,9 +376,9 @@ namespace pyddhdg
   class NPSolver
   {
   public:
-    NPSolver(const Problem<dim>                        &problem,
+    NPSolver(const Problem<dim> &                       problem,
              std::shared_ptr<Ddhdg::NPSolverParameters> parameters,
-             const Ddhdg::Adimensionalizer             &adimensionalizer,
+             const Ddhdg::Adimensionalizer &            adimensionalizer,
              bool                                       verbose = true);
 
     void
@@ -466,6 +466,11 @@ namespace pyddhdg
     std::map<Ddhdg::Component,
              pybind11::array_t<double, pybind11::array::c_style>>
     get_current_trace_vector();
+
+    void
+    set_current_trace_vector(
+      const std::map<Ddhdg::Component,
+                     pybind11::array_t<double, pybind11::array::c_style>> &);
 
     std::map<std::pair<Ddhdg::Component, Ddhdg::Component>,
              Eigen::SparseMatrix<double>>
@@ -651,7 +656,7 @@ namespace pyddhdg
 
     [[nodiscard]] double
     estimate_l2_error_on_trace(
-      const std::string                       &expected_solution,
+      const std::string &                      expected_solution,
       Ddhdg::Component                         c,
       const dealii::python::QuadratureWrapper &q) const;
 
@@ -671,7 +676,7 @@ namespace pyddhdg
 
     [[nodiscard]] double
     estimate_linfty_error_on_trace(
-      const std::string                       &expected_solution,
+      const std::string &                      expected_solution,
       Ddhdg::Component                         c,
       const dealii::python::QuadratureWrapper &q) const;
 

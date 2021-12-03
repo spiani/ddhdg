@@ -390,12 +390,12 @@ namespace Ddhdg
     // Right now I will disable this code because it seems that it compute
     // values that are not real (like inf or nan). This requires further
     // investigation
-    /*this->project_component(
+    this->project_component(
       Component::phi_n,
       std::make_shared<dealii::Functions::ZeroFunction<dim>>());
     this->project_component(
       Component::phi_p,
-      std::make_shared<dealii::Functions::ZeroFunction<dim>>());*/
+      std::make_shared<dealii::Functions::ZeroFunction<dim>>());
 
     this->set_enabled_components(current_active_components[Component::V],
                                  current_active_components[Component::n],
