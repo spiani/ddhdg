@@ -579,6 +579,9 @@ namespace Ddhdg
     get_dofs_constrained_by_dirichlet_conditions(
       std::vector<bool> &lines) const;
 
+    std::pair<std::vector<double>, std::map<Component, std::vector<double>>>
+    get_trace_plot_data() const;
+
     void
     setup_overall_system();
 

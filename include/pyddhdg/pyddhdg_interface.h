@@ -850,6 +850,9 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("initial_p_function"),
        py::arg("n_cycles"),
        py::arg("initial_refinements") = 0)
+#  if DIM == 1
+  .def("_get_trace_plot_data", &NPSolver<DIM>::_get_trace_plot_data)
+#  endif
   .def("compute_quasi_fermi_potential",
        &NPSolver<DIM>::compute_quasi_fermi_potential,
        py::arg("density"),

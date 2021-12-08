@@ -163,9 +163,9 @@ namespace Ddhdg
       std::map<Component, LAPACKFullMatrix<double>> matrix;
       std::map<Component, dealii::Vector<double>>   rhs;
 
-      // This are just aliases to the previous attributes and are useful only to
-      // make the functions written for the NPSolver::ScratchData work also for
-      // this class
+      // These are just aliases to the previous attributes and are useful only
+      // to make the functions written for the NPSolver::ScratchData work also
+      // for this class
       std::vector<double> &U_T_face;
       std::vector<double> &U_T_cell;
     };

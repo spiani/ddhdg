@@ -757,6 +757,13 @@ namespace pyddhdg
                     double           temperature,
                     Ddhdg::Component component) const;
 
+    std::pair<std::vector<double>,
+              std::map<Ddhdg::Component, std::vector<double>>>
+    _get_trace_plot_data() const
+    {
+      return this->ddhdg_solver->get_trace_plot_data();
+    }
+
   private:
     const std::shared_ptr<Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>>
       ddhdg_solver;

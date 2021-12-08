@@ -2167,6 +2167,90 @@ namespace Ddhdg
     return this->triangulation->active_cell_iterators();
   }
 
+  template <int dim, typename ProblemType>
+  std::pair<std::vector<double>, std::map<Component, std::vector<double>>>
+  NPSolver<dim, ProblemType>::get_trace_plot_data() const
+  {
+    if constexpr (dim != 1)
+      {
+        Assert(
+          false,
+          ExcMessage(
+            "The method get_trace_plot_data has been implemented only for 1D solvers"))
+      }
+    else
+      {
+        AssertThrow(this->initialized,
+                    ExcMessage("Solver has not been initialized"))
+
+          unsigned int n_faces =
+            this->triangulation->n_global_active_cells() + 1;
+
+        std::vector<double>                      positions(n_faces);
+        std::map<Component, std::vector<double>> trace_values;
+        std::map<Component, std::vector<double>> scratch_trace_values;
+        for (auto const c : Ddhdg::all_primary_components())
+          trace_values[c] = std::vector<double>(n_faces);
+
+        const dealii::QGauss<dim - 1> face_quadrature_formula =
+          QGauss<dim - 1>(1);
+        const unsigned int n_face_q_points = face_quadrature_formula.size();
+
+        const UpdateFlags flags(update_values | update_quadrature_points |
+                                update_JxW_values);
+
+        FEFaceValues<dim> fe_face_trace_values(*(this->fe_trace),
+                                               face_quadrature_formula,
+                                               flags);
+
+        std::vector<Point<dim>> face_quadrature_points(n_face_q_points);
+        for (auto const c : Ddhdg::all_primary_components())
+          scratch_trace_values[c] = std::vector<double>(n_face_q_points);
+        std::set<unsigned int> visited_faces;
+        unsigned int           n_visited_faces = 0;
+
+        for (const auto &cell : this->dof_handler_trace.active_cell_iterators())
+          {
+            for (unsigned int face = 0;
+                 face < GeometryInfo<dim>::faces_per_cell;
+                 ++face)
+              {
+                unsigned int face_uid = cell->face_index(face);
+                if (visited_faces.find(face_uid) != visited_faces.end())
+                  continue;
+
+                fe_face_trace_values.reinit(cell, face);
+
+                for (auto const c : Ddhdg::all_primary_components())
+                  {
+                    const FEValuesExtractors::Scalar c_extractor =
+                      this->get_trace_component_extractor(c);
+                    fe_face_trace_values[c_extractor].get_function_values(
+                      this->current_solution_trace, scratch_trace_values.at(c));
+                  }
+
+                std::cout << n_face_q_points << std::endl;
+
+                for (unsigned int q = 0; q < n_face_q_points; ++q)
+                  face_quadrature_points[q] =
+                    fe_face_trace_values.quadrature_point(q);
+
+                // Now we copy the data. This part is specific for dimension 1
+                positions[n_visited_faces] = face_quadrature_points[0][0];
+                for (auto const c : Ddhdg::all_primary_components())
+                  {
+                    trace_values.at(c)[n_visited_faces] =
+                      scratch_trace_values.at(c)[0];
+                  }
+
+                visited_faces.insert(face_uid);
+                ++n_visited_faces;
+              }
+          }
+        return {positions, trace_values};
+      }
+  }
+
 
   template class NPSolver<1, HomogeneousProblem<1>>;
   template class NPSolver<2, HomogeneousProblem<2>>;
