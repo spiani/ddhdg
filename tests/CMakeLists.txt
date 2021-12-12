@@ -2,9 +2,7 @@ set(_target tests)
 
 find_package(GTest)
 
-set(gtest_library_name "gtest")
 if (NOT GTest_FOUND)
-    set(gtest_library_name "gtest")
     include(FetchContent)
     FetchContent_Declare(
             googletest
@@ -13,6 +11,14 @@ if (NOT GTest_FOUND)
     )
     FetchContent_MakeAvailable(googletest)
     include(GoogleTest)
+endif ()
+
+if (NOT DEFINED GTEST_MAIN_LIBRARIES)
+    set(GTEST_MAIN_LIBRARIES "gtest_main")
+endif ()
+
+if (NOT DEFINED GTEST_LIBRARIES)
+    set(GTEST_MAIN_LIBRARIES "gtest")
 endif ()
 
 set(_test_files
@@ -34,7 +40,7 @@ set(_test_files
 
 add_executable(${_target} main.cpp ${_test_files})
 DEAL_II_SETUP_TARGET(${_target})
-target_link_libraries(${_target} DDHDG ${gtest_library_name})
+target_link_libraries(${_target} DDHDG ${GTEST_MAIN_LIBRARIES} ${GTEST_LIBRARIES})
 
 # gtest_discover_tests(tests)
 gtest_add_tests(TARGET ${_target})
