@@ -51,6 +51,7 @@ EPS = 0.01
 class InvalidDimensionException(ValueError):
     pass
 
+
 class InvalidTypenameException(ValueError):
     pass
 
@@ -502,6 +503,36 @@ def _plot_linfty_error_per_cell(solver, expected_solution, component, ax=None,
     )
 
 
+def _plot_solution_on_trace(solver, component, ax=None, color=None,
+                            marker='.', linestyle=''):
+    if not MATPLOTLIB_IMPORTED:
+        raise ModuleNotFoundError(
+            'The method "plot_solution_on_trace" requires matplotlib'
+        )
+
+    dim = solver.dimension
+    if dim != 1:
+        raise ValueError('No plot available in {}D'.format(dim))
+
+    if ax is None:
+        ax = plt.gca()
+
+    x_values, data_values = solver._get_trace_plot_data()
+    y_values = data_values[component]
+
+    kwargs = {}
+    if color is not None:
+        kwargs['color'] = color
+
+    return ax.plot(
+        x_values,
+        y_values,
+        color=color,
+        linestyle=linestyle,
+        marker=marker
+    )
+
+
 # These are the classes that are templatized over dimension
 HomogeneousPermittivity = TemplateClass('HomogeneousPermittivity')
 HomogeneousMobility = TemplateClass('HomogeneousMobility')
@@ -523,6 +554,7 @@ NPSolver = TemplateClass(
         _plot_error_per_cell,
         _plot_l2_error_per_cell,
         _plot_linfty_error_per_cell,
-        _plot_h1_error_per_cell
+        _plot_h1_error_per_cell,
+        _plot_solution_on_trace
     )
 )

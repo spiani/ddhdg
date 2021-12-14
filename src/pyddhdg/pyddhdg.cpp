@@ -481,7 +481,7 @@ namespace pyddhdg
     const dealii::types::boundary_id   id,
     const Ddhdg::BoundaryConditionType bc_type,
     const Ddhdg::Component             c,
-    const DealIIFunction<dim> &        f)
+    const DealIIFunction<dim>         &f)
   {
     this->bc_handler->add_boundary_condition(id,
                                              bc_type,
@@ -497,7 +497,7 @@ namespace pyddhdg
     const dealii::types::boundary_id   id,
     const Ddhdg::BoundaryConditionType bc_type,
     const Ddhdg::Component             c,
-    const std::string &                f)
+    const std::string                 &f)
   {
     this->add_boundary_condition(id, bc_type, c, AnalyticFunction<dim>(f));
   }
@@ -513,6 +513,48 @@ namespace pyddhdg
     const double                       d)
   {
     this->add_boundary_condition(id, bc_type, c, DealIIFunction<dim>(d));
+  }
+
+
+
+  template <int dim>
+  void
+  BoundaryConditionHandler<dim>::replace_boundary_condition(
+    const dealii::types::boundary_id   id,
+    const Ddhdg::BoundaryConditionType bc_type,
+    const Ddhdg::Component             c,
+    const DealIIFunction<dim>         &f)
+  {
+    this->bc_handler->replace_boundary_condition(id,
+                                                 bc_type,
+                                                 c,
+                                                 f.get_dealii_function());
+  }
+
+
+
+  template <int dim>
+  void
+  BoundaryConditionHandler<dim>::replace_boundary_condition(
+    const dealii::types::boundary_id   id,
+    const Ddhdg::BoundaryConditionType bc_type,
+    const Ddhdg::Component             c,
+    const std::string                 &f)
+  {
+    this->replace_boundary_condition(id, bc_type, c, AnalyticFunction<dim>(f));
+  }
+
+
+
+  template <int dim>
+  void
+  BoundaryConditionHandler<dim>::replace_boundary_condition(
+    const dealii::types::boundary_id   id,
+    const Ddhdg::BoundaryConditionType bc_type,
+    const Ddhdg::Component             c,
+    const double                       d)
+  {
+    this->replace_boundary_condition(id, bc_type, c, DealIIFunction<dim>(d));
   }
 
 
@@ -538,12 +580,12 @@ namespace pyddhdg
   template <int dim>
   Problem<dim>::Problem(const double                   left,
                         const double                   right,
-                        HomogeneousPermittivity<dim> & permittivity,
-                        HomogeneousMobility<dim> &     electron_mobility,
-                        HomogeneousMobility<dim> &     hole_mobility,
-                        RecombinationTerm<dim> &       recombination_term,
-                        DealIIFunction<dim> &          temperature,
-                        DealIIFunction<dim> &          doping,
+                        HomogeneousPermittivity<dim>  &permittivity,
+                        HomogeneousMobility<dim>      &electron_mobility,
+                        HomogeneousMobility<dim>      &hole_mobility,
+                        RecombinationTerm<dim>        &recombination_term,
+                        DealIIFunction<dim>           &temperature,
+                        DealIIFunction<dim>           &doping,
                         BoundaryConditionHandler<dim> &bc_handler,
                         const double                   conduction_band_density,
                         const double                   valence_band_density,
@@ -568,13 +610,13 @@ namespace pyddhdg
   template <int dim>
   Problem<dim>::Problem(
     const dealii::python::TriangulationWrapper &triangulation,
-    HomogeneousPermittivity<dim> &              permittivity,
-    HomogeneousMobility<dim> &                  electron_mobility,
-    HomogeneousMobility<dim> &                  hole_mobility,
-    RecombinationTerm<dim> &                    recombination_term,
-    DealIIFunction<dim> &                       temperature,
-    DealIIFunction<dim> &                       doping,
-    BoundaryConditionHandler<dim> &             bc_handler,
+    HomogeneousPermittivity<dim>               &permittivity,
+    HomogeneousMobility<dim>                   &electron_mobility,
+    HomogeneousMobility<dim>                   &hole_mobility,
+    RecombinationTerm<dim>                     &recombination_term,
+    DealIIFunction<dim>                        &temperature,
+    DealIIFunction<dim>                        &doping,
+    BoundaryConditionHandler<dim>              &bc_handler,
     const double                                conduction_band_density,
     const double                                valence_band_density,
     const double                                conduction_band_edge_energy,
@@ -680,9 +722,9 @@ namespace pyddhdg
 
   template <int dim>
   NPSolver<dim>::NPSolver(
-    const Problem<dim> &                             problem,
+    const Problem<dim>                              &problem,
     const std::shared_ptr<Ddhdg::NPSolverParameters> parameters,
-    const Ddhdg::Adimensionalizer &                  adimensionalizer,
+    const Ddhdg::Adimensionalizer                   &adimensionalizer,
     const bool                                       verbose)
     : ddhdg_solver(
         std::make_shared<Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>>(
@@ -789,7 +831,7 @@ namespace pyddhdg
   template <int dim>
   void
   NPSolver<dim>::set_component(const Ddhdg::Component c,
-                               const std::string &    f,
+                               const std::string     &f,
                                const bool             use_projection)
   {
     std::shared_ptr<dealii::FunctionParser<dim>> c_function =
@@ -1304,9 +1346,9 @@ namespace pyddhdg
                                                       true,
                                                       false);
 
-    for (const auto in_vector : trace_vector_map)
+    for (const auto &in_vector : trace_vector_map)
       {
-        const auto &  c      = in_vector.first;
+        const auto   &c      = in_vector.first;
         const auto    buffer = in_vector.second.request();
         const double *vector = static_cast<const double *>(buffer.ptr);
         unsigned int  k      = 0;
@@ -1486,6 +1528,57 @@ namespace pyddhdg
       relative_tol,
       max_number_of_iterations,
       generate_first_guess);
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::replace_boundary_condition(
+    dealii::types::boundary_id   id,
+    Ddhdg::BoundaryConditionType bc_type,
+    Ddhdg::Component             c,
+    DealIIFunction<dim>          f)
+  {
+    this->ddhdg_solver->replace_boundary_condition(id,
+                                                   bc_type,
+                                                   c,
+                                                   f.get_dealii_function());
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::replace_boundary_condition(
+    dealii::types::boundary_id   id,
+    Ddhdg::BoundaryConditionType bc_type,
+    Ddhdg::Component             c,
+    const std::string           &f_string)
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> f =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    f->initialize(dealii::FunctionParser<dim>::default_variable_names(),
+                  f_string,
+                  Ddhdg::Constants::constants);
+    this->ddhdg_solver->replace_boundary_condition(id, bc_type, c, f);
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::replace_boundary_condition(
+    dealii::types::boundary_id   id,
+    Ddhdg::BoundaryConditionType bc_type,
+    Ddhdg::Component             c,
+    const double                 k)
+  {
+    this->ddhdg_solver->replace_boundary_condition(
+      id,
+      bc_type,
+      c,
+      std::make_shared<dealii::Functions::ConstantFunction<dim>>(k));
   }
 
 
@@ -2120,7 +2213,7 @@ namespace pyddhdg
   template <int dim>
   double
   NPSolver<dim>::estimate_l2_error_on_trace(
-    const std::string &                      expected_solution,
+    const std::string                       &expected_solution,
     const Ddhdg::Component                   c,
     const dealii::python::QuadratureWrapper &q) const
   {
@@ -2147,7 +2240,7 @@ namespace pyddhdg
   template <int dim>
   double
   NPSolver<dim>::estimate_l2_error_on_trace(
-    const std::string &    expected_solution,
+    const std::string     &expected_solution,
     const Ddhdg::Component c) const
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =
@@ -2198,7 +2291,7 @@ namespace pyddhdg
   template <int dim>
   double
   NPSolver<dim>::estimate_linfty_error_on_trace(
-    const std::string &                      expected_solution,
+    const std::string                       &expected_solution,
     const Ddhdg::Component                   c,
     const dealii::python::QuadratureWrapper &q) const
   {
@@ -2225,7 +2318,7 @@ namespace pyddhdg
   template <int dim>
   double
   NPSolver<dim>::estimate_linfty_error_on_trace(
-    const std::string &    expected_solution,
+    const std::string     &expected_solution,
     const Ddhdg::Component c) const
   {
     std::shared_ptr<dealii::FunctionParser<dim>> expected_solution_f =

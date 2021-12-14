@@ -22,6 +22,8 @@ namespace Ddhdg
       , component(c)
     {}
 
+    BoundaryCondition(const BoundaryCondition &other) = default;
+
     BoundaryConditionType
     get_type() const
     {
@@ -67,7 +69,7 @@ namespace Ddhdg
     }
 
   protected:
-    const std::shared_ptr<const dealii::Function<dim>> function;
+    std::shared_ptr<const dealii::Function<dim>> function;
   };
 
   template <int dim>
@@ -98,7 +100,7 @@ namespace Ddhdg
     }
 
   protected:
-    const std::shared_ptr<const dealii::Function<dim>> function;
+    std::shared_ptr<const dealii::Function<dim>> function;
   };
 
   template <int dim>
@@ -128,15 +130,29 @@ namespace Ddhdg
     add_boundary_condition(dealii::types::boundary_id             id,
                            const DirichletBoundaryCondition<dim> &db);
 
+    bool
+    replace_boundary_condition(dealii::types::boundary_id             id,
+                               const DirichletBoundaryCondition<dim> &db);
+
     void
     add_boundary_condition(dealii::types::boundary_id           id,
                            const NeumannBoundaryCondition<dim> &db);
+
+    bool
+    replace_boundary_condition(dealii::types::boundary_id           id,
+                               const NeumannBoundaryCondition<dim> &db);
 
     void
     add_boundary_condition(dealii::types::boundary_id                   id,
                            BoundaryConditionType                        bc_type,
                            Component                                    c,
                            std::shared_ptr<const dealii::Function<dim>> f);
+
+    bool
+    replace_boundary_condition(dealii::types::boundary_id id,
+                               BoundaryConditionType      bc_type,
+                               Component                  c,
+                               std::shared_ptr<const dealii::Function<dim>> f);
 
     [[nodiscard]] bool
     has_dirichlet_boundary_conditions() const;

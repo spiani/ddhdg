@@ -304,6 +304,13 @@ namespace Ddhdg
       unsigned int                                    initial_refinements,
       std::ostream                                   &out) = 0;
 
+    virtual void
+    replace_boundary_condition(
+      dealii::types::boundary_id                   id,
+      BoundaryConditionType                        bc_type,
+      Component                                    c,
+      std::shared_ptr<const dealii::Function<dim>> f) = 0;
+
     virtual IteratorRange<typename dealii::Triangulation<dim>::cell_iterator>
     get_cell_iterator() const = 0;
 

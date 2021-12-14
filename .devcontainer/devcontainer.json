@@ -12,16 +12,16 @@
   },
   // Add the IDs of extensions you want installed when the container is created.
   "extensions": [
-	"davydden.dealii-prm",
-	"johnpapa.vscode-peacock",
-	"alefragnani.project-manager",
-	"ms-vscode.cpptools",
-	"shan.code-settings-sync",
-	"ms-vscode.cmake-tools",
-	"twxs.cmake",
-	"fredericbonnet.cmake-test-adapter",
-	"xaver.clang-format"
-]
+    "davydden.dealii-prm",
+    "johnpapa.vscode-peacock",
+    "alefragnani.project-manager",
+    "ms-vscode.cpptools",
+    "shan.code-settings-sync",
+    "ms-vscode.cmake-tools",
+    "twxs.cmake",
+    "fredericbonnet.cmake-test-adapter",
+    "xaver.clang-format"
+  ]
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
   // Uncomment the next line to run commands after the container is created - for example installing curl.

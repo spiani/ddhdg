@@ -467,6 +467,13 @@ namespace Ddhdg
       unsigned int                                    initial_refinements,
       std::ostream                                   &out) override;
 
+    void
+    replace_boundary_condition(
+      dealii::types::boundary_id                   id,
+      BoundaryConditionType                        bc_type,
+      Component                                    c,
+      std::shared_ptr<const dealii::Function<dim>> f) override;
+
     IteratorRange<typename dealii::Triangulation<dim>::cell_iterator>
     get_cell_iterator() const override;
 
@@ -823,8 +830,9 @@ namespace Ddhdg
                            CTScratchData      &scratch,
                            CTCopyData         &copy_data);
 
-    std::unique_ptr<Triangulation<dim>>       triangulation;
-    const std::shared_ptr<NPSolverParameters> parameters;
+    std::unique_ptr<Triangulation<dim>>            triangulation;
+    std::unique_ptr<BoundaryConditionHandler<dim>> boundary_handler;
+    const std::shared_ptr<NPSolverParameters>      parameters;
 
     const std::shared_ptr<const dealii::Function<dim>> rescaled_doping;
     const std::unique_ptr<RecombinationTerm<dim>>      recombination_term;

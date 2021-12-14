@@ -1645,8 +1645,7 @@ namespace Ddhdg
     // Let us assemble the projection matrix and its rhs
     for (unsigned int q = 0; q < n_face_q_points; ++q)
       {
-        // First of all we prepare a vector with the values of the base
-        // functions
+        // First we prepare a vector with the values of the base functions
         for (unsigned int i = 0; i < constrained_dofs; i++)
           {
             const unsigned int dof_index = current_dofs[i];
@@ -1683,6 +1682,7 @@ namespace Ddhdg
     for (unsigned int i = 0; i < constrained_dofs; ++i)
       {
         const unsigned int j = n_cell_constrained_dofs + i;
+
         scratch.local_condenser.cell_constrained_dofs[j]   = current_dofs[i];
         scratch.local_condenser.constrained_dofs_values[j] = proj_rhs[i];
       }
@@ -2178,8 +2178,11 @@ namespace Ddhdg
             DirichletBoundaryCondition<dim>(
               std::make_shared<dealii::Functions::ZeroFunction<dim>>(),
               Component::V) :
-            this->problem->boundary_handler->get_dirichlet_conditions_for_id(
+            this->boundary_handler->get_dirichlet_conditions_for_id(
               face_boundary_id, c);
+        Logging::write_log<Logging::severity_level::trace>(
+          "Appling Dirichlet boundary condition on face with id %s",
+          face_boundary_id);
         this->apply_dbc_on_face<prm, c>(scratch, task_data, dbc, face);
       }
     else
@@ -2228,7 +2231,7 @@ namespace Ddhdg
               (prm::thermodyn_eq) ?
                 NeumannBoundaryCondition<dim>(
                   std::make_shared<dealii::Functions::ZeroFunction<dim>>(), c) :
-                this->problem->boundary_handler->get_neumann_conditions_for_id(
+                this->boundary_handler->get_neumann_conditions_for_id(
                   face_boundary_id, c);
             this->apply_nbc_on_face<c>(scratch, task_data, nbc, face);
           }
@@ -2586,12 +2589,11 @@ namespace Ddhdg
                 for (const Component c : this->enabled_components)
                   {
                     const bool has_dirichlet_bc =
-                      this->problem->boundary_handler
-                        ->has_dirichlet_boundary_conditions(face_boundary_id,
-                                                            c);
+                      this->boundary_handler->has_dirichlet_boundary_conditions(
+                        face_boundary_id, c);
                     const bool has_neumann_bc =
-                      this->problem->boundary_handler
-                        ->has_neumann_boundary_conditions(face_boundary_id, c);
+                      this->boundary_handler->has_neumann_boundary_conditions(
+                        face_boundary_id, c);
 
                     this->assemble_flux_conditions_wrapper<prm>(
                       c,
@@ -2710,11 +2712,11 @@ namespace Ddhdg
 
         for (const auto c : this->enabled_components)
           {
-            if (this->problem->boundary_handler
-                  ->has_dirichlet_boundary_conditions(face_boundary_id, c))
+            if (this->boundary_handler->has_dirichlet_boundary_conditions(
+                  face_boundary_id, c))
               has_boundary_conditions = true;
-            if (this->problem->boundary_handler
-                  ->has_neumann_boundary_conditions(face_boundary_id, c))
+            if (this->boundary_handler->has_neumann_boundary_conditions(
+                  face_boundary_id, c))
               has_boundary_conditions = true;
             if (has_boundary_conditions)
               break;

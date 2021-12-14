@@ -202,6 +202,24 @@ py::class_<BoundaryConditionHandler<DIM>>(m, "BoundaryConditionHandler")
                          Ddhdg::Component,
                          const double>(
          &BoundaryConditionHandler<DIM>::add_boundary_condition))
+  .def("replace_boundary_condition",
+       py::overload_cast<dealii::types::boundary_id,
+                         Ddhdg::BoundaryConditionType,
+                         Ddhdg::Component,
+                         const DealIIFunction<DIM> &>(
+         &BoundaryConditionHandler<DIM>::replace_boundary_condition))
+  .def("replace_boundary_condition",
+       py::overload_cast<dealii::types::boundary_id,
+                         Ddhdg::BoundaryConditionType,
+                         Ddhdg::Component,
+                         const std::string &>(
+         &BoundaryConditionHandler<DIM>::replace_boundary_condition))
+  .def("replace_boundary_condition",
+       py::overload_cast<dealii::types::boundary_id,
+                         Ddhdg::BoundaryConditionType,
+                         Ddhdg::Component,
+                         const double>(
+         &BoundaryConditionHandler<DIM>::replace_boundary_condition))
   .def("has_dirichlet_boundary_conditions",
        &BoundaryConditionHandler<DIM>::has_dirichlet_boundary_conditions)
   .def("has_neumann_boundary_conditions",
@@ -398,6 +416,24 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("max_number_of_iterations"),
        py::arg("generate_first_guess") = true,
        py::call_guard<py::gil_scoped_release>())
+  .def("replace_boundary_condition",
+       py::overload_cast<dealii::types::boundary_id,
+                         Ddhdg::BoundaryConditionType,
+                         Ddhdg::Component,
+                         DealIIFunction<DIM>>(
+         &NPSolver<DIM>::replace_boundary_condition))
+  .def("replace_boundary_condition",
+       py::overload_cast<dealii::types::boundary_id,
+                         Ddhdg::BoundaryConditionType,
+                         Ddhdg::Component,
+                         const std::string &>(
+         &NPSolver<DIM>::replace_boundary_condition))
+  .def(
+    "replace_boundary_condition",
+    py::overload_cast<dealii::types::boundary_id,
+                      Ddhdg::BoundaryConditionType,
+                      Ddhdg::Component,
+                      const double>(&NPSolver<DIM>::replace_boundary_condition))
   .def("estimate_error_per_cell",
        py::overload_cast<const Ddhdg::Component>(
          &NPSolver<DIM>::estimate_error_per_cell,

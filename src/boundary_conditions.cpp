@@ -20,6 +20,75 @@ Ddhdg::BoundaryConditionHandler<dim>::add_boundary_condition(
   dbc_map[id].insert({db.get_component(), db});
 }
 
+template <int dim>
+bool
+Ddhdg::BoundaryConditionHandler<dim>::replace_boundary_condition(
+  dealii::types::boundary_id                    id,
+  const Ddhdg::DirichletBoundaryCondition<dim> &db)
+{
+  bool dirichlet_found =
+    dbc_map[id].find(db.get_component()) != dbc_map[id].end();
+  bool neumann_found =
+    nbc_map[id].find(db.get_component()) != nbc_map[id].end();
+
+  if (!(dirichlet_found || neumann_found))
+    {
+      std::string error = "On boundary id " + std::to_string(id) +
+                          ", no Dirichlet or Neumann " +
+                          "boundary conditions have been specified";
+      AssertThrow(false, dealii::ExcMessage(error));
+    }
+
+  const auto c = db.get_component();
+
+  if (neumann_found)
+    nbc_map[id].erase(c);
+
+  auto const result = dbc_map[id].insert({c, db});
+  if (not result.second)
+    {
+      dbc_map[id].erase(c);
+      dbc_map[id].insert({c, db});
+    }
+
+  return neumann_found;
+}
+
+
+
+template <int dim>
+bool
+Ddhdg::BoundaryConditionHandler<dim>::replace_boundary_condition(
+  dealii::types::boundary_id                  id,
+  const Ddhdg::NeumannBoundaryCondition<dim> &db)
+{
+  bool dirichlet_found =
+    dbc_map[id].find(db.get_component()) != dbc_map[id].end();
+  bool neumann_found =
+    nbc_map[id].find(db.get_component()) != nbc_map[id].end();
+
+  if (!(dirichlet_found || neumann_found))
+    {
+      std::string error = "On boundary id " + std::to_string(id) +
+                          ", no Dirichlet or Neumann " +
+                          "boundary conditions have been specified";
+      AssertThrow(false, dealii::ExcMessage(error));
+    }
+
+  const auto c = db.get_component();
+
+  if (dirichlet_found)
+    dbc_map[id].erase(c);
+
+  auto const result = nbc_map[id].insert({c, db});
+  if (not result.second)
+    {
+      nbc_map[id].erase(c);
+      nbc_map[id].insert({c, db});
+    }
+  return dirichlet_found;
+}
+
 
 
 template <int dim>
@@ -58,6 +127,28 @@ Ddhdg::BoundaryConditionHandler<dim>::add_boundary_condition(
     {
       this->add_boundary_condition(id, NeumannBoundaryCondition(f, c));
     }
+}
+
+
+template <int dim>
+bool
+Ddhdg::BoundaryConditionHandler<dim>::replace_boundary_condition(
+  dealii::types::boundary_id                   id,
+  BoundaryConditionType                        bc_type,
+  Component                                    c,
+  std::shared_ptr<const dealii::Function<dim>> f)
+{
+  if (bc_type == Ddhdg::dirichlet)
+    {
+      return this->replace_boundary_condition(id,
+                                              DirichletBoundaryCondition(f, c));
+    }
+  else if (bc_type == Ddhdg::neumann)
+    {
+      return this->replace_boundary_condition(id,
+                                              NeumannBoundaryCondition(f, c));
+    }
+  AssertThrow(false, dealii::ExcMessage("Invalid boundary condition type"));
 }
 
 

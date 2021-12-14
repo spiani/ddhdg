@@ -1020,8 +1020,8 @@ namespace Ddhdg
                 const auto c_extractor = scratch.trace_extractors.at(cmp);
 
                 const bool has_dirichlet_bc =
-                  this->problem->boundary_handler
-                    ->has_dirichlet_boundary_conditions(face_boundary_id, cmp);
+                  this->boundary_handler->has_dirichlet_boundary_conditions(
+                    face_boundary_id, cmp);
                 if (has_dirichlet_bc)
                   {
                     const double rescaling_factor =
@@ -1032,9 +1032,8 @@ namespace Ddhdg
                     c_rhs = 0.;
 
                     const auto dbc =
-                      this->problem->boundary_handler
-                        ->get_dirichlet_conditions_for_id(face_boundary_id,
-                                                          cmp);
+                      this->boundary_handler->get_dirichlet_conditions_for_id(
+                        face_boundary_id, cmp);
 
                     for (unsigned int q = 0; q < q_points; ++q)
                       {
@@ -1056,8 +1055,8 @@ namespace Ddhdg
                   }
 
                 const bool has_neumann_bc =
-                  this->problem->boundary_handler
-                    ->has_neumann_boundary_conditions(face_boundary_id, cmp);
+                  this->boundary_handler->has_neumann_boundary_conditions(
+                    face_boundary_id, cmp);
                 if (has_neumann_bc)
                   {
                     const double rescaling_factor =
@@ -1065,8 +1064,8 @@ namespace Ddhdg
                         ->get_neumann_boundary_condition_rescaling_factor(cmp);
 
                     const auto nbc =
-                      this->problem->boundary_handler
-                        ->get_neumann_conditions_for_id(face_boundary_id, cmp);
+                      this->boundary_handler->get_neumann_conditions_for_id(
+                        face_boundary_id, cmp);
                     for (unsigned int q = 0; q < q_points; ++q)
                       {
                         const double JxW = scratch.fe_face_values_cell.JxW(q);

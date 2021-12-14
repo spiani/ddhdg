@@ -334,6 +334,8 @@ namespace Ddhdg
     const bool                                    verbose)
     : Solver<dim, ProblemType>(problem, adimensionalizer)
     , triangulation(copy_triangulation(problem->triangulation))
+    , boundary_handler(std::make_unique<BoundaryConditionHandler<dim>>(
+        *(problem->boundary_handler)))
     , parameters(parameters)
     , rescaled_doping(
         this->adimensionalizer->template adimensionalize_doping_function<dim>(
@@ -526,8 +528,8 @@ namespace Ddhdg
               const types::boundary_id face_boundary_id =
                 cell->face(face)->boundary_id();
               const bool has_dirichlet_boundary_conditions =
-                this->problem->boundary_handler
-                  ->has_dirichlet_boundary_conditions(face_boundary_id, c);
+                this->boundary_handler->has_dirichlet_boundary_conditions(
+                  face_boundary_id, c);
 
               if (has_dirichlet_boundary_conditions)
                 {
@@ -613,16 +615,15 @@ namespace Ddhdg
     this->n_dirichlet_constraints =
       this->get_dofs_constrained_by_dirichlet_conditions(dirichlet_constraints);
 
-    this->n_dirichlet_constraints = n_dirichlet_constraints;
     this->constrained_dof_indices.resize(this->n_dirichlet_constraints);
     this->constrained_dof_values.resize(this->n_dirichlet_constraints);
 
-    // This is tricky; we need a way to recognize if we have computed the
-    // the values of the previous vectors (or if they are still just allocated)
-    // For this reason, we put a "invalid flag" at the beginning of the vector
-    // to make clear that they do not contain (yet) reasonable values. If there
-    // are no dirichlet constraints this is useless because they contain
-    // already the right values (which is no one)
+    // This is tricky; we need a way to recognize if we have computed the values
+    // of the previous vectors (or if they are still just allocated): for this
+    // reason, we put an "invalid flag" at the beginning of the vector to make
+    // clear that they do not contain (yet) reasonable values. If there are no
+    // dirichlet constraints this is useless because they contain already the
+    // right values (which is no one)
     if (this->n_dirichlet_constraints > 0)
       this->constrained_dof_indices[0] = dealii::numbers::invalid_dof_index;
 
@@ -910,8 +911,8 @@ namespace Ddhdg
     const UpdateFlags flags(update_values | update_quadrature_points);
 
     FEFaceValues<dim>  fe_face_trace_values(*(this->fe_trace),
-                                            face_quadrature_formula,
-                                            flags);
+                                           face_quadrature_formula,
+                                           flags);
     const unsigned int n_face_q_points =
       fe_face_trace_values.get_quadrature().size();
     Assert(n_face_q_points == 1, ExcDimensionMismatch(n_face_q_points, 1));
@@ -2152,6 +2153,83 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
+  void
+  NPSolver<dim, ProblemType>::replace_boundary_condition(
+    const dealii::types::boundary_id                   id,
+    const BoundaryConditionType                        bc_type,
+    const Component                                    c,
+    const std::shared_ptr<const dealii::Function<dim>> f)
+  {
+    this->write_log("Replacing a boundary condition");
+    bool changed_bc_type = true;
+    if (this->boundary_handler->has_boundary_conditions(id))
+      changed_bc_type =
+        this->boundary_handler->replace_boundary_condition(id, bc_type, c, f);
+    else
+      this->boundary_handler->add_boundary_condition(id, bc_type, c, f);
+
+    if (!changed_bc_type)
+      {
+        this->write_log(
+          "No need of recomputing the constrain matrix because the new "
+          "boundary condition is of the same type of the one that we "
+          "already had");
+        if (bc_type == Ddhdg::BoundaryConditionType::dirichlet)
+          {
+            this->write_log(
+              "Because of the fact that the new boundary condition is a "
+              "Dirichlet boundary condition, the old values for the Dirichlet "
+              "constrained dofs will be recomputed at the first iteration");
+            if (this->n_dirichlet_constraints > 0)
+              this->constrained_dof_indices[0] =
+                dealii::numbers::invalid_dof_index;
+          }
+        return;
+      }
+
+    this->write_log(
+      "The new boundary conditions require to rebuild the constraint matrix");
+    const unsigned int trace_restricted_dofs =
+      this->dof_handler_trace_restricted.n_dofs();
+    std::vector<bool> dirichlet_constraints(trace_restricted_dofs, false);
+    this->n_dirichlet_constraints =
+      this->get_dofs_constrained_by_dirichlet_conditions(dirichlet_constraints);
+
+    this->constrained_dof_indices.resize(this->n_dirichlet_constraints);
+    this->constrained_dof_values.resize(this->n_dirichlet_constraints);
+
+    if (this->n_dirichlet_constraints > 0)
+      this->constrained_dof_indices[0] = dealii::numbers::invalid_dof_index;
+
+    this->write_log(
+      "%s degree of freedom (on the skeleton) are constrained by Dirichlet "
+      "boundary conditions",
+      this->n_dirichlet_constraints);
+
+    this->system_rhs.reinit(trace_restricted_dofs);
+    this->system_solution.reinit(trace_restricted_dofs);
+
+    this->constraints.clear();
+    DoFTools::make_hanging_node_constraints(this->dof_handler_trace_restricted,
+                                            this->constraints);
+    this->constraints.add_lines(dirichlet_constraints);
+    this->constraints.close();
+
+    {
+      DynamicSparsityPattern dsp(trace_restricted_dofs);
+      DoFTools::make_sparsity_pattern(this->dof_handler_trace_restricted,
+                                      dsp,
+                                      this->constraints,
+                                      false);
+      this->sparsity_pattern.copy_from(dsp);
+    }
+    this->system_matrix.reinit(this->sparsity_pattern);
+    this->build_restricted_to_trace_dof_map();
+  }
+
+
+
+  template <int dim, typename ProblemType>
   IteratorRange<typename dealii::Triangulation<dim>::cell_iterator>
   NPSolver<dim, ProblemType>::get_cell_iterator() const
   {
@@ -2173,7 +2251,7 @@ namespace Ddhdg
   {
     if constexpr (dim != 1)
       {
-        Assert(
+        AssertThrow(
           false,
           ExcMessage(
             "The method get_trace_plot_data has been implemented only for 1D solvers"))
@@ -2228,8 +2306,6 @@ namespace Ddhdg
                     fe_face_trace_values[c_extractor].get_function_values(
                       this->current_solution_trace, scratch_trace_values.at(c));
                   }
-
-                std::cout << n_face_q_points << std::endl;
 
                 for (unsigned int q = 0; q < n_face_q_points; ++q)
                   face_quadrature_points[q] =

@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     container: heltai/ddhdg
     
-    steps:          
+    steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     container: heltai/ddhdg
     
-    steps:          
+    steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
