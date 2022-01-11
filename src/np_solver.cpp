@@ -2316,7 +2316,8 @@ namespace Ddhdg
                 for (auto const c : Ddhdg::all_primary_components())
                   {
                     trace_values.at(c)[n_visited_faces] =
-                      scratch_trace_values.at(c)[0];
+                      scratch_trace_values.at(c)[0] *
+                      this->adimensionalizer->get_component_rescaling_factor(c);
                   }
 
                 visited_faces.insert(face_uid);
