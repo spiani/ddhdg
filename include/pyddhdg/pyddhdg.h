@@ -13,6 +13,158 @@
 #include <Eigen/Sparse>
 
 
+namespace Ddhdg
+{
+  template <int dim>
+  class PythonDefinedRecombinationTerm : public RecombinationTerm<dim>
+  {
+  public:
+    PythonDefinedRecombinationTerm(pybind11::object r_function,
+                                   pybind11::object dr_dn_function,
+                                   pybind11::object dr_dp_function)
+      : r(r_function)
+      , dr_dn(dr_dn_function)
+      , dr_dp(dr_dp_function)
+    {}
+
+    PythonDefinedRecombinationTerm(
+      const PythonDefinedRecombinationTerm<dim> &pdrt) = default;
+
+    void
+    redefine_function(pybind11::object r_function,
+                      pybind11::object dr_dn_function,
+                      pybind11::object dr_dp_function);
+
+    double
+    compute_recombination_term(double                    n,
+                               double                    p,
+                               const dealii::Point<dim> &q,
+                               double rescaling_factor) const override;
+
+    double
+    compute_derivative_of_recombination_term(double                    n,
+                                             double                    p,
+                                             const dealii::Point<dim> &q,
+                                             double    rescaling_factor,
+                                             Component c) const override;
+
+    void
+    compute_multiple_recombination_terms(
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
+      const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
+      bool                                   clear_vector,
+      std::vector<double>                   &r) override;
+
+    void
+    compute_multiple_derivatives_of_recombination_terms(
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
+      const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
+      Component                              c,
+      bool                                   clear_vector,
+      std::vector<double>                   &r) override;
+
+    std::unique_ptr<RecombinationTerm<dim>>
+    copy() const override
+    {
+      return std::make_unique<PythonDefinedRecombinationTerm<dim>>(*this);
+    }
+
+    virtual ~PythonDefinedRecombinationTerm() = default;
+
+  private:
+    pybind11::object r;
+    pybind11::object dr_dn;
+    pybind11::object dr_dp;
+  };
+
+  template <int dim>
+  class PythonDefinedSpacialRecombinationTerm : public RecombinationTerm<dim>
+  {
+  public:
+    PythonDefinedSpacialRecombinationTerm(pybind11::object r_function)
+      : r(r_function)
+    {}
+
+    PythonDefinedSpacialRecombinationTerm(
+      const PythonDefinedSpacialRecombinationTerm<dim> &pdrt) = default;
+
+    void
+    redefine_function(pybind11::object r_function)
+    {
+      this->r = r_function;
+    };
+
+    double
+    compute_recombination_term(double                    n,
+                               double                    p,
+                               const dealii::Point<dim> &q,
+                               double rescaling_factor) const override;
+
+    double
+    compute_derivative_of_recombination_term(double                    n,
+                                             double                    p,
+                                             const dealii::Point<dim> &q,
+                                             double    rescaling_factor,
+                                             Component c) const override
+    {
+      (void)n;
+      (void)p;
+      (void)q;
+      (void)rescaling_factor;
+      (void)c;
+      return 0.;
+    }
+
+    void
+    compute_multiple_recombination_terms(
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
+      const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
+      bool                                   clear_vector,
+      std::vector<double>                   &r) override;
+
+    void
+    compute_multiple_derivatives_of_recombination_terms(
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
+      const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
+      Component                              c,
+      bool                                   clear_vector,
+      std::vector<double>                   &r) override
+    {
+      (void)n;
+      (void)p;
+      (void)P;
+      (void)rescaling_factor;
+      (void)c;
+      unsigned int n_of_points = r.size();
+      if (clear_vector)
+        for (unsigned int i = 0; i < n_of_points; ++i)
+          r[i] = 0.;
+    }
+
+    std::unique_ptr<RecombinationTerm<dim>>
+    copy() const override
+    {
+      return std::make_unique<PythonDefinedSpacialRecombinationTerm<dim>>(
+        *this);
+    }
+
+    virtual ~PythonDefinedSpacialRecombinationTerm() = default;
+
+  private:
+    pybind11::object r;
+  };
+} // namespace Ddhdg
+
+
+
 namespace pyddhdg
 {
   template <int dim>
@@ -245,6 +397,92 @@ namespace pyddhdg
 
     const double n_coefficient;
     const double p_coefficient;
+  };
+
+  template <int dim>
+  class PythonDefinedRecombinationTerm : public RecombinationTerm<dim>
+  {
+  public:
+    PythonDefinedRecombinationTerm(pybind11::object r_function,
+                                   pybind11::object dr_dn_function,
+                                   pybind11::object dr_dp_function)
+      : r_function(r_function)
+      , dr_dn_function(dr_dn_function)
+      , dr_dp_function(dr_dp_function)
+      , ddhdg_recombination_term(
+          std::make_shared<Ddhdg::PythonDefinedRecombinationTerm<dim>>(
+            this->r_function,
+            this->dr_dn_function,
+            this->dr_dp_function)){};
+
+    std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+    generate_ddhdg_recombination_term() override
+    {
+      return this->ddhdg_recombination_term;
+    }
+
+    void
+    redefine_function(pybind11::object r_function,
+                      pybind11::object dr_dn_function,
+                      pybind11::object dr_dp_function)
+    {
+      this->ddhdg_recombination_term->redefine_function(r_function,
+                                                        dr_dn_function,
+                                                        dr_dp_function);
+      this->r_function     = r_function;
+      this->dr_dn_function = dr_dn_function;
+      this->dr_dp_function = dr_dp_function;
+    }
+
+    pybind11::object
+    evaluate()
+    {
+      return this->r_function;
+    }
+
+  private:
+    pybind11::object r_function;
+    pybind11::object dr_dn_function;
+    pybind11::object dr_dp_function;
+
+    std::shared_ptr<Ddhdg::PythonDefinedRecombinationTerm<dim>>
+      ddhdg_recombination_term;
+  };
+
+  template <int dim>
+  class PythonDefinedSpacialRecombinationTerm : public RecombinationTerm<dim>
+  {
+  public:
+    PythonDefinedSpacialRecombinationTerm(pybind11::object r_function)
+      : r_function(r_function)
+      , ddhdg_recombination_term(
+          std::make_shared<Ddhdg::PythonDefinedSpacialRecombinationTerm<dim>>(
+            this->r_function)){};
+
+    std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
+    generate_ddhdg_recombination_term() override
+    {
+      return this->ddhdg_recombination_term;
+    }
+
+    void
+    redefine_function(pybind11::object r_function)
+    {
+      this->ddhdg_recombination_term->redefine_function(r_function);
+      this->r_function = r_function;
+    }
+
+    pybind11::object
+    evaluate()
+    {
+      return this->r_function;
+    }
+
+  private:
+    pybind11::object r_function;
+
+    std::shared_ptr<Ddhdg::PythonDefinedSpacialRecombinationTerm<dim>>
+      ddhdg_recombination_term;
   };
 
   template <int dim>

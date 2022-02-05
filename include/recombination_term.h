@@ -482,5 +482,4 @@ namespace Ddhdg
   private:
     std::vector<double> temperature_buffer;
   };
-
 } // namespace Ddhdg

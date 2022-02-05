@@ -4,6 +4,386 @@
 
 #include "function_tools.h"
 
+
+namespace Ddhdg
+{
+  template <int dim>
+  void
+  PythonDefinedRecombinationTerm<dim>::redefine_function(
+    const pybind11::object r_function,
+    const pybind11::object dr_dn_function,
+    const pybind11::object dr_dp_function)
+  {
+    this->r     = r_function;
+    this->dr_dn = dr_dn_function;
+    this->dr_dp = dr_dp_function;
+  }
+
+
+
+  template <int dim>
+  double
+  PythonDefinedRecombinationTerm<dim>::compute_recombination_term(
+    double                    n,
+    double                    p,
+    const dealii::Point<dim> &q,
+    double                    rescaling_factor) const
+  {
+    const unsigned int n_of_points = 1;
+
+    double *points_data = new double[n_of_points * dim];
+    for (unsigned int d = 0; d < dim; ++d)
+      points_data[d] = q[d];
+
+    pybind11::buffer_info points_buffer(
+      points_data,
+      sizeof(double), // itemsize
+      pybind11::format_descriptor<double>::format(),
+      1,                                  // ndim
+      std::vector<size_t>{dim},           // shape
+      std::vector<size_t>{sizeof(double)} // strides
+    );
+
+    pybind11::array_t<double, pybind11::array::c_style> points(points_buffer);
+    pybind11::object                                    output_value =
+      this->r(n * rescaling_factor, p * rescaling_factor, points);
+    const double output_double = pybind11::cast<double>(output_value);
+
+    delete[] points_data;
+
+    return output_double;
+  }
+
+
+
+  template <int dim>
+  double
+  PythonDefinedRecombinationTerm<dim>::compute_derivative_of_recombination_term(
+    double                    n,
+    double                    p,
+    const dealii::Point<dim> &q,
+    double                    rescaling_factor,
+    const Component           c) const
+  {
+    const unsigned int n_of_points = 1;
+
+    double *points_data = new double[n_of_points * dim];
+    for (unsigned int d = 0; d < dim; ++d)
+      points_data[d] = q[d];
+
+    pybind11::buffer_info points_buffer(
+      points_data,
+      sizeof(double), // itemsize
+      pybind11::format_descriptor<double>::format(),
+      1,                                  // ndim
+      std::vector<size_t>{dim},           // shape
+      std::vector<size_t>{sizeof(double)} // strides
+    );
+
+    pybind11::array_t<double, pybind11::array::c_style> points(points_buffer);
+
+    if (c == Ddhdg::Component::n)
+      {
+        pybind11::object output_value =
+          this->dr_dn(n * rescaling_factor, p * rescaling_factor, points);
+        delete[] points_data;
+        return pybind11::cast<double>(output_value);
+      }
+    else if (c == Ddhdg::Component::p)
+      {
+        pybind11::object output_value =
+          this->dr_dp(n * rescaling_factor, p * rescaling_factor, points);
+        delete[] points_data;
+        return pybind11::cast<double>(output_value);
+      }
+    delete[] points_data;
+    AssertThrow(false, dealii::ExcMessage("Invalid component"));
+  }
+
+
+
+  template <int dim>
+  void
+  PythonDefinedRecombinationTerm<dim>::compute_multiple_recombination_terms(
+    const std::vector<double>             &n,
+    const std::vector<double>             &p,
+    const std::vector<dealii::Point<dim>> &P,
+    double                                 rescaling_factor,
+    bool                                   clear_vector,
+    std::vector<double>                   &r)
+  {
+    const unsigned int n_of_points = P.size();
+
+    double *points_data = new double[n_of_points * dim];
+    for (unsigned int i = 0; i < n_of_points; ++i)
+      for (unsigned int d = 0; d < dim; ++d)
+        points_data[i * dim + d] = P[i][d];
+
+    double *n_data = new double[n_of_points];
+    double *p_data = new double[n_of_points];
+
+    for (unsigned int i = 0; i < n_of_points; ++i)
+      {
+        n_data[i] = n[i] * rescaling_factor;
+        p_data[i] = p[i] * rescaling_factor;
+      }
+
+    pybind11::buffer_info points_buffer(
+      points_data,
+      sizeof(double), // itemsize
+      pybind11::format_descriptor<double>::format(),
+      2,                                                        // ndim
+      std::vector<size_t>{n_of_points, dim},                    // shape
+      std::vector<size_t>{dim * sizeof(double), sizeof(double)} // strides
+    );
+
+    pybind11::buffer_info n_buffer(
+      n_data,
+      sizeof(double), // itemsize
+      pybind11::format_descriptor<double>::format(),
+      1,                                  // ndim
+      std::vector<size_t>{n_of_points},   // shape
+      std::vector<size_t>{sizeof(double)} // strides
+    );
+
+    pybind11::buffer_info p_buffer(
+      p_data,
+      sizeof(double), // itemsize
+      pybind11::format_descriptor<double>::format(),
+      1,                                  // ndim
+      std::vector<size_t>{n_of_points},   // shape
+      std::vector<size_t>{sizeof(double)} // strides
+    );
+
+    pybind11::array_t<double, pybind11::array::c_style> points(points_buffer);
+    pybind11::array_t<double, pybind11::array::c_style> n_ndarray(n_buffer);
+    pybind11::array_t<double, pybind11::array::c_style> p_ndarray(p_buffer);
+    pybind11::array_t<double>                           output_value =
+      this->r(n_ndarray, p_ndarray, points);
+
+    pybind11::buffer_info output_buffer = output_value.request();
+    if (output_buffer.ndim != 1)
+      AssertThrow(false, ExcMessage("Number of dimensions must be one"));
+    if (output_buffer.size != n_of_points)
+      AssertThrow(
+        false,
+        ExcMessage(
+          "Python function returned an array with an invalid number of points"));
+
+    double *output_ptr = static_cast<double *>(output_buffer.ptr);
+
+    if (clear_vector)
+      for (unsigned int i = 0; i < n_of_points; ++i)
+        r[i] = 0;
+
+    for (unsigned int i = 0; i < n_of_points; ++i)
+      r[i] += output_ptr[i];
+
+    delete[] points_data;
+    delete[] n_data;
+    delete[] p_data;
+  }
+
+
+
+  template <int dim>
+  void
+  PythonDefinedRecombinationTerm<dim>::
+    compute_multiple_derivatives_of_recombination_terms(
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
+      const std::vector<dealii::Point<dim>> &P,
+      const double                           rescaling_factor,
+      const Component                        c,
+      const bool                             clear_vector,
+      std::vector<double>                   &r)
+  {
+    const unsigned int n_of_points = P.size();
+
+    double *points_data = new double[n_of_points * dim];
+    for (unsigned int i = 0; i < n_of_points; ++i)
+      for (unsigned int d = 0; d < dim; ++d)
+        points_data[i * dim + d] = P[i][d];
+
+    double *n_data = new double[n_of_points];
+    double *p_data = new double[n_of_points];
+
+    for (unsigned int i = 0; i < n_of_points; ++i)
+      {
+        n_data[i] = n[i] * rescaling_factor;
+        p_data[i] = p[i] * rescaling_factor;
+      }
+
+    pybind11::buffer_info points_buffer(
+      points_data,
+      sizeof(double), // itemsize
+      pybind11::format_descriptor<double>::format(),
+      2,                                                        // ndim
+      std::vector<size_t>{n_of_points, dim},                    // shape
+      std::vector<size_t>{dim * sizeof(double), sizeof(double)} // strides
+    );
+
+    pybind11::buffer_info n_buffer(
+      n_data,
+      sizeof(double), // itemsize
+      pybind11::format_descriptor<double>::format(),
+      1,                                  // ndim
+      std::vector<size_t>{n_of_points},   // shape
+      std::vector<size_t>{sizeof(double)} // strides
+    );
+
+    pybind11::buffer_info p_buffer(
+      p_data,
+      sizeof(double), // itemsize
+      pybind11::format_descriptor<double>::format(),
+      1,                                  // ndim
+      std::vector<size_t>{n_of_points},   // shape
+      std::vector<size_t>{sizeof(double)} // strides
+    );
+
+    pybind11::array_t<double, pybind11::array::c_style> points(points_buffer);
+    pybind11::array_t<double, pybind11::array::c_style> n_ndarray(n_buffer);
+    pybind11::array_t<double, pybind11::array::c_style> p_ndarray(p_buffer);
+    pybind11::array_t<double>                           output_value;
+
+    if (c == Ddhdg::Component::n)
+      output_value = this->dr_dn(n_ndarray, p_ndarray, points);
+    else if (c == Ddhdg::Component::p)
+      output_value = this->dr_dp(n_ndarray, p_ndarray, points);
+    else
+      AssertThrow(false, ExcMessage("Invalid component specified"))
+
+        pybind11::buffer_info output_buffer = output_value.request();
+    if (output_buffer.ndim != 1)
+      AssertThrow(false, ExcMessage("Number of dimensions must be one"));
+    if (output_buffer.size != n_of_points)
+      AssertThrow(
+        false,
+        ExcMessage(
+          "Python function returned an array with an invalid number of points"));
+
+    double *output_ptr = static_cast<double *>(output_buffer.ptr);
+
+    if (clear_vector)
+      for (unsigned int i = 0; i < n_of_points; ++i)
+        r[i] = 0;
+
+    for (unsigned int i = 0; i < n_of_points; ++i)
+      r[i] += output_ptr[i];
+
+    delete[] points_data;
+    delete[] n_data;
+    delete[] p_data;
+  }
+
+
+
+  template <int dim>
+  double
+  PythonDefinedSpacialRecombinationTerm<dim>::compute_recombination_term(
+    double                    n,
+    double                    p,
+    const dealii::Point<dim> &q,
+    double                    rescaling_factor) const
+  {
+    const unsigned int n_of_points = 1;
+
+    double *points_data = new double[n_of_points * dim];
+    for (unsigned int d = 0; d < dim; ++d)
+      points_data[d] = q[d];
+
+    pybind11::buffer_info points_buffer(
+      points_data,
+      sizeof(double), // itemsize
+      pybind11::format_descriptor<double>::format(),
+      1,                                  // ndim
+      std::vector<size_t>{dim},           // shape
+      std::vector<size_t>{sizeof(double)} // strides
+    );
+
+    pybind11::array_t<double, pybind11::array::c_style> points(points_buffer);
+
+    (void)rescaling_factor;
+    (void)n;
+    (void)p;
+
+    pybind11::object output_value  = this->r(points);
+    const double     output_double = pybind11::cast<double>(output_value);
+
+    delete[] points_data;
+
+    return output_double;
+  }
+
+
+
+  template <int dim>
+  void
+  PythonDefinedSpacialRecombinationTerm<dim>::
+    compute_multiple_recombination_terms(
+      const std::vector<double>             &n,
+      const std::vector<double>             &p,
+      const std::vector<dealii::Point<dim>> &P,
+      double                                 rescaling_factor,
+      bool                                   clear_vector,
+      std::vector<double>                   &r)
+  {
+    const unsigned int n_of_points = P.size();
+
+    double *points_data = new double[n_of_points * dim];
+    for (unsigned int i = 0; i < n_of_points; ++i)
+      for (unsigned int d = 0; d < dim; ++d)
+        points_data[i * dim + d] = P[i][d];
+
+    pybind11::buffer_info points_buffer(
+      points_data,
+      sizeof(double), // itemsize
+      pybind11::format_descriptor<double>::format(),
+      2,                                                        // ndim
+      std::vector<size_t>{n_of_points, dim},                    // shape
+      std::vector<size_t>{dim * sizeof(double), sizeof(double)} // strides
+    );
+
+    (void)rescaling_factor;
+    (void)n;
+    (void)p;
+
+    pybind11::array_t<double, pybind11::array::c_style> points(points_buffer);
+    pybind11::array_t<double> output_value = this->r(points);
+
+    pybind11::buffer_info output_buffer = output_value.request();
+    if (output_buffer.ndim != 1)
+      AssertThrow(false, ExcMessage("Number of dimensions must be one"));
+    if (output_buffer.size != n_of_points)
+      AssertThrow(
+        false,
+        ExcMessage(
+          "Python function returned an array with an invalid number of points"));
+
+    double *output_ptr = static_cast<double *>(output_buffer.ptr);
+
+    if (clear_vector)
+      for (unsigned int i = 0; i < n_of_points; ++i)
+        r[i] = 0;
+
+    for (unsigned int i = 0; i < n_of_points; ++i)
+      r[i] += output_ptr[i];
+
+    delete[] points_data;
+  }
+
+
+
+  template class PythonDefinedRecombinationTerm<1>;
+  template class PythonDefinedRecombinationTerm<2>;
+  template class PythonDefinedRecombinationTerm<3>;
+
+  template class PythonDefinedSpacialRecombinationTerm<1>;
+  template class PythonDefinedSpacialRecombinationTerm<2>;
+  template class PythonDefinedSpacialRecombinationTerm<3>;
+} // namespace Ddhdg
+
+
 namespace pyddhdg
 {
   template <int dim>
@@ -2663,6 +3043,14 @@ namespace pyddhdg
   template class Auger<1>;
   template class Auger<2>;
   template class Auger<3>;
+
+  template class PythonDefinedRecombinationTerm<1>;
+  template class PythonDefinedRecombinationTerm<2>;
+  template class PythonDefinedRecombinationTerm<3>;
+
+  template class PythonDefinedSpacialRecombinationTerm<1>;
+  template class PythonDefinedSpacialRecombinationTerm<2>;
+  template class PythonDefinedSpacialRecombinationTerm<3>;
 
   template class SuperimposedRecombinationTerm<1>;
   template class SuperimposedRecombinationTerm<2>;
