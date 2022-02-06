@@ -340,7 +340,7 @@ namespace Ddhdg
     , rescaled_doping(
         this->adimensionalizer->template adimensionalize_doping_function<dim>(
           this->problem->doping))
-    , recombination_term(problem->recombination_term->copy())
+    , recombination_term(problem->recombination_term->shared_copy())
     , fe_cell(std::unique_ptr<const dealii::FESystem<dim>>(
         generate_fe_system(parameters->degree, false)))
     , dof_handler_cell(*triangulation)

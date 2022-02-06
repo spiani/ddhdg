@@ -73,6 +73,12 @@ namespace Ddhdg
       return std::make_unique<PythonDefinedRecombinationTerm<dim>>(*this);
     }
 
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<PythonDefinedRecombinationTerm<dim>>(*this);
+    }
+
     virtual ~PythonDefinedRecombinationTerm() = default;
 
   private:
@@ -153,6 +159,13 @@ namespace Ddhdg
     copy() const override
     {
       return std::make_unique<PythonDefinedSpacialRecombinationTerm<dim>>(
+        *this);
+    }
+
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<PythonDefinedSpacialRecombinationTerm<dim>>(
         *this);
     }
 
@@ -254,6 +267,9 @@ namespace pyddhdg
 
     virtual std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
     generate_ddhdg_recombination_term() = 0;
+
+    virtual std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const = 0;
   };
 
   template <int dim, typename BaseRecombinationClass>
@@ -295,6 +311,12 @@ namespace pyddhdg
     [[nodiscard]] DealIIFunction<dim>
     get_p_linear_coefficient() const;
 
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<LinearRecombinationTerm<dim>>(*this);
+    }
+
   private:
     const DealIIFunction<dim> zero_term;
     const DealIIFunction<dim> n_linear_coefficient;
@@ -320,6 +342,12 @@ namespace pyddhdg
     std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
     generate_ddhdg_recombination_term() override;
 
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<ShockleyReadHallFixedTemperature<dim>>(*this);
+    }
+
     const double intrinsic_carrier_concentration;
     const double electron_life_time;
     const double hole_life_time;
@@ -344,6 +372,12 @@ namespace pyddhdg
     std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
     generate_ddhdg_recombination_term() override;
 
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<AugerFixedTemperature<dim>>(*this);
+    }
+
     const double intrinsic_carrier_concentration;
     const double n_coefficient;
     const double p_coefficient;
@@ -363,6 +397,12 @@ namespace pyddhdg
 
     std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
     generate_ddhdg_recombination_term() override;
+
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<ShockleyReadHall<dim>>(*this);
+    }
 
     const double              conduction_band_density;
     const double              valence_band_density;
@@ -388,6 +428,12 @@ namespace pyddhdg
 
     std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
     generate_ddhdg_recombination_term() override;
+
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<Auger<dim>>(*this);
+    }
 
     const double              conduction_band_density;
     const double              valence_band_density;
@@ -419,6 +465,12 @@ namespace pyddhdg
     generate_ddhdg_recombination_term() override
     {
       return this->ddhdg_recombination_term;
+    }
+
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<PythonDefinedRecombinationTerm<dim>>(*this);
     }
 
     void
@@ -463,6 +515,13 @@ namespace pyddhdg
     generate_ddhdg_recombination_term() override
     {
       return this->ddhdg_recombination_term;
+    }
+
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<PythonDefinedSpacialRecombinationTerm<dim>>(
+        *this);
     }
 
     void
@@ -512,6 +571,12 @@ namespace pyddhdg
 
     std::shared_ptr<Ddhdg::RecombinationTerm<dim>>
     generate_ddhdg_recombination_term() override;
+
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<SuperimposedRecombinationTerm<dim>>(*this);
+    }
 
   private:
     const pybind11::list recombination_terms;
@@ -606,6 +671,12 @@ namespace pyddhdg
     std::shared_ptr<const Ddhdg::HomogeneousProblem<dim>>
     get_ddhdg_problem() const;
 
+    std::shared_ptr<const RecombinationTerm<dim>>
+    get_recombination_term() const
+    {
+      return this->recombination_term;
+    }
+
   private:
     static std::shared_ptr<dealii::Triangulation<dim>>
     generate_triangulation(double left = 0., double right = 1.);
@@ -614,6 +685,7 @@ namespace pyddhdg
     copy_triangulation(
       const dealii::python::TriangulationWrapper &triangulation);
 
+    const std::shared_ptr<RecombinationTerm<dim>> recombination_term;
     const std::shared_ptr<const Ddhdg::HomogeneousProblem<dim>> ddhdg_problem;
   };
 
@@ -685,6 +757,13 @@ namespace pyddhdg
                          const std::string &n_f,
                          const std::string &p_f,
                          bool               use_projection = false);
+
+    void
+    set_recombination_term(
+      const std::shared_ptr<RecombinationTerm<dim>> recombination_term);
+
+    void
+    set_recombination_term(const RecombinationTerm<dim> &recombination_term);
 
     void
     set_multithreading(bool multithreading = true);
@@ -1038,6 +1117,7 @@ namespace pyddhdg
     }
 
   private:
+    std::shared_ptr<RecombinationTerm<dim>> recombination_term;
     const std::shared_ptr<Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>>
       ddhdg_solver;
   };

@@ -971,12 +971,13 @@ namespace pyddhdg
                         const double                   valence_band_density,
                         const double conduction_band_edge_energy,
                         const double valence_band_edge_energy)
-    : ddhdg_problem(std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
+    : recombination_term(recombination_term.shared_copy())
+    , ddhdg_problem(std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
         generate_triangulation(left, right),
         permittivity.generate_ddhdg_permittivity(),
         electron_mobility.generate_ddhdg_mobility(),
         hole_mobility.generate_ddhdg_mobility(),
-        recombination_term.generate_ddhdg_recombination_term(),
+        this->recombination_term->generate_ddhdg_recombination_term(),
         temperature.get_dealii_function(),
         doping.get_dealii_function(),
         bc_handler.get_ddhdg_boundary_condition_handler(),
@@ -1001,12 +1002,13 @@ namespace pyddhdg
     const double                                valence_band_density,
     const double                                conduction_band_edge_energy,
     const double                                valence_band_edge_energy)
-    : ddhdg_problem(std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
+    : recombination_term(recombination_term.shared_copy())
+    , ddhdg_problem(std::make_shared<Ddhdg::HomogeneousProblem<dim>>(
         copy_triangulation(triangulation),
         permittivity.generate_ddhdg_permittivity(),
         electron_mobility.generate_ddhdg_mobility(),
         hole_mobility.generate_ddhdg_mobility(),
-        recombination_term.generate_ddhdg_recombination_term(),
+        this->recombination_term->generate_ddhdg_recombination_term(),
         temperature.get_dealii_function(),
         doping.get_dealii_function(),
         bc_handler.get_ddhdg_boundary_condition_handler(),
@@ -1020,7 +1022,8 @@ namespace pyddhdg
 
   template <int dim>
   Problem<dim>::Problem(const Problem<dim> &problem)
-    : ddhdg_problem(problem.ddhdg_problem)
+    : recombination_term(problem.recombination_term)
+    , ddhdg_problem(problem.ddhdg_problem)
   {}
 
 
@@ -1106,13 +1109,17 @@ namespace pyddhdg
     const std::shared_ptr<Ddhdg::NPSolverParameters> parameters,
     const Ddhdg::Adimensionalizer                   &adimensionalizer,
     const bool                                       verbose)
-    : ddhdg_solver(
+    : recombination_term(problem.get_recombination_term()->shared_copy())
+    , ddhdg_solver(
         std::make_shared<Ddhdg::NPSolver<dim, Ddhdg::HomogeneousProblem<dim>>>(
           problem.get_ddhdg_problem(),
           parameters,
           std::make_shared<const Ddhdg::Adimensionalizer>(adimensionalizer),
           verbose))
-  {}
+  {
+    this->ddhdg_solver->set_recombination_term(
+      this->recombination_term->generate_ddhdg_recombination_term());
+  }
 
 
 
@@ -1267,6 +1274,30 @@ namespace pyddhdg
                                              n_function,
                                              p_function,
                                              use_projection);
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::set_recombination_term(
+    std::shared_ptr<RecombinationTerm<dim>> recombination_term)
+  {
+    this->recombination_term = recombination_term;
+    this->ddhdg_solver->set_recombination_term(
+      this->recombination_term->generate_ddhdg_recombination_term());
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::set_recombination_term(
+    const RecombinationTerm<dim> &recombination_term)
+  {
+    this->recombination_term = recombination_term.shared_copy();
+    this->ddhdg_solver->set_recombination_term(
+      this->recombination_term->generate_ddhdg_recombination_term());
   }
 
 

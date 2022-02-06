@@ -48,6 +48,9 @@ namespace Ddhdg
     virtual std::unique_ptr<RecombinationTerm<dim>>
     copy() const = 0;
 
+    virtual std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const = 0;
+
     virtual ~RecombinationTerm() = default;
   };
 
@@ -124,6 +127,12 @@ namespace Ddhdg
       return std::make_unique<LinearRecombinationTerm<dim>>(*this);
     }
 
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<LinearRecombinationTerm<dim>>(*this);
+    }
+
     virtual ~LinearRecombinationTerm() = default;
 
   private:
@@ -188,6 +197,12 @@ namespace Ddhdg
     copy() const override
     {
       return std::make_unique<SuperimposedRecombinationTerm<dim>>(*this);
+    }
+
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<SuperimposedRecombinationTerm<dim>>(*this);
     }
 
     virtual ~SuperimposedRecombinationTerm() = default;
@@ -266,6 +281,12 @@ namespace Ddhdg
       return std::make_unique<ShockleyReadHallFixedTemperature<dim>>(*this);
     }
 
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<ShockleyReadHallFixedTemperature<dim>>(*this);
+    }
+
     virtual ~ShockleyReadHallFixedTemperature() = default;
 
     const double intrinsic_carrier_concentration;
@@ -341,6 +362,12 @@ namespace Ddhdg
       return std::make_unique<AugerFixedTemperature<dim>>(*this);
     }
 
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<AugerFixedTemperature<dim>>(*this);
+    }
+
     virtual ~AugerFixedTemperature() = default;
 
     const double intrinsic_carrier_concentration;
@@ -399,6 +426,12 @@ namespace Ddhdg
     copy() const override
     {
       return std::make_unique<ShockleyReadHall<dim>>(*this);
+    }
+
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<ShockleyReadHall<dim>>(*this);
     }
 
     virtual ~ShockleyReadHall() = default;
@@ -466,6 +499,12 @@ namespace Ddhdg
     copy() const override
     {
       return std::make_unique<Auger<dim>>(*this);
+    }
+
+    std::shared_ptr<RecombinationTerm<dim>>
+    shared_copy() const override
+    {
+      return std::make_shared<Auger<dim>>(*this);
     }
 
     virtual ~Auger() = default;

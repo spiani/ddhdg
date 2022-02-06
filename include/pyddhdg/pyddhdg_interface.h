@@ -376,6 +376,10 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("n_function"),
        py::arg("p_function"),
        py::arg("use_projection") = false)
+  .def("set_recombination_term",
+       py::overload_cast<const RecombinationTerm<DIM> &>(
+         &NPSolver<DIM>::set_recombination_term),
+       py ::arg("recombination_term"))
   .def("set_multithreading", &NPSolver<DIM>::set_multithreading)
   .def("enable_component",
        &NPSolver<DIM>::enable_component,

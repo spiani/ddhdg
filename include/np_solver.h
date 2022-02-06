@@ -136,6 +136,13 @@ namespace Ddhdg
     void
     set_multithreading(bool multithreading = true);
 
+    void
+    set_recombination_term(
+      const std::shared_ptr<RecombinationTerm<dim>> rec_term)
+    {
+      this->recombination_term = rec_term;
+    }
+
     [[nodiscard]] bool
     is_enabled(Component c) const override;
 
@@ -835,7 +842,7 @@ namespace Ddhdg
     const std::shared_ptr<NPSolverParameters>      parameters;
 
     const std::shared_ptr<const dealii::Function<dim>> rescaled_doping;
-    const std::unique_ptr<RecombinationTerm<dim>>      recombination_term;
+    std::shared_ptr<RecombinationTerm<dim>>            recombination_term;
 
     std::unique_ptr<const FESystem<dim>> fe_cell;
     DoFHandler<dim>                      dof_handler_cell;
