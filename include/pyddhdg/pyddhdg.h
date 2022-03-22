@@ -805,6 +805,13 @@ namespace pyddhdg
              pybind11::array_t<double, pybind11::array::c_style>>
     get_current_trace_vector();
 
+    std::pair<
+      std::unordered_map<std::string,
+                         pybind11::array_t<double, pybind11::array::c_style>>,
+      std::unordered_map<std::string,
+                         pybind11::array_t<double, pybind11::array::c_style>>>
+    get_local_cell_system(unsigned int cell_level, unsigned int cell_index);
+
     void
     set_current_trace_vector(
       const std::map<Ddhdg::Component,

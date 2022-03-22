@@ -2329,6 +2329,95 @@ namespace Ddhdg
   }
 
 
+
+  template <int dim, typename ProblemType>
+  std::pair<local_cell_matrix, local_cell_rhs>
+  NPSolver<dim, ProblemType>::get_local_cell_system(unsigned int cell_level,
+                                                    unsigned int cell_index)
+  {
+    if (!this->initialized)
+      this->setup_overall_system();
+
+    const QGauss<dim> quadrature_formula(
+      this->get_number_of_quadrature_points());
+    const QGauss<dim - 1> face_quadrature_formula(
+      this->get_number_of_quadrature_points());
+
+    const UpdateFlags flags_cell(update_values | update_gradients |
+                                 update_JxW_values | update_quadrature_points);
+    const UpdateFlags face_flags_cell(update_values);
+    const UpdateFlags flags_trace(update_values);
+    const UpdateFlags flags_trace_restricted(
+      update_values | update_normal_vectors | update_quadrature_points |
+      update_JxW_values);
+
+    // Create a map that associate to each active component on the trace its fe
+    std::map<Component, const dealii::FiniteElement<dim> &> component_to_fe;
+    for (const auto c : this->enabled_components)
+      {
+        const dealii::ComponentMask c_mask =
+          this->get_trace_component_mask(c, true);
+        const dealii::FiniteElement<dim> &fe =
+          this->fe_trace_restricted->get_sub_fe(c_mask);
+        component_to_fe.insert({c, fe});
+      }
+
+    PerTaskData task_data(this->fe_trace_restricted->dofs_per_cell, false);
+    ScratchData scratch(
+      *(this->fe_trace_restricted),
+      *(this->fe_trace),
+      *(this->fe_cell),
+      quadrature_formula,
+      face_quadrature_formula,
+      flags_cell,
+      face_flags_cell,
+      flags_trace,
+      flags_trace_restricted,
+      this->problem->permittivity->get_computer(*(this->adimensionalizer)),
+      this->problem->n_mobility->get_computer(*(this->adimensionalizer)),
+      this->problem->p_mobility->get_computer(*(this->adimensionalizer)),
+      this->parameters->get_tau_computer(*(this->adimensionalizer)),
+      this->enabled_components,
+      component_to_fe);
+
+    typename DoFHandler<dim>::active_cell_iterator loc_cell(
+      &(*triangulation),
+      cell_level,
+      cell_index,
+      &this->dof_handler_trace_restricted);
+
+    (this->*get_assemble_system_one_cell_function(false, false))(loc_cell,
+                                                                 scratch,
+                                                                 task_data);
+
+    local_cell_matrix local_system_matrix;
+    local_cell_rhs    local_system_rhs;
+    local_system_matrix["cc"] =
+      std::make_shared<FullMatrix<double>>(scratch.cc_matrix);
+    local_system_matrix["ct"] =
+      std::make_shared<FullMatrix<double>>(scratch.ct_matrix);
+    local_system_matrix["tc"] =
+      std::make_shared<FullMatrix<double>>(scratch.tc_matrix);
+    local_system_matrix["tt"] =
+      std::make_shared<FullMatrix<double>>(task_data.tt_matrix);
+    local_system_rhs["c"] =
+      std::make_shared<std::vector<double>>(scratch.cc_rhs.size());
+    local_system_rhs["t"] =
+      std::make_shared<std::vector<double>>(task_data.tt_vector.size());
+
+    std::vector<double> &c_vector = *(local_system_rhs["c"]);
+    std::vector<double> &t_vector = *(local_system_rhs["t"]);
+
+    for (unsigned int i = 0; i < scratch.cc_rhs.size(); ++i)
+      c_vector[i] = scratch.cc_rhs[i];
+    for (unsigned int i = 0; i < task_data.tt_vector.size(); ++i)
+      t_vector[i] = task_data.tt_vector[i];
+
+    return std::pair<local_cell_matrix, local_cell_rhs>(local_system_matrix,
+                                                        local_system_rhs);
+  }
+
+
   template class NPSolver<1, HomogeneousProblem<1>>;
   template class NPSolver<2, HomogeneousProblem<2>>;
   template class NPSolver<3, HomogeneousProblem<3>>;

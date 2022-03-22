@@ -17,6 +17,12 @@ namespace Ddhdg
 {
   using namespace dealii;
 
+  using local_cell_matrix =
+    std::unordered_map<std::string,
+                       std::shared_ptr<dealii::FullMatrix<double>>>;
+  using local_cell_rhs =
+    std::unordered_map<std::string, std::shared_ptr<std::vector<double>>>;
+
   template <int dim, typename ProblemType>
   class TemplatizedParametersInterface;
 
@@ -619,7 +625,8 @@ namespace Ddhdg
 
     template <typename prm,
               bool has_boundary_conditions,
-              typename TauComputerClass>
+              typename TauComputerClass,
+              bool execute_schur_complement>
     void
     assemble_system_one_cell_internal(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
@@ -634,9 +641,12 @@ namespace Ddhdg
 
     assemble_system_one_cell_pointer
     get_assemble_system_one_cell_function(
-      bool compute_thermodynamic_equilibrium);
+      bool compute_thermodynamic_equilibrium,
+      bool execute_schur_complement);
 
-    template <typename prm, typename TauComputerClass>
+    template <typename prm,
+              typename TauComputerClass,
+              bool execute_schur_complement>
     void
     assemble_system_one_cell(
       const typename DoFHandler<dim>::active_cell_iterator &cell,
@@ -836,6 +846,9 @@ namespace Ddhdg
     copy_trace_cell_worker(const IteratorType &cell,
                            CTScratchData      &scratch,
                            CTCopyData         &copy_data);
+
+    std::pair<local_cell_matrix, local_cell_rhs>
+    get_local_cell_system(unsigned int cell_level, unsigned int cell_index);
 
     std::unique_ptr<Triangulation<dim>>            triangulation;
     std::unique_ptr<BoundaryConditionHandler<dim>> boundary_handler;

@@ -1881,6 +1881,87 @@ namespace pyddhdg
 
 
   template <int dim>
+  std::pair<
+    std::unordered_map<std::string,
+                       pybind11::array_t<double, pybind11::array::c_style>>,
+    std::unordered_map<std::string,
+                       pybind11::array_t<double, pybind11::array::c_style>>>
+  NPSolver<dim>::get_local_cell_system(unsigned int cell_level,
+                                       unsigned int cell_index)
+  {
+    const auto data =
+      this->ddhdg_solver->get_local_cell_system(cell_level, cell_index);
+    const auto matrix_map = data.first;
+    const auto rhs_map    = data.second;
+
+    std::unordered_map<std::string,
+                       pybind11::array_t<double, pybind11::array::c_style>>
+      matrix_map_output;
+    std::unordered_map<std::string,
+                       pybind11::array_t<double, pybind11::array::c_style>>
+      rhs_map_output;
+
+    for (const auto &map_element : matrix_map)
+      {
+        const dealii::FullMatrix<double> &dealii_matrix = *(map_element.second);
+
+        const auto vector_shape =
+          std::vector<long>{(long)dealii_matrix.m(), (long)dealii_matrix.n()};
+        const auto vector_stride =
+          std::vector<long>{(long)dealii_matrix.n() * 8, 8};
+
+        auto *matrix_data = new double[dealii_matrix.m() * dealii_matrix.n()];
+
+        for (unsigned int i = 0; i < dealii_matrix.m(); ++i)
+          for (unsigned int j = 0; j < dealii_matrix.n(); ++j)
+            matrix_data[i * dealii_matrix.n() + j] = dealii_matrix(i, j);
+
+        // Create a Python object that will free the allocated
+        // memory when destroyed:
+        pybind11::capsule free_when_done(matrix_data, [](void *f) {
+          auto *data = reinterpret_cast<double *>(f);
+          delete[] data;
+        });
+
+        auto matrix = pybind11::array_t<double, pybind11::array::c_style>(
+          vector_shape, vector_stride, matrix_data, free_when_done);
+
+        matrix_map_output[map_element.first] = matrix;
+      }
+
+    for (const auto &map_element : rhs_map)
+      {
+        const auto vector_shape =
+          std::vector<long>{(long)map_element.second->size()};
+        const auto vector_stride = std::vector<long>{8};
+
+        auto *rhs_vector_data = new double[map_element.second->size()];
+
+        for (unsigned int i = 0; i < map_element.second->size(); ++i)
+          rhs_vector_data[i] = map_element.second->at(i);
+
+        pybind11::capsule free_when_done(rhs_vector_data, [](void *f) {
+          auto *data = reinterpret_cast<double *>(f);
+          delete[] data;
+        });
+
+        auto rhs_vector = pybind11::array_t<double, pybind11::array::c_style>(
+          vector_shape, vector_stride, rhs_vector_data, free_when_done);
+
+        rhs_map_output[map_element.first] = rhs_vector;
+      }
+
+    return std::pair<
+      std::unordered_map<std::string,
+                         pybind11::array_t<double, pybind11::array::c_style>>,
+      std::unordered_map<std::string,
+                         pybind11::array_t<double, pybind11::array::c_style>>>(
+      matrix_map_output, rhs_map_output);
+  }
+
+
+
+  template <int dim>
   Ddhdg::NonlinearIterationResults
   NPSolver<dim>::run()
   {

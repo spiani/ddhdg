@@ -70,7 +70,7 @@ namespace Ddhdg
                         dof_handler_trace_restricted.end(),
                         *this,
                         this->get_assemble_system_one_cell_function(
-                          compute_thermodynamic_equilibrium),
+                          compute_thermodynamic_equilibrium, true),
                         &NPSolver<dim, ProblemType>::copy_local_to_global,
                         scratch,
                         task_data);
@@ -81,9 +81,8 @@ namespace Ddhdg
              this->dof_handler_trace_restricted.active_cell_iterators())
           {
             (this->*get_assemble_system_one_cell_function(
-                      compute_thermodynamic_equilibrium))(cell,
-                                                          scratch,
-                                                          task_data);
+                      compute_thermodynamic_equilibrium,
+                      true))(cell, scratch, task_data);
             copy_local_to_global(task_data);
           }
       }
@@ -94,7 +93,8 @@ namespace Ddhdg
   template <int dim, typename ProblemType>
   typename NPSolver<dim, ProblemType>::assemble_system_one_cell_pointer
   NPSolver<dim, ProblemType>::get_assemble_system_one_cell_function(
-    const bool compute_thermodynamic_equilibrium)
+    const bool compute_thermodynamic_equilibrium,
+    const bool execute_schur_complement)
   {
     // The last three bits of parameter_mask are the values of the flags
     // this->is_enabled(Component::V), this->is_enabled(Component::n) and
@@ -123,7 +123,8 @@ namespace Ddhdg
 
     typename NPSolver<dim, ProblemType>::assemble_system_one_cell_pointer f =
       p1->get_assemble_system_one_cell_function(
-        this->parameters->get_tau_computer(*(this->adimensionalizer)).get());
+        this->parameters->get_tau_computer(*(this->adimensionalizer)).get(),
+        execute_schur_complement);
     delete p1;
     return f;
   }
@@ -2181,7 +2182,7 @@ namespace Ddhdg
             this->boundary_handler->get_dirichlet_conditions_for_id(
               face_boundary_id, c);
         Logging::write_log<Logging::severity_level::trace>(
-          "Appling Dirichlet boundary condition on face with id %s",
+          "Applying Dirichlet boundary condition on face with id %s",
           face_boundary_id);
         this->apply_dbc_on_face<prm, c>(scratch, task_data, dbc, face);
       }
@@ -2289,7 +2290,8 @@ namespace Ddhdg
   template <int dim, typename ProblemType>
   template <typename prm,
             bool has_boundary_conditions,
-            typename TauComputerClass>
+            typename TauComputerClass,
+            bool execute_schur_complement>
   void
   NPSolver<dim, ProblemType>::assemble_system_one_cell_internal(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
@@ -2337,7 +2339,7 @@ namespace Ddhdg
     this->add_cell_products_to_cc_matrix<prm>(scratch);
 
     // This function, instead, computes the l2 products that are needed for
-    // the right hand term
+    // the right-hand term
     this->add_cell_products_to_cc_rhs<prm>(scratch);
 
     // Now we must perform the L2 products on the boundary, i.e. for each face
@@ -2366,7 +2368,7 @@ namespace Ddhdg
         // Before assembling the other parts of the matrix, we need the values
         // of epsilon, mu and D_n on the quadrature points of the current
         // face. Moreover, we want to populate the scratch object with the
-        // values of the solution at the previous step. All this jobs are
+        // values of the solution at the previous step. All these jobs are
         // accomplished by the next function
         this->prepare_data_on_face_quadrature_points<TauComputerClass>(scratch,
                                                                        cell,
@@ -2646,6 +2648,9 @@ namespace Ddhdg
         scratch.local_condenser.condense_ct_matrix(scratch.ct_matrix,
                                                    scratch.cc_rhs);
 
+    if constexpr (!execute_schur_complement)
+      return;
+
 #ifdef WITH_MUTEX
     inversion_mutex.lock();
 #endif
@@ -2694,15 +2699,16 @@ namespace Ddhdg
 
 
   template <int dim, typename ProblemType>
-  template <typename prm, typename TauComputerClass>
+  template <typename prm,
+            typename TauComputerClass,
+            bool execute_schur_complement>
   void
   NPSolver<dim, ProblemType>::assemble_system_one_cell(
     const typename DoFHandler<dim>::active_cell_iterator &cell,
     ScratchData                                          &scratch,
     PerTaskData                                          &task_data)
   {
-    // First of all, we want to check if any boundary condition is set for this
-    // cell
+    // First, we want to check if any boundary condition is set for this cell
     bool has_boundary_conditions = false;
     for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
          ++face)
@@ -2728,10 +2734,16 @@ namespace Ddhdg
     // we are far from the boundary, we do not have to care about boundary
     // conditions
     if (has_boundary_conditions)
-      this->assemble_system_one_cell_internal<prm, true, TauComputerClass>(
+      this->assemble_system_one_cell_internal<prm,
+                                              true,
+                                              TauComputerClass,
+                                              execute_schur_complement>(
         cell, scratch, task_data);
     else
-      this->assemble_system_one_cell_internal<prm, false, TauComputerClass>(
+      this->assemble_system_one_cell_internal<prm,
+                                              false,
+                                              TauComputerClass,
+                                              execute_schur_complement>(
         cell, scratch, task_data);
   }
 

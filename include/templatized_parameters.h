@@ -29,7 +29,8 @@ namespace Ddhdg
     virtual
       typename NPSolver<dim, ProblemType>::assemble_system_one_cell_pointer
       get_assemble_system_one_cell_function(
-        const TauComputer *tau_computer) const = 0;
+        const TauComputer *tau_computer,
+        bool               execute_schur_complement) const = 0;
 
     virtual ~TemplatizedParametersInterface() = default;
   };
@@ -54,7 +55,8 @@ namespace Ddhdg
 
     typename NPSolver<dim, ProblemType>::assemble_system_one_cell_pointer
     get_assemble_system_one_cell_function(
-      const TauComputer *tau_computer) const override;
+      const TauComputer *tau_computer,
+      bool               execute_schur_complement) const override;
   };
 
   template <int dim, typename ProblemType>
@@ -101,7 +103,9 @@ namespace Ddhdg
   template <int dim, typename ProblemType, unsigned int parameter_mask>
   typename NPSolver<dim, ProblemType>::assemble_system_one_cell_pointer
   TemplatizedParameters<dim, ProblemType, parameter_mask>::
-    get_assemble_system_one_cell_function(const TauComputer *tau_computer) const
+    get_assemble_system_one_cell_function(
+      const TauComputer *tau_computer,
+      const bool         execute_schur_complement) const
   {
     const TauComputerType tc_type = tau_computer->get_tau_computer_type();
 
@@ -110,14 +114,32 @@ namespace Ddhdg
                   "The current TauComputer class does not report its type"));
 
     if (tc_type == TauComputerType::fixed_tau_computer)
-      return &NPSolver<dim, ProblemType>::template assemble_system_one_cell<
-        TemplatizedParameters<dim, ProblemType, parameter_mask>,
-        FixedTauComputer>;
+      {
+        if (execute_schur_complement)
+          return &NPSolver<dim, ProblemType>::template assemble_system_one_cell<
+            TemplatizedParameters<dim, ProblemType, parameter_mask>,
+            FixedTauComputer,
+            true>;
+        else
+          return &NPSolver<dim, ProblemType>::template assemble_system_one_cell<
+            TemplatizedParameters<dim, ProblemType, parameter_mask>,
+            FixedTauComputer,
+            false>;
+      }
 
     if (tc_type == TauComputerType::cell_face_tau_computer)
-      return &NPSolver<dim, ProblemType>::template assemble_system_one_cell<
-        TemplatizedParameters<dim, ProblemType, parameter_mask>,
-        CellFaceTauComputer>;
+      {
+        if (execute_schur_complement)
+          return &NPSolver<dim, ProblemType>::template assemble_system_one_cell<
+            TemplatizedParameters<dim, ProblemType, parameter_mask>,
+            CellFaceTauComputer,
+            true>;
+        else
+          return &NPSolver<dim, ProblemType>::template assemble_system_one_cell<
+            TemplatizedParameters<dim, ProblemType, parameter_mask>,
+            CellFaceTauComputer,
+            false>;
+      }
 
     AssertThrow(false,
                 ExcMessage(
