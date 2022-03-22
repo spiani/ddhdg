@@ -59,6 +59,19 @@ namespace python
      */
     CellAccessorWrapper();
 
+    template <int dim, int spacedim>
+    static CellAccessorWrapper
+    create_from_pointer(
+      dealii::CellAccessor<dim, spacedim> *const cell_accessor)
+    {
+      CellAccessorWrapper c;
+      c.dim           = dim;
+      c.spacedim      = spacedim;
+      c.cell_accessor = cell_accessor;
+      return c;
+    }
+
+
     /**
      * Destructor.
      */

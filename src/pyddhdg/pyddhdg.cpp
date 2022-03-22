@@ -1186,6 +1186,22 @@ namespace pyddhdg
     return this->ddhdg_solver->get_n_active_cells();
   }
 
+  template <int dim>
+  pybind11::list
+  NPSolver<dim>::active_cells()
+  {
+    pybind11::list cells;
+    for (dealii::TriaActiveIterator<dealii::CellAccessor<dim>> cell :
+         this->ddhdg_solver->triangulation->active_cell_iterators())
+      {
+        dealii::CellAccessor<dim> *cell_copy =
+          new dealii::CellAccessor<dim>(*cell);
+        cells.append(
+          dealii::python::CellAccessorWrapper::create_from_pointer(cell_copy));
+      }
+    return cells;
+  }
+
 
   template <int dim>
   void

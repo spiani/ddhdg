@@ -1,4 +1,6 @@
 #ifdef DIM
+py::module_::import("PyDealII");
+
 py::class_<HomogeneousPermittivity<DIM>>(m, "HomogeneousPermittivity")
   .def(py::init<const double &>());
 
@@ -330,6 +332,7 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
                          &NPSolver<DIM>::n_of_triangulation_levels)
   .def("get_n_dofs", &NPSolver<DIM>::get_n_dofs, py::arg("for_trace") = false)
   .def_property_readonly("n_active_cells", &NPSolver<DIM>::get_n_active_cells)
+  .def("active_cells", &NPSolver<DIM>::active_cells)
   .def("get_cell_vertices",
        [](const NPSolver<DIM> &self) {
          const unsigned int active_cells = self.get_n_active_cells();

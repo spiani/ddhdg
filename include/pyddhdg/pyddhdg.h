@@ -4,6 +4,7 @@
 
 #include <deal.II/grid/grid_generator.h>
 
+#include <dealii-python-bindings/cell_accessor_wrapper.h>
 #include <dealii-python-bindings/triangulation_wrapper.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -738,6 +739,9 @@ namespace pyddhdg
 
     [[nodiscard]] unsigned int
     get_n_active_cells() const;
+
+    pybind11::list
+    active_cells();
 
     void
     get_cell_vertices(double vertices[]) const;
