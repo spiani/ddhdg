@@ -780,7 +780,8 @@ namespace Ddhdg
     const double ni =
       this->conduction_band_density * this->valence_band_density *
       exp((this->valence_band_edge_energy - this->conduction_band_edge_energy) /
-          (Constants::KB * T * rescaling_factor));
+          (Constants::KB * T)) /
+      rescaling_factor;
     const double tau_n = this->electron_life_time;
     const double tau_p = this->hole_life_time;
 
@@ -804,7 +805,8 @@ namespace Ddhdg
     const double ni =
       this->conduction_band_density * this->valence_band_density *
       exp((this->valence_band_edge_energy - this->conduction_band_edge_energy) /
-          (Constants::KB * T * rescaling_factor));
+          (Constants::KB * T)) /
+      rescaling_factor;
     const double tau_n = this->electron_life_time;
     const double tau_p = this->hole_life_time;
 
@@ -858,11 +860,12 @@ namespace Ddhdg
 
     for (std::size_t q = 0; q < n_of_points; q++)
       {
-        const double ni =
-          this->conduction_band_density * this->valence_band_density *
-          exp((this->valence_band_edge_energy -
-               this->conduction_band_edge_energy) /
-              (Constants::KB * temperature_buffer[q] * rescaling_factor));
+        const double ni = this->conduction_band_density *
+                          this->valence_band_density *
+                          exp((this->valence_band_edge_energy -
+                               this->conduction_band_edge_energy) /
+                              (Constants::KB * temperature_buffer[q])) /
+                          rescaling_factor;
         const double num = n[q] * p[q] - ni * ni;
         const double den = tau_p * (n[q] + ni) + tau_n * (p[q] + ni);
         r[q] += num * rescaling_factor / den;
@@ -908,12 +911,12 @@ namespace Ddhdg
           case Component::n: {
             for (std::size_t q = 0; q < n_of_points; q++)
               {
-                const double ni =
-                  this->conduction_band_density * this->valence_band_density *
-                  exp(
-                    (this->valence_band_edge_energy -
-                     this->conduction_band_edge_energy) /
-                    (Constants::KB * temperature_buffer[q] * rescaling_factor));
+                const double ni = this->conduction_band_density *
+                                  this->valence_band_density *
+                                  exp((this->valence_band_edge_energy -
+                                       this->conduction_band_edge_energy) /
+                                      (Constants::KB * temperature_buffer[q])) /
+                                  rescaling_factor;
                 const double num = n[q] * p[q] - ni * ni;
                 const double den = tau_p * (n[q] + ni) + tau_n * (p[q] + ni);
                 r[q] += p[q] / den - num * tau_p / (den * den);
@@ -923,12 +926,12 @@ namespace Ddhdg
           case Component::p: {
             for (std::size_t q = 0; q < n_of_points; q++)
               {
-                const double ni =
-                  this->conduction_band_density * this->valence_band_density *
-                  exp(
-                    (this->valence_band_edge_energy -
-                     this->conduction_band_edge_energy) /
-                    (Constants::KB * temperature_buffer[q] * rescaling_factor));
+                const double ni = this->conduction_band_density *
+                                  this->valence_band_density *
+                                  exp((this->valence_band_edge_energy -
+                                       this->conduction_band_edge_energy) /
+                                      (Constants::KB * temperature_buffer[q])) /
+                                  rescaling_factor;
                 const double num = n[q] * p[q] - ni * ni;
                 const double den = tau_p * (n[q] + ni) + tau_n * (p[q] + ni);
                 r[q] += n[q] / den - num * tau_n / (den * den);
