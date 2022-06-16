@@ -656,7 +656,7 @@ namespace python
     if (dim == 1)
       {
         Point<1> *other_point = static_cast<Point<1> *>(other.point);
-        point = new Point<1>((*other_point)[0], (*other_point)[1]);
+        point                 = new Point<1>((*other_point)[0]);
       }
     else if (dim == 2)
       {

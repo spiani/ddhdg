@@ -124,13 +124,26 @@ namespace python
       const TriaAccessor<structdim, dim, spacedim> *accessor =
         static_cast<const TriaAccessor<structdim, dim, spacedim> *>(
           tria_accessor);
-      Point<spacedim> center =
-        accessor->center(respect_manifold, interpolate_from_surrounding);
-      PYSPACE::list center_list;
-      for (int i = 0; i < spacedim; ++i)
-        center_list.append(center[i]);
+      if constexpr (structdim == 0)
+        {
+          Point<spacedim> center = accessor->center();
+          PYSPACE::list   center_list;
+          for (int i = 0; i < spacedim; ++i)
+            center_list.append(center[i]);
 
-      return PointWrapper(center_list);
+          return PointWrapper(center_list);
+        }
+
+      if constexpr (structdim > 0)
+        {
+          Point<spacedim> center =
+            accessor->center(respect_manifold, interpolate_from_surrounding);
+          PYSPACE::list center_list;
+          for (int i = 0; i < spacedim; ++i)
+            center_list.append(center[i]);
+
+          return PointWrapper(center_list);
+        }
     }
 
 
@@ -147,72 +160,87 @@ namespace python
       if constexpr (sd < d)
         AssertThrow(false, ExcMessage("Wrong dim-spacedim combination."));
 
-      if constexpr (d > 1)
-        if (dim != d)
-          return get_center_wrapper<d - 1, sd>(respect_manifold,
-                                               interpolate_from_surrounding,
-                                               tria_accessor,
-                                               structdim,
-                                               dim,
-                                               spacedim);
-      if (dim != d)
-        AssertThrow(false, ExcMessage("Unsupported dimension."));
+      if constexpr (sd >= d)
+        {
+          if constexpr (d > 1)
+            if (dim != d)
+              return get_center_wrapper<d - 1, sd>(respect_manifold,
+                                                   interpolate_from_surrounding,
+                                                   tria_accessor,
+                                                   structdim,
+                                                   dim,
+                                                   spacedim);
+          if (dim != d)
+            AssertThrow(false, ExcMessage("Unsupported dimension."));
 
-      if constexpr (sd > 1)
-        if (spacedim != sd)
-          return get_center_wrapper<d, sd - 1>(respect_manifold,
-                                               interpolate_from_surrounding,
-                                               tria_accessor,
-                                               structdim,
-                                               dim,
-                                               spacedim);
-      if (spacedim != sd)
-        AssertThrow(false, ExcMessage("Unsupported space dimension"));
+          if constexpr (sd > 1)
+            if (spacedim != sd)
+              return get_center_wrapper<d, sd - 1>(respect_manifold,
+                                                   interpolate_from_surrounding,
+                                                   tria_accessor,
+                                                   structdim,
+                                                   dim,
+                                                   spacedim);
+          if (spacedim != sd)
+            AssertThrow(false, ExcMessage("Unsupported space dimension"));
 
-      if constexpr (d == 1)
-        {
-          Assert(structdim <= 1,
-                 ExcMessage("structdim must be smaller than dim (1)"));
-          if (structdim == 1)
-            return get_center<1, 1, sd>(respect_manifold,
-                                        interpolate_from_surrounding,
-                                        tria_accessor);
-          else
-            AssertThrow(false, ExcMessage("Invalid structdim"));
-        }
-      else if constexpr (d == 2)
-        {
-          Assert(structdim <= 2,
-                 ExcMessage("structdim must be smaller than dim (2)"));
-          if (structdim == 1)
-            return get_center<1, 2, sd>(respect_manifold,
-                                        interpolate_from_surrounding,
-                                        tria_accessor);
-          else if (structdim == 2)
-            return get_center<2, 2, sd>(respect_manifold,
-                                        interpolate_from_surrounding,
-                                        tria_accessor);
-          else
-            AssertThrow(false, ExcMessage("Invalid structdim"));
-        }
-      else if constexpr (d == 3)
-        {
-          Assert(structdim <= 3,
-                 ExcMessage("structdim must be smaller than dim (3)"));
-          if (structdim == 1)
-            return get_center<1, 3, sd>(respect_manifold,
-                                        interpolate_from_surrounding,
-                                        tria_accessor);
-          else if (structdim == 2)
-            return get_center<2, 3, sd>(respect_manifold,
-                                        interpolate_from_surrounding,
-                                        tria_accessor);
-          else if (structdim == 3)
-            return get_center<3, 3, sd>(respect_manifold,
-                                        interpolate_from_surrounding,
-                                        tria_accessor);
-          else
-            AssertThrow(false, ExcMessage("Invalid structdim"));
+          if constexpr (d == 1)
+            {
+              Assert(structdim <= 1,
+                     ExcMessage("structdim must be smaller than dim (1)"));
+              if (structdim == 0)
+                return get_center<0, 1, sd>(respect_manifold,
+                                            interpolate_from_surrounding,
+                                            tria_accessor);
+              else if (structdim == 1)
+                return get_center<1, 1, sd>(respect_manifold,
+                                            interpolate_from_surrounding,
+                                            tria_accessor);
+              else
+                AssertThrow(false, ExcMessage("Invalid structdim"));
+            }
+          else if constexpr (d == 2)
+            {
+              Assert(structdim <= 2,
+                     ExcMessage("structdim must be smaller than dim (2)"));
+              if (structdim == 0)
+                return get_center<0, 2, sd>(respect_manifold,
+                                            interpolate_from_surrounding,
+                                            tria_accessor);
+              else if (structdim == 1)
+                return get_center<1, 2, sd>(respect_manifold,
+                                            interpolate_from_surrounding,
+                                            tria_accessor);
+              else if (structdim == 2)
+                return get_center<2, 2, sd>(respect_manifold,
+                                            interpolate_from_surrounding,
+                                            tria_accessor);
+              else
+                AssertThrow(false, ExcMessage("Invalid structdim"));
+            }
+          else if constexpr (d == 3)
+            {
+              Assert(structdim <= 3,
+                     ExcMessage("structdim must be smaller than dim (3)"));
+              if (structdim == 0)
+                return get_center<0, 3, sd>(respect_manifold,
+                                            interpolate_from_surrounding,
+                                            tria_accessor);
+              else if (structdim == 1)
+                return get_center<1, 3, sd>(respect_manifold,
+                                            interpolate_from_surrounding,
+                                            tria_accessor);
+              else if (structdim == 2)
+                return get_center<2, 3, sd>(respect_manifold,
+                                            interpolate_from_surrounding,
+                                            tria_accessor);
+              else if (structdim == 3)
+                return get_center<3, 3, sd>(respect_manifold,
+                                            interpolate_from_surrounding,
+                                            tria_accessor);
+              else
+                AssertThrow(false, ExcMessage("Invalid structdim"));
+            }
         }
     }
 
