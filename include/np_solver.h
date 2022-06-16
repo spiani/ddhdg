@@ -848,7 +848,9 @@ namespace Ddhdg
                            CTCopyData         &copy_data);
 
     std::pair<local_cell_matrix, local_cell_rhs>
-    get_local_cell_system(unsigned int cell_level, unsigned int cell_index);
+    get_local_cell_system(unsigned int cell_level,
+                          unsigned int cell_index,
+                          bool compute_thermodynamic_equilibrium = false);
 
     std::unique_ptr<Triangulation<dim>>            triangulation;
     std::unique_ptr<BoundaryConditionHandler<dim>> boundary_handler;

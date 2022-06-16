@@ -1246,7 +1246,7 @@ namespace Ddhdg
         const auto d        = component2displacement(c);
         trace_extractors[c] = this->get_trace_component_extractor(c);
         cell_extractors[c]  = {this->get_component_extractor(c),
-                              this->get_displacement_extractor(d)};
+                               this->get_displacement_extractor(d)};
       }
 
     this->parameters->get_tau_computer(*(this->adimensionalizer));

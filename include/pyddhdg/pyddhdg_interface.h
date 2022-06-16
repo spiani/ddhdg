@@ -774,9 +774,41 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("component"))
   .def("get_solution", &NPSolver<DIM>::get_solution, py::arg("component"))
   .def("get_solution_on_a_point",
-       &NPSolver<DIM>::get_solution_on_a_point,
+       py::overload_cast<const dealii::Point<DIM>, const Ddhdg::Component>(
+         &NPSolver<DIM>::get_solution_on_a_point,
+         py::const_),
        py::arg("point"),
        py::arg("component"))
+  .def(
+    "get_solution_on_a_point",
+    [](const NPSolver<DIM>      &s,
+       const dealii::Point<DIM>  p,
+       const Ddhdg::Displacement d) {
+      const auto output_vector = s.get_solution_on_a_point(p, d);
+
+      // Copy the data in a new buffer
+      auto *data = new double[DIM];
+      for (unsigned int i = 0; i < DIM; ++i)
+        data[i] = output_vector[i];
+
+      // Create a Python object that will free the allocated
+      // memory when destroyed:
+      py::capsule free_when_done(data, [](void *f) {
+        auto *data = reinterpret_cast<double *>(f);
+        delete[] data;
+      });
+
+      const auto vector_shape  = std::vector<long>{DIM};
+      const auto vector_stride = std::vector<long>{8};
+
+      return py::array_t<double, py::array::c_style>(
+        vector_shape,    // shape
+        vector_stride,   // strides
+        data,            // the data pointer
+        free_when_done); // numpy array references this parent
+    },
+    py::arg("point"),
+    py::arg("displacement"))
   .def("output_results",
        py::overload_cast<const std::string &, const bool, const bool>(
          &NPSolver<DIM>::output_results,

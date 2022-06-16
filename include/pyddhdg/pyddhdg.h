@@ -810,7 +810,9 @@ namespace pyddhdg
                          pybind11::array_t<double, pybind11::array::c_style>>,
       std::unordered_map<std::string,
                          pybind11::array_t<double, pybind11::array::c_style>>>
-    get_local_cell_system(unsigned int cell_level, unsigned int cell_index);
+    get_local_cell_system(unsigned int cell_level,
+                          unsigned int cell_index,
+                          bool         compute_thermodynamic_equilibrium);
 
     void
     set_current_trace_vector(
@@ -1062,6 +1064,9 @@ namespace pyddhdg
 
     [[nodiscard]] double
     get_solution_on_a_point(dealii::Point<dim> p, Ddhdg::Component c) const;
+
+    [[nodiscard]] dealii::Vector<double>
+    get_solution_on_a_point(dealii::Point<dim> p, Ddhdg::Displacement d) const;
 
     void
     output_results(const std::string &solution_filename,

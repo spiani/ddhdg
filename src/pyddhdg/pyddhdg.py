@@ -82,6 +82,15 @@ class ConstantsNamespace:
 
 Constants = ConstantsNamespace()
 
+_components2displacements = {
+    pyddhdg_common.Component.v: pyddhdg_common.Displacement.e,
+    pyddhdg_common.Component.n: pyddhdg_common.Displacement.wn,
+    pyddhdg_common.Component.p: pyddhdg_common.Displacement.wp,
+}
+_displacements2components = {
+    d: c for c, d in _components2displacements.items()
+}
+
 
 class ComponentsNamespace:
     def __init__(self):
@@ -115,13 +124,52 @@ class ComponentsNamespace:
     def __iter__(self):
         return self.principal_components().__iter__()
 
+    @staticmethod
+    def from_displacement(displacement):
+        try:
+            displacement = Displacements[displacement]
+        except KeyError:
+            pass
+        return _displacements2components[displacement]
+
 
 Components = ComponentsNamespace()
+
+
+class DisplacementsNamespace:
+    def __init__(self):
+        self._data = {
+            'e': pyddhdg_common.Displacement.e,
+            'wn': pyddhdg_common.Displacement.wn,
+            'wp': pyddhdg_common.Displacement.wp,
+        }
+
+    def __getattr__(self, attr):
+        if attr in self._data:
+            return self._data[attr]
+        raise AttributeError(
+            '"{}" is not a valid displacement'.format(attr)
+        )
+
+    def __getitem__(self, item):
+        return self._data[item]
+
+    def as_dict(self):
+        return self._data.copy()
+
+    @staticmethod
+    def from_component(component):
+        try:
+            component = Components[component]
+        except KeyError:
+            pass
+        return _components2displacements[component]
+
 
 # Export also the components and the others enums; in this way we avoid to
 # pollute the global namespace with the name of the single elements of the
 # enums (i.e. it will be necessary to write Displacement.E and not simply E)
-Displacements = pyddhdg_common.Displacement
+Displacements = DisplacementsNamespace()
 BoundaryConditionType = pyddhdg_common.BoundaryConditionType
 DDFluxType = pyddhdg_common.DDFluxType
 

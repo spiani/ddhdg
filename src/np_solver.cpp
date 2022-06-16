@@ -2332,8 +2332,10 @@ namespace Ddhdg
 
   template <int dim, typename ProblemType>
   std::pair<local_cell_matrix, local_cell_rhs>
-  NPSolver<dim, ProblemType>::get_local_cell_system(unsigned int cell_level,
-                                                    unsigned int cell_index)
+  NPSolver<dim, ProblemType>::get_local_cell_system(
+    const unsigned int cell_level,
+    const unsigned int cell_index,
+    const bool         compute_thermodynamic_equilibrium)
   {
     if (!this->initialized)
       this->setup_overall_system();
@@ -2386,9 +2388,9 @@ namespace Ddhdg
       cell_index,
       &this->dof_handler_trace_restricted);
 
-    (this->*get_assemble_system_one_cell_function(false, false))(loc_cell,
-                                                                 scratch,
-                                                                 task_data);
+    (this->*get_assemble_system_one_cell_function(
+              compute_thermodynamic_equilibrium,
+              false))(loc_cell, scratch, task_data);
 
     local_cell_matrix local_system_matrix;
     local_cell_rhs    local_system_rhs;

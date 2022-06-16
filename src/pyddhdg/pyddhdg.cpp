@@ -1886,11 +1886,13 @@ namespace pyddhdg
                        pybind11::array_t<double, pybind11::array::c_style>>,
     std::unordered_map<std::string,
                        pybind11::array_t<double, pybind11::array::c_style>>>
-  NPSolver<dim>::get_local_cell_system(unsigned int cell_level,
-                                       unsigned int cell_index)
+  NPSolver<dim>::get_local_cell_system(
+    const unsigned int cell_level,
+    const unsigned int cell_index,
+    const bool         compute_thermodynamic_equilibrium)
   {
-    const auto data =
-      this->ddhdg_solver->get_local_cell_system(cell_level, cell_index);
+    const auto data = this->ddhdg_solver->get_local_cell_system(
+      cell_level, cell_index, compute_thermodynamic_equilibrium);
     const auto matrix_map = data.first;
     const auto rhs_map    = data.second;
 
@@ -2889,6 +2891,16 @@ namespace pyddhdg
                                          const Ddhdg::Component   c) const
   {
     return this->ddhdg_solver->get_solution_on_a_point(p, c);
+  }
+
+
+
+  template <int dim>
+  dealii::Vector<double>
+  NPSolver<dim>::get_solution_on_a_point(const dealii::Point<dim>  p,
+                                         const Ddhdg::Displacement d) const
+  {
+    return this->ddhdg_solver->get_solution_on_a_point(p, d);
   }
 
 
