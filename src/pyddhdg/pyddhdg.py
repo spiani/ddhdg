@@ -109,6 +109,14 @@ class ComponentsNamespace:
             '"{}" is not a valid component'.format(attr)
         )
 
+    def __contains__(self, item):
+        if not item in self._data.values():
+            return False
+        for d_value in self._data.values():
+            if d_value is item:
+                return True
+        return False
+
     def __getitem__(self, item):
         return self._data[item]
 
@@ -150,6 +158,14 @@ class DisplacementsNamespace:
         raise AttributeError(
             '"{}" is not a valid displacement'.format(attr)
         )
+
+    def __contains__(self, item):
+        if not item in self._data.values():
+            return False
+        for d_value in self._data.values():
+            if d_value is item:
+                return True
+        return False
 
     def __getitem__(self, item):
         return self._data[item]
@@ -328,6 +344,15 @@ def _plot_solution(solver, component, plot_grid=False, ax=None, colors=None,
     if dim != 1:
         raise ValueError('No plot available in {}D'.format(dim))
 
+    # If component is not a component but a displacement, convert it to
+    # the associated component and remember that we need to plot the
+    # displacement
+    plot_displacement = False
+    if component in Displacements:
+        plot_displacement = True
+        displacement = component
+        component = Components.from_displacement(displacement)
+
     if ax is None:
         ax = plt.gca()
     if colors is None:
@@ -405,13 +430,21 @@ def _plot_solution(solver, component, plot_grid=False, ax=None, colors=None,
         y_points = np.empty_like(x_points)
         for i in range(points_per_cell):
             p = pyddhdg.Point[dim](x_points[i])
-            y_points[i] = solver.get_solution_on_a_point(p, component)
+            if plot_displacement:
+                y_points[i] = \
+                    solver.get_solution_on_a_point(p, displacement)[0]
+            else:
+                y_points[i] = solver.get_solution_on_a_point(p, component)
 
         if interpolate:
             cell_x_min = cell_x_mins[cell]
             cell_x_max = cell_x_maxs[cell]
             x_plot_points = np.linspace(cell_x_min, cell_x_max, plot_points)
-            y_plot_points = barycentric_interpolate(x_points, y_points, x_plot_points)
+            y_plot_points = barycentric_interpolate(
+                x_points,
+                y_points,
+                x_plot_points
+            )
         else:
             x_plot_points = x_points
             y_plot_points = y_points
@@ -428,7 +461,12 @@ def _plot_solution(solver, component, plot_grid=False, ax=None, colors=None,
         else:
             color = colors
 
-        ax.plot(x_plot_points, y_plot_points, color=color, linewidth=linewidth)
+        ax.plot(
+            x_plot_points,
+            y_plot_points,
+            color=color,
+            linewidth=linewidth
+        )
 
         if plot_grid is True:
             y1 = min([0, y_previous_cell, y_plot_points[0]])
@@ -443,8 +481,8 @@ def _plot_solution(solver, component, plot_grid=False, ax=None, colors=None,
             y_previous_cell = y_plot_points[-1]
 
 
-# Before initializing the template classes, we introduce the methods that will
-# be bound to some of them
+# Before initializing the template classes, we introduce the methods
+# that will be bound to some of them
 def _plot_value_per_cell(solver, value_per_cell, ax=None, colors=None,
                          linewidth=1):
     if not MATPLOTLIB_IMPORTED:

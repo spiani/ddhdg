@@ -555,7 +555,7 @@ namespace python
 
       PYSPACE::list coordinates;
       for (int j = 0; j < spacedim; ++j)
-        coordinates.append(vertex[i]);
+        coordinates.append(vertex[j]);
 
       return PointWrapper(coordinates);
     }
