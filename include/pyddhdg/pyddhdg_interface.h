@@ -403,7 +403,11 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        &NPSolver<DIM>::get_linear_system_solution_vector)
   .def("get_current_trace_vector", &NPSolver<DIM>::get_current_trace_vector)
   .def("set_current_trace_vector", &NPSolver<DIM>::set_current_trace_vector)
-  .def("get_local_cell_system", &NPSolver<DIM>::get_local_cell_system)
+  .def("get_local_cell_system",
+       py::overload_cast<const dealii::python::CellAccessorWrapper &, bool>(
+         &NPSolver<DIM>::get_local_cell_system),
+       py::arg("cell"),
+       py::arg("compute_thermodynamic_equilibrium") = false)
   .def("get_jacobian", &NPSolver<DIM>::get_jacobian)
   .def("run", py::overload_cast<>(&NPSolver<DIM>::run))
   .def("run",

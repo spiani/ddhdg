@@ -2337,6 +2337,21 @@ namespace Ddhdg
     const unsigned int cell_index,
     const bool         compute_thermodynamic_equilibrium)
   {
+    std::map<Component, bool> current_active_components;
+    for (Component c : all_primary_components())
+      {
+        current_active_components[c] = this->is_enabled(c);
+      }
+
+    bool changed_components = false;
+    if (compute_thermodynamic_equilibrium &&
+        (!this->is_enabled(Component::V) || this->is_enabled(Component::n) ||
+         this->is_enabled(Component::p)))
+      changed_components = true;
+
+    if (changed_components)
+      this->set_enabled_components(true, false, false);
+
     if (!this->initialized)
       this->setup_overall_system();
 
@@ -2414,6 +2429,11 @@ namespace Ddhdg
       c_vector[i] = scratch.cc_rhs[i];
     for (unsigned int i = 0; i < task_data.tt_vector.size(); ++i)
       t_vector[i] = task_data.tt_vector[i];
+
+    if (changed_components)
+      this->set_enabled_components(current_active_components[Component::V],
+                                   current_active_components[Component::n],
+                                   current_active_components[Component::p]);
 
     return std::pair<local_cell_matrix, local_cell_rhs>(local_system_matrix,
                                                         local_system_rhs);

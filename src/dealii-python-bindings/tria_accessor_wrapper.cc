@@ -126,6 +126,8 @@ namespace python
           tria_accessor);
       if constexpr (structdim == 0)
         {
+          (void)respect_manifold;
+          (void)interpolate_from_surrounding;
           Point<spacedim> center = accessor->center();
           PYSPACE::list   center_list;
           for (int i = 0; i < spacedim; ++i)

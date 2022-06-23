@@ -814,6 +814,19 @@ namespace pyddhdg
                           unsigned int cell_index,
                           bool         compute_thermodynamic_equilibrium);
 
+    std::pair<
+      std::unordered_map<std::string,
+                         pybind11::array_t<double, pybind11::array::c_style>>,
+      std::unordered_map<std::string,
+                         pybind11::array_t<double, pybind11::array::c_style>>>
+    get_local_cell_system(const dealii::python::CellAccessorWrapper &cell,
+                          bool compute_thermodynamic_equilibrium)
+    {
+      return this->get_local_cell_system(cell.level(),
+                                         cell.index(),
+                                         compute_thermodynamic_equilibrium);
+    }
+
     void
     set_current_trace_vector(
       const std::map<Ddhdg::Component,

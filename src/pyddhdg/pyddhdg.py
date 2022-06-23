@@ -5,7 +5,6 @@ import warnings
 
 import pyddhdg.pyddhdg_common
 
-
 # We import the modules for the three dimensions and we put them
 # in a dictionary
 _MODULE_PER_DIM = {
