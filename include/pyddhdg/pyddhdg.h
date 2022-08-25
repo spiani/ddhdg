@@ -757,6 +757,22 @@ namespace pyddhdg
                   bool                use_projection);
 
     void
+    project_component(Ddhdg::Component                         c,
+                      const std::string                       &f,
+                      const dealii::python::QuadratureWrapper &q);
+
+    void
+    project_component(Ddhdg::Component                         c,
+                      DealIIFunction<dim>                      f,
+                      const dealii::python::QuadratureWrapper &q);
+
+    void
+    project_component(Ddhdg::Component c, const std::string &f);
+
+    void
+    project_component(Ddhdg::Component c, DealIIFunction<dim> f);
+
+    void
     set_current_solution(const std::string &v_f,
                          const std::string &n_f,
                          const std::string &p_f,

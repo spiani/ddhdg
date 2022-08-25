@@ -373,6 +373,22 @@ py::class_<NPSolver<DIM>>(m, "NPSolver")
        py::arg("component"),
        py::arg("analytic_function"),
        py::arg("use_projection") = false)
+  .def("project_component",
+       py::overload_cast<Ddhdg::Component,
+                         const std::string &,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::project_component),
+       py::arg("component"),
+       py::arg("analytic_function"),
+       py::arg("quadrature"))
+  .def("project_component",
+       py::overload_cast<Ddhdg::Component,
+                         DealIIFunction<DIM>,
+                         const dealii::python::QuadratureWrapper &>(
+         &NPSolver<DIM>::project_component),
+       py::arg("component"),
+       py::arg("analytic_function"),
+       py::arg("quadrature"))
   .def("set_current_solution",
        &NPSolver<DIM>::set_current_solution,
        py::arg("V_function"),

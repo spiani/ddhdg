@@ -1260,6 +1260,62 @@ namespace pyddhdg
   }
 
 
+  template <int dim>
+  void
+  NPSolver<dim>::project_component(const Ddhdg::Component                   c,
+                                   const std::string                       &f,
+                                   const dealii::python::QuadratureWrapper &q)
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> c_function =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    c_function->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      f,
+      Ddhdg::Constants::constants);
+    dealii::Quadrature<dim> *quad =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+    this->ddhdg_solver->project_component(c, c_function, *quad);
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::project_component(const Ddhdg::Component                   c,
+                                   const DealIIFunction<dim>                f,
+                                   const dealii::python::QuadratureWrapper &q)
+  {
+    dealii::Quadrature<dim> *quad =
+      static_cast<dealii::Quadrature<dim> *>(q.get_quadrature());
+    this->ddhdg_solver->project_component(c, f.get_dealii_function(), *quad);
+  }
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::project_component(const Ddhdg::Component c,
+                                   const std::string     &f)
+  {
+    std::shared_ptr<dealii::FunctionParser<dim>> c_function =
+      std::make_shared<dealii::FunctionParser<dim>>();
+    c_function->initialize(
+      dealii::FunctionParser<dim>::default_variable_names(),
+      f,
+      Ddhdg::Constants::constants);
+    this->ddhdg_solver->project_component(c, c_function);
+  }
+
+
+
+  template <int dim>
+  void
+  NPSolver<dim>::project_component(const Ddhdg::Component    c,
+                                   const DealIIFunction<dim> f)
+  {
+    this->ddhdg_solver->project_component(c, f.get_dealii_function());
+  }
+
+
 
   template <int dim>
   void

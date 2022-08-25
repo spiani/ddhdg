@@ -41,10 +41,10 @@ namespace Ddhdg
                     const dealii::ComponentMask                 &c_mask,
                     const FEValuesExtractors::Scalar            &c_extractor,
                     const FEValuesExtractors::Vector            &d_extractor,
-                    const dealii::QGauss<dim>     &quadrature_formula,
-                    const dealii::QGauss<dim - 1> &face_quadrature_formula,
-                    dealii::UpdateFlags            fe_values_flags,
-                    dealii::UpdateFlags            fe_face_values_flags);
+                    const dealii::Quadrature<dim>     &quadrature_formula,
+                    const dealii::Quadrature<dim - 1> &face_quadrature_formula,
+                    dealii::UpdateFlags                fe_values_flags,
+                    dealii::UpdateFlags                fe_face_values_flags);
 
       PCScratchData(const PCScratchData<dim> &pc_scratch_data);
 
@@ -135,10 +135,10 @@ namespace Ddhdg
       const dealii::ComponentMask                       &c_mask,
       const FEValuesExtractors::Scalar                  &c_extractor,
       const FEValuesExtractors::Vector                  &d_extractor,
-      const dealii::QGauss<dim>                         &quadrature_formula,
-      const dealii::QGauss<dim - 1> &face_quadrature_formula,
-      dealii::UpdateFlags            fe_values_flags,
-      dealii::UpdateFlags            fe_face_values_flags)
+      const dealii::Quadrature<dim>                     &quadrature_formula,
+      const dealii::Quadrature<dim - 1> &face_quadrature_formula,
+      dealii::UpdateFlags                fe_values_flags,
+      dealii::UpdateFlags                fe_face_values_flags)
       : c_function(c_function)
       , fe_values(fe_cell, quadrature_formula, fe_values_flags)
       , fe_face_values(fe_cell, face_quadrature_formula, fe_face_values_flags)
@@ -206,8 +206,8 @@ namespace Ddhdg
         const dealii::ComponentMask                 &c_mask,
         const FEValuesExtractors::Scalar            &c_extractor,
         const FEValuesExtractors::Vector            &d_extractor,
-        const dealii::QGauss<dim>                   &quadrature_formula,
-        const dealii::QGauss<dim - 1>               &face_quadrature_formula,
+        const dealii::Quadrature<dim>               &quadrature_formula,
+        const dealii::Quadrature<dim - 1>           &face_quadrature_formula,
         dealii::UpdateFlags                          fe_values_flags,
         dealii::UpdateFlags                          fe_face_values_flags);
 
@@ -238,10 +238,10 @@ namespace Ddhdg
       const dealii::ComponentMask                       &c_mask,
       const FEValuesExtractors::Scalar                  &c_extractor,
       const FEValuesExtractors::Vector                  &d_extractor,
-      const dealii::QGauss<dim>                         &quadrature_formula,
-      const dealii::QGauss<dim - 1> &face_quadrature_formula,
-      dealii::UpdateFlags            fe_values_flags,
-      dealii::UpdateFlags            fe_face_values_flags)
+      const dealii::Quadrature<dim>                     &quadrature_formula,
+      const dealii::Quadrature<dim - 1> &face_quadrature_formula,
+      dealii::UpdateFlags                fe_values_flags,
+      dealii::UpdateFlags                fe_face_values_flags)
       : PCScratchData<dim>(c_function,
                            fe_cell,
                            c_index,
@@ -478,7 +478,9 @@ namespace Ddhdg
   template <Component c>
   void
   NPSolver<dim, Problem>::project_component_private(
-    const std::shared_ptr<const dealii::Function<dim>> c_function)
+    const std::shared_ptr<const dealii::Function<dim>> c_function,
+    const Quadrature<dim>                             &quadrature_formula,
+    const Quadrature<dim - 1>                         &face_quadrature_formula)
   {
     Assert(c == Component::V || c == Component::n || c == Component::p ||
              c == Component::phi_n || c == Component::phi_p,
@@ -499,11 +501,6 @@ namespace Ddhdg
 
     if (!this->initialized)
       this->setup_overall_system();
-
-    const unsigned int n_q_per_side = this->get_number_of_quadrature_points();
-
-    const QGauss<dim>     quadrature_formula(n_q_per_side);
-    const QGauss<dim - 1> face_quadrature_formula(n_q_per_side);
 
     const UpdateFlags fe_values_flags(update_values | update_gradients |
                                       update_JxW_values |
@@ -583,22 +580,72 @@ namespace Ddhdg
     const Component                                    c,
     const std::shared_ptr<const dealii::Function<dim>> c_function)
   {
+    if (!this->initialized)
+      this->setup_overall_system();
+
+    const unsigned int n_q_per_side = this->get_number_of_quadrature_points();
+
+    const QGauss<dim>     quadrature_formula(n_q_per_side);
+    const QGauss<dim - 1> face_quadrature_formula(n_q_per_side);
+
+    return this->project_component(c,
+                                   c_function,
+                                   quadrature_formula,
+                                   face_quadrature_formula);
+  }
+
+
+
+  template <int dim, typename Problem>
+  void
+  NPSolver<dim, Problem>::project_component(
+    const Component                                    c,
+    const std::shared_ptr<const dealii::Function<dim>> c_function,
+    const Quadrature<dim>                             &quadrature_formula)
+  {
+    if (!this->initialized)
+      this->setup_overall_system();
+    const unsigned int n_q_per_side = this->get_number_of_quadrature_points();
+
+    const QGauss<dim - 1> face_quadrature_formula(n_q_per_side);
+
+    return this->project_component(c,
+                                   c_function,
+                                   quadrature_formula,
+                                   face_quadrature_formula);
+  }
+
+
+
+  template <int dim, typename Problem>
+  void
+  NPSolver<dim, Problem>::project_component(
+    const Component                                    c,
+    const std::shared_ptr<const dealii::Function<dim>> c_function,
+    const Quadrature<dim>                             &quadrature_formula,
+    const Quadrature<dim - 1>                         &face_quadrature_formula)
+  {
     switch (c)
       {
         case Component::V:
-          this->project_component_private<Component::V>(c_function);
+          this->project_component_private<Component::V>(
+            c_function, quadrature_formula, face_quadrature_formula);
           break;
         case Component::n:
-          this->project_component_private<Component::n>(c_function);
+          this->project_component_private<Component::n>(
+            c_function, quadrature_formula, face_quadrature_formula);
           break;
         case Component::p:
-          this->project_component_private<Component::p>(c_function);
+          this->project_component_private<Component::p>(
+            c_function, quadrature_formula, face_quadrature_formula);
           break;
         case Component::phi_n:
-          this->project_component_private<Component::phi_n>(c_function);
+          this->project_component_private<Component::phi_n>(
+            c_function, quadrature_formula, face_quadrature_formula);
           break;
         case Component::phi_p:
-          this->project_component_private<Component::phi_p>(c_function);
+          this->project_component_private<Component::phi_p>(
+            c_function, quadrature_formula, face_quadrature_formula);
           break;
         default:
           Assert(false, InvalidComponent());

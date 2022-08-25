@@ -216,7 +216,7 @@ class TemplateClass:
                 self._reference_class[i] = current_class
                 continue
 
-            # If we need to bind methods, we dinamycally create a wrapper class
+            # If we need to bind methods, we dynamically create a wrapper class
             class_wrapper = type(
                 class_name + "_wrapper",
                 (current_class,),

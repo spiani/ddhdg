@@ -99,11 +99,14 @@ namespace Ddhdg
         this->dof_handler_cell,
         this->current_solution_cell);
 
-      dealii::VectorTools::interpolate_to_different_mesh(
-        other.dof_handler_trace,
-        other.current_solution_trace,
-        this->dof_handler_trace,
-        this->current_solution_trace);
+      if (this->triangulation->n_cells() == other.triangulation->n_cells())
+        dealii::VectorTools::interpolate_to_different_mesh(
+          other.dof_handler_trace,
+          other.current_solution_trace,
+          this->dof_handler_trace,
+          this->current_solution_trace);
+      else
+        this->project_cell_function_on_trace();
     }
 
     void
@@ -126,6 +129,17 @@ namespace Ddhdg
     interpolate_component(
       Component                                    c,
       std::shared_ptr<const dealii::Function<dim>> c_function) override;
+
+    void
+    project_component(Component                                    c,
+                      std::shared_ptr<const dealii::Function<dim>> c_function,
+                      const Quadrature<dim>     &quadrature_formula,
+                      const Quadrature<dim - 1> &face_quadrature_formula);
+
+    void
+    project_component(Component                                    c,
+                      std::shared_ptr<const dealii::Function<dim>> c_function,
+                      const Quadrature<dim> &quadrature_formula);
 
     void
     project_component(
@@ -574,7 +588,9 @@ namespace Ddhdg
     template <Component c>
     void
     project_component_private(
-      std::shared_ptr<const dealii::Function<dim>> c_function);
+      std::shared_ptr<const dealii::Function<dim>> c_function,
+      const Quadrature<dim>                       &quadrature_formula,
+      const Quadrature<dim - 1>                   &face_quadrature_formula);
 
     template <typename DQScratchData, typename DQCopyData, typename quantity>
     void
