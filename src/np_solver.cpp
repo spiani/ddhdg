@@ -1612,8 +1612,10 @@ namespace Ddhdg
   std::shared_ptr<dealii::Function<dim>>
   NPSolver<dim, ProblemType>::get_solution() const
   {
-    return std::make_shared<dealii::Functions::FEFieldFunction<dim>>(
-      this->dof_handler_cell, this->current_solution_cell);
+    const std::shared_ptr<dealii::Functions::FEFieldFunction<dim>> solution =
+      std::make_shared<dealii::Functions::FEFieldFunction<dim>>(
+        this->dof_handler_cell, this->current_solution_cell);
+    return solution;
   }
 
 
@@ -1624,7 +1626,10 @@ namespace Ddhdg
   {
     const unsigned int c_index = get_component_index(c);
     const unsigned int i       = c_index * (dim + 1) + dim;
-    return std::make_shared<ComponentFunction<dim>>(this->get_solution(), i);
+    const std::shared_ptr<ComponentFunction<dim>> solution =
+      std::make_shared<ComponentFunction<dim>>(this->get_solution(), i);
+    const double rf = this->adimensionalizer->get_component_rescaling_factor(c);
+    return std::make_shared<FunctionTimesScalar<dim>>(solution, rf);
   }
 
 
