@@ -1,5 +1,4 @@
 #ifdef DIM
-py::module_::import("PyDealII");
 
 py::class_<HomogeneousPermittivity<DIM>>(m, "HomogeneousPermittivity")
   .def(py::init<const double &>());
